@@ -60,3 +60,10 @@ EXPOSE 9993
 # Set the default command to run on boot
 # This will boot WildFly in the standalone mode and bind to all interface
 # CMD ["/opt/jboss/wildfly/bin/standalone.sh", "-b", "0.0.0.0"]
+
+USER root
+
+# Install some network utilities that are missing from this centos 7 distribution
+RUN  \
+    yum install -y iproute && \
+    yum install -y telnet
