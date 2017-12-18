@@ -1,4 +1,3 @@
-@echo off
-
-SET CONTAINER_NAME=httpd_fileserver_7003
+@ECHO OFF
+call "%~dp0\0_setCoreEnvVariables.bat" %*
 docker exec -it %CONTAINER_NAME% /bin/bash
