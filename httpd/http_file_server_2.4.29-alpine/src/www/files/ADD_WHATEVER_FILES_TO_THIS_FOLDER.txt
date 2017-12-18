@@ -1,1 +1,6 @@
 Within this folder, you should add whatever files you want to serve.
+
+We put a dummy text file called:
+wildfly-installer-0.0.1-SNAPSHOT-package.zip
+
+As this is the file (the real one) would be what we would want to serve during docker building of the wildfly container.

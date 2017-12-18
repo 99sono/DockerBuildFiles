@@ -31,5 +31,29 @@ Failing to uphold this rule will lead to CURL get requests that apache httpd wil
 Here we enable  the line: 
 Include conf/extra/httpd-vhosts.conf
 
+We also enable the line: 
+'''
+EnableSendfile on
+'''
+Without this, apprently, the sending of large zip files (e.g. 100 MB or more) leads to data corruption.
+
+
 2. httpd-vhosts.conf
 Here we add a simple virtual host that allows easy access to all files in the /usr/local/apache2/htdocs
+
+# Serving Files to another container during build
+In order to solve the problem of being able to apache httpd (docker) to serve files to a second
+container during, build what we do is:
+1. First we create shared network for the http file server and the new docker machine:
+docker network create docker-build
+
+2. We run the docker file server with the script: 02_run_docker_image_network_install.bat
+The docker machine will be running in this network.
+
+3. We can trigger the docker build of the new machine with something like
+'''
+docker build --network docker-build -t %WILDFLY_IMAGE_NAME%:%WILDFLY_IMAGE_VERSION% .
+'''
+
+4. During docker build, this machine should be able to access http://hppd.fileserver:80/files/FileToDownload.zip
+
