@@ -1,0 +1,58 @@
+Hello,
+
+I'm trying to understand why my Docker machine doesn't seem to utilize 100% of the GPU. After thinking I've figured it out, please confirm.
+
+To explain my situation: I'm running Windows 10 with WSL2 and hosting my Docker containers in the Ubuntu WSL2 environment. I have installed the NVIDIA CUDA toolkit as well as the NVIDIA container toolkit. My GPU is a Lenovo P50 laptop GPU, which is the Quadro M2000M by NVIDIA.
+
+When I monitor GPU utilization using Task Manager on Windows, I never see the GPU reaching 100% utilization when running a chat prompt. However, in the bar chart summary, Compute_1 shows occasional activity up to 100%. The Compute_1 bar chart seems to be for a different graphics card than my own.
+
+During inference, only the Copy and Compute_0 charts appear to be used. Here's my assumption:
+
+* My software on Windows and Ubuntu is as optimized as it can be.
+* My Docker Compose configuration is also as optimized as possible, with all resources available to the container.
+* The reason for GPU utilization appearing low during inference is likely due to the way Task Manager calculates GPU utilization.
+
+Task Manager considers not only GPU-specific workloads but also encoding, decoding, 3D charting, and other capabilities. Since AI inference typically uses a subset of these capabilities, the apparent low utilization makes sense.
+
+Is this plausible to you? I'd appreciate your feedback and any additional insights you might have.
+
+Here is my Docker Compose configuration for reference:
+```
+docker-compose:
+version: '3.8'
+
+services:
+  # Ollama service configuration
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    restart: no
+
+  # Open-WebUI service configuration
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    ports:
+      - "11435:8080"
+    volumes:
+      - open-webui:/app/backend/data
+    environment:
+      - OLLAMA_API_BASE_URL=http://ollama:11434
+      - WEBUI_AUTH=false
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: no
+
+volumes:
+  ollama:
+  open-webui:

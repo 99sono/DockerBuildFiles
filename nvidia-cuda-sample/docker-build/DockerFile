@@ -1,0 +1,7 @@
+FROM nvcr.io/nvidia/k8s/cuda-sample:nbody
+
+# Set the working directory
+# WORKDIR /cuda-samples/sample
+
+# Add a shell command as the default entrypoint
+ENTRYPOINT ["/bin/bash"]
