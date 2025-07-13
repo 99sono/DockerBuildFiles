@@ -39,5 +39,5 @@ services:
     restart: no
 
 volumes:
-  ollama:
+  # ollama:
   open-webui:
