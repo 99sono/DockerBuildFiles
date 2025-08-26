@@ -12,7 +12,7 @@ services:
       - ./downloaded_models:/root/.ollama
     environment:
       # see: https://aider.chat/docs/llms/ollama.html
-      - OLLAMA_CONTEXT_LENGTH=8192
+      - OLLAMA_CONTEXT_LENGTH=128000
       - OLLAMA_API_KEY=Irrelevant
       - OLLAMA_KEEP_ALIVE=3h
     runtime: nvidia
