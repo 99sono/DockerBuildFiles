@@ -2,3 +2,7 @@
 *.zip
 downloaded_models
 .aider.*
+
+# The .env file is ignored because it often contains private API keys, so it should not be committed to a repo.
+# However, it makes sense to commit files called .env.example that explain what the .env file should look like.
+.env

@@ -24,13 +24,24 @@ This project sets up Ollama (a large language model service) and Open-WebUI (a w
 - `02_connect_to_ollama.sh`: Connects to the Ollama container
 - `03_01_curl_gemma3_4b_context_8k.sh`: Example curl command to interact with Ollama
 - `04_cat_linux_operating_system_ollama.sh`: Shows the operating system of the Ollama container
-- `05_google_01_pull_gemma3-4b.sh`: Pulls the Gemma3 4B model
-- `05_google_02_pull_gemma3-12b.sh`: Pulls the Gemma3 12B model
-- `05_google_03_pull_gemma3-24b.sh`: Pulls the Gemma3 24B model
-- `05_qwen_01_pull_qwen3-30b-a3b.sh`: Pulls the Qwen3 30B model
-- `05_deepseek_01_pull_deepseek-coder-v2-16b.sh`: Pulls the DeepSeek Coder V2 16B model
-- `05_deepseek_02_pull_deepseek-r1-8b-0528-qwen3-fp16.sh`: Pulls the DeepSeek R1 8B model
+- `05_docker_pull_model.sh`: Pulls any model (see models.md for available models)
 
 ## Model Management
 
-To pull a model, use the appropriate script from the list above or run:
+All model pull operations are now handled through a single script:
+```bash
+./05_docker_pull_model.sh [model_name]
+```
+
+See [models.md](models.md) for the complete list of available models and their specifications.
+
+## Security Notice
+This configuration is designed for **local development only**. The default settings:
+- Use a placeholder API key
+- Disable authentication in Open-WebUI
+- Assume a trusted local network
+
+For production deployments:
+1. Generate a secure API key
+2. Enable authentication in Open-WebUI
+3. Restrict network access

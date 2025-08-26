@@ -8,13 +8,14 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      #- ollama:/root/.ollama
-      - ./downloaded_models:/root/.ollama
+    - type: bind
+      source: ${MODELS_PATH:-./downloaded_models}
+      target: /root/.ollama
     environment:
       # see: https://aider.chat/docs/llms/ollama.html
-      - OLLAMA_CONTEXT_LENGTH=128000
-      - OLLAMA_API_KEY=Irrelevant
-      - OLLAMA_KEEP_ALIVE=3h
+      - OLLAMA_CONTEXT_LENGTH=${OLLAMA_CONTEXT_LENGTH:-128000}
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY:-Irrelevant}
+      - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE:-3h}
     runtime: nvidia
     deploy:
       resources:
@@ -33,7 +34,7 @@ services:
       - open-webui:/app/backend/data
     environment:
       - OLLAMA_API_BASE_URL=http://ollama:11434
-      - WEBUI_AUTH=false
+      - WEBUI_AUTH=${WEBUI_AUTH:-false}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: no
