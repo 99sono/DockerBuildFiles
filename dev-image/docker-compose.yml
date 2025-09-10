@@ -24,8 +24,13 @@ services:
       - "2222:22"
 
     # Persist a workspace directory if you want source code to live on the host
-    # volumes:
-    #   - ./workspace:/home/developer/workspace
+    volumes:
+       - ~/dev:/home/developer/dev/mount
+       - ~/.gitconfig:/home/developer/.gitconfig
+       - ~/.ssh:/home/developer/.ssh       
+       - ~/.m2:/home/developer/.m2
+       - ~/DockerBuildFiles/dev-image/.vscode-server:/home/developer/.vscode-server
+
 
     # Agentic coding environment variables (optional).
     # These support tools like qwen-code (OpenAI-compatible) and Gemini CLI.

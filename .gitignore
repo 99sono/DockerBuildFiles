@@ -6,3 +6,9 @@ downloaded_models
 # The .env file is ignored because it often contains private API keys, so it should not be committed to a repo.
 # However, it makes sense to commit files called .env.example that explain what the .env file should look like.
 .env
+
+# We do not want to commit binary files of vscode to the repo
+dev-image/.vscode-server/bin
+dev-image/.vscode-server/data
+dev-image/.vscode-server/extensions
+dev-image/.vscode-server/extensionsCache
