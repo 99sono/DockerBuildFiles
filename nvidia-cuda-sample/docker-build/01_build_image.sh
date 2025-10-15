@@ -1,1 +1,1 @@
-docker build -f ./DockerFile -t nuno-nvidia-cuda-sample .
+docker build -f ./DockerFile -t sono99-nvidia-cuda-sample .

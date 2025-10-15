@@ -27,4 +27,4 @@ docker run --rm --name $CONTAINER_NAME --detach -p $LOCAL_PORT:$REMOTE_PORT $DOC
 
 
 # mount a folder on the target machine:
-# -v "/home/nunogdem/Dev/Docker/docker-build/docker-java7:/var/www/html"
+# -v "/home/johndoe/Dev/Docker/docker-build/docker-java7:/var/www/html"

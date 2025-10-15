@@ -1,7 +1,7 @@
 # Docker Compose Template — Dev Environment (Illustrative)
 
 Purpose
-This template demonstrates how one might run the final assembled development image produced by this layered build (typically from Layer 04). It is intentionally minimal and focused on the dev environment only, removing unrelated services (e.g., Redis, Postgres). This setup participates in the shared `development-network` to enable communication with other development-related services like Ollama.
+This template demonstrates how one might run the final assembled development image produced by this layered build (typically from Layer 04). It is intentionally minimal and focused on the dev environment only, removing unrelated services (e.g., Redis, Postgres). This setup participates in the shared `development-network` to enable communication with other development-related services like Ollama via container hostnames.
 
 What this template is (and is not)
 - It is a starting point for consuming the final image outside of this repository’s build workflow.
@@ -101,13 +101,35 @@ Notes on layered structure
 
 ## Shared Development Network
 
-This container participates in the shared `development-network` Docker network, enabling communication with other development-related services:
+This container participates in the shared `development-network` Docker network, enabling communication with other development-related services.
 
-- Connect to Ollama instance via `http://ollama:11434`
-- Access other development services using their service names
-- Maintain separation of concerns while enabling interoperability
+### Architecture
 
-Future development containers can follow this pattern - each in their own folder but united through the common development network infrastructure.
+- **External Network Design**: Uses Docker's external network feature to bypass project-name prefixing
+- **Network Reference**: docker-compose.yml references `development-network: {external: true}`
+- **Automatic Creation**: Startup script (`02_start_dev.sh`) automatically creates the network if needed via `../commonScripts/create_development_network.sh`
+
+### Service Communication
+
+- **Ollama Access**: Connect via `http://ollama:11434` (API calls, model interactions)
+- **Service Discovery**: Access other services using their container hostnames
+- **Verified**: Confirmed working with successful `ping ollama` from within dev environment
+
+### Example Usage
+
+```bash
+# From within dev-environment container:
+curl http://ollama:11434/api/tags           # List available models
+curl http://ollama:11434/api/generate -X POST -H "Content-Type: application/json" -d '{"model":"your-model","prompt":"Hello"}'
+```
+
+### For Future Development Services
+
+When adding new development service folders:
+1. Reference `networks: development-network: {external: true}` in docker-compose.yml
+2. Include network creation in startup scripts: `../commonScripts/create_development_network.sh`
+3. Use service hostnames for cross-container communication
+4. Independent folders remain possible - can start any service first
 
 ## Troubleshooting
 - If the container starts but you cannot exec:

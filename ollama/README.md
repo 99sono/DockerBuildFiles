@@ -48,12 +48,42 @@ For production deployments:
 
 ## Shared Development Network
 
-This setup participates in a shared Docker network called `development-network` to enable communication with other development-related containers. This allows:
+This setup participates in a shared Docker network called `development-network` to enable communication with other development-related containers.
 
-- Dev containers to access Ollama APIs via `http://ollama:11434`
-- Future services to join the common development ecosystem
-- Separation of concerns while maintaining service interoperability
+### Network Architecture
 
-Other development containers can reach this Ollama instance using the service name `ollama` on the shared network.
+The setup uses Docker's **external network** approach to enable cross-compose communication:
 
-Note: Individual service folders remain independent, connected through this shared networking paradigm.
+- **Network Creation**: `commonScripts/create_development_network.sh` automatically creates/checks for the `development-network`
+- **External Reference**: Both docker-compose.yml files reference `development-network: {external: true}`
+- **Automatic Setup**: Startup scripts (`01_01_docker_compose_up.sh`) ensure the network exists before launching containers
+
+### Communication
+
+- **Dev containers** can access Ollama APIs via `http://ollama:11434`
+- **Future services** can join the common development ecosystem
+- **Service Discovery** works via container hostnames on the shared network
+
+### Technical Details
+
+- **Bypasses Project Prefixing**: Docker Compose normally prefixes networks with project names (e.g., `ollama_development-network`)
+- **External Networks**: Using `external: true` ensures all compose projects share the exact same network
+- **Symmetric Setup**: Either Ollama or Dev containers can be started first - both will create/check the shared network
+
+### Usage Pattern
+
+```bash
+# Start independently - both ensure network exists
+cd ollama && ./01_01_docker_compose_up.sh
+cd dev-image && ./02_start_dev.sh
+
+# Containers communicate via hostnames
+# From dev-environment: curl http://ollama:11434/api/tags
+```
+
+### For Future Service Folders
+
+New development services should:
+1. Reference `networks: development-network: {external: true}` in docker-compose.yml
+2. Call `../commonScripts/create_development_network.sh` in startup scripts
+3. Use service hostnames for cross-container communication
