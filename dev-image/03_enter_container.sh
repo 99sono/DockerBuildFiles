@@ -3,8 +3,11 @@
 
 set -e
 
-# Default values if .env not found
-CONTAINER_NAME=${CONTAINER_NAME:-dev-environment}
+# Load common environment
+source ./00_setup_env.sh || {
+    echo "❌ Could not load environment setup. Make sure 00_setup_env.sh exists."
+    exit 1
+}
 
 echo "=== Entering Development Container ==="
 echo "Container: ${CONTAINER_NAME}"
