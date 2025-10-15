@@ -1,7 +1,7 @@
 # Docker Compose Template — Dev Environment (Illustrative)
 
 Purpose
-This template demonstrates how one might run the final assembled development image produced by this layered build (typically from Layer 04). It is intentionally minimal and focused on the dev environment only, removing unrelated services (e.g., Redis, Postgres).
+This template demonstrates how one might run the final assembled development image produced by this layered build (typically from Layer 04). It is intentionally minimal and focused on the dev environment only, removing unrelated services (e.g., Redis, Postgres). This setup participates in the shared `development-network` to enable communication with other development-related services like Ollama.
 
 What this template is (and is not)
 - It is a starting point for consuming the final image outside of this repository’s build workflow.
@@ -99,7 +99,17 @@ Notes on layered structure
 - Layer 03: Coding agents (Gemini CLI integrated first; Qwen Code added thereafter)
 - Layer 04: Project stubs (final assembly image; recommended for use in this template)
 
-Troubleshooting
+## Shared Development Network
+
+This container participates in the shared `development-network` Docker network, enabling communication with other development-related services:
+
+- Connect to Ollama instance via `http://ollama:11434`
+- Access other development services using their service names
+- Maintain separation of concerns while enabling interoperability
+
+Future development containers can follow this pattern - each in their own folder but united through the common development network infrastructure.
+
+## Troubleshooting
 - If the container starts but you cannot exec:
   - Check `docker ps` for container status.
   - Review logs: `docker logs dev-environment`

@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Ensure shared development network exists
+echo "🔗 Ensuring shared development network exists..."
+./../commonScripts/create_development_network.sh
+
 # Start Docker Compose services
 docker-compose up -d
 

@@ -45,3 +45,15 @@ For production deployments:
 1. Generate a secure API key
 2. Enable authentication in Open-WebUI
 3. Restrict network access
+
+## Shared Development Network
+
+This setup participates in a shared Docker network called `development-network` to enable communication with other development-related containers. This allows:
+
+- Dev containers to access Ollama APIs via `http://ollama:11434`
+- Future services to join the common development ecosystem
+- Separation of concerns while maintaining service interoperability
+
+Other development containers can reach this Ollama instance using the service name `ollama` on the shared network.
+
+Note: Individual service folders remain independent, connected through this shared networking paradigm.

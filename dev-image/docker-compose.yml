@@ -46,6 +46,9 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
 
-    # Keep the container running using the inherited entrypoint from the image.
-    # You can override command if you need a different behavior:
-    # command: ["sleep", "infinity"]
+    networks:
+      - development-network
+
+networks:
+  development-network:
+    external: true

@@ -3,6 +3,10 @@
 
 set -e
 
+# Ensure shared development network exists
+echo "🔗 Ensuring shared development network exists..."
+./../commonScripts/create_development_network.sh
+
 # Check if .env file exists
 if [ ! -f .env ]; then
     echo "⚠️  .env file not found. Creating from .env.example..."

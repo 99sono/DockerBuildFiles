@@ -23,6 +23,8 @@ services:
           devices:
             - capabilities: [gpu]
     restart: no
+    networks:
+      - development-network
 
   # Open-WebUI service configuration
   open-webui:
@@ -38,7 +40,13 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: no
+    networks:
+      - development-network
 
 volumes:
   # ollama:
   open-webui:
+
+networks:
+  development-network:
+    external: true
