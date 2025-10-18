@@ -16,7 +16,8 @@ services:
     # Replace this with your final assembled image reference (built from Layer 04).
     # Example after building layer 04:
     #   development-level04-project-stubs:1.0.0
-    image: development-level04-project-stubs:${IMAGE_VERSION:-1.0.0}
+    # image: development-level04-project-stubs:${IMAGE_VERSION:-1.0.0}
+    image: 99sono/99sono-public-repo:${IMAGE_VERSION:-dev-environment-1.0.0-SNAPSHOT}
 
     container_name: dev-environment
     # Map SSH for remote access to the container if needed (inherited entrypoint runs sshd)

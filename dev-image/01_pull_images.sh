@@ -3,10 +3,8 @@
 
 set -e
 
-# Source environment variables
-if [ -f .env ]; then
-    export $(cat .env | xargs)
-fi
+# Setup environment (this will source .env properly)
+./00_setup_env.sh
 
 # pull docker images
 docker-compose pull
