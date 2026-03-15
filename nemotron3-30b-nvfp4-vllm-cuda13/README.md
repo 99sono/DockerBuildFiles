@@ -2,8 +2,8 @@
 Cline supports three backend types:
 
 - **Ollama** (local llama.cpp models)
-- **LM Studio** (local vLLM‑like server)
-- **OpenAI‑compatible API** (any model served via `/v1/chat/completions`)
+- **LM Studio** (local vLLM-like server)
+- **OpenAI-compatible API** (any model served via `/v1/chat/completions`)
 
 Your vLLM container exposes:
 
@@ -13,12 +13,12 @@ http://localhost:8000/v1/chat/completions
 
 This is exactly the interface Cline expects when you choose:
 
-**Provider: “OpenAI Compatible”**
+**Provider: "OpenAI Compatible"**
 
 ---
 
 ## What you configure inside Cline
-In Cline’s settings:
+In Cline's settings:
 
 ### 1. Provider  
 Choose: **OpenAI Compatible**
@@ -31,7 +31,7 @@ http://localhost:8000/v1
 ```
 
 ### 3. API Key  
-vLLM does **not** require a key, but Cline requires a non‑empty field.  
+vLLM does **not** require a key, but Cline requires a non-empty field.  
 You can enter anything, for example:
 
 ```
@@ -45,7 +45,7 @@ Run:
 curl http://localhost:8000/v1/models
 ```
 
-You’ll get something like:
+You'll get something like:
 
 ```
 {
@@ -55,7 +55,7 @@ You’ll get something like:
 }
 ```
 
-Use that `"id"` value in Cline’s “Model” field.
+Use that `"id"` value in Cline's "Model" field.
 
 ---
 
@@ -66,10 +66,10 @@ vLLM automatically exposes:
 - `/v1/completions`
 - `/v1/models`
 
-…using the same schema as OpenAI’s API.  
+...using the same schema as OpenAI's API.  
 Cline is built to talk to exactly this interface.
 
-So from Cline’s perspective, your Nemotron container *is* an OpenAI‑style LLM server.
+So from Cline's perspective, your Nemotron container *is* an OpenAI-style LLM server.
 
 ---
 
@@ -77,15 +77,15 @@ So from Cline’s perspective, your Nemotron container *is* an OpenAI‑style LL
 ### Strengths
 - Much faster than Ollama for coding tasks  
 - Supports long context windows  
-- Handles multi‑turn agentic workflows well  
-- Stable for large models like Nemotron‑30B  
+- Handles multi-turn agentic workflows well  
+- Stable for large models like Nemotron-30B  
 
 ### Limitations
-- No built‑in function calling unless the model supports it  
-- No automatic tool‑use unless the model is trained for it  
-- Cline’s “agentic” behavior depends heavily on the model’s reasoning quality  
+- No built-in function calling unless the model supports it  
+- No automatic tool-use unless the model is trained for it  
+- Cline's "agentic" behavior depends heavily on the model's reasoning quality  
 
-Nemotron‑30B FP4 is strong enough for coding assistance, but Qwen‑Coder or DeepSeek‑Coder models may feel more “agent‑like”.
+Nemotron-30B FP4 is strong enough for coding assistance, but Qwen-Coder or DeepSeek-Coder models may feel more "agent-like".
 
 ---
 
@@ -93,9 +93,9 @@ Nemotron‑30B FP4 is strong enough for coding assistance, but Qwen‑Coder or D
 - Container is running and reachable on `localhost:8000`
 - GPU is visible inside the container (`nvidia-smi` works)
 - `curl http://localhost:8000/v1/models` returns a model
-- Cline is set to “OpenAI Compatible”
+- Cline is set to "OpenAI Compatible"
 - Base URL is `http://localhost:8000/v1`
-- API key is any non‑empty string
+- API key is any non-empty string
 - Model name matches the ID returned by `/v1/models`
 
 Once these are set, Cline will connect immediately.

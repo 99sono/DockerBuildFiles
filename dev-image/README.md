@@ -4,7 +4,7 @@ Purpose
 This template demonstrates how one might run the final assembled development image produced by this layered build (typically from Layer 04). It is intentionally minimal and focused on the dev environment only, removing unrelated services (e.g., Redis, Postgres). This setup participates in the shared `development-network` to enable communication with other development-related services like Ollama via container hostnames.
 
 What this template is (and is not)
-- It is a starting point for consuming the final image outside of this repository’s build workflow.
+- It is a starting point for consuming the final image outside of this repository's build workflow.
 - It is not a full-stack application compose file.
 - It does not start additional services by default; add those only if your project needs them.
 
@@ -84,7 +84,7 @@ The template maps SSH port 22 in the container to 2222 on the host:
 ports:
   - "2222:22"
 ```
-This matches the stack’s inherited entrypoint behavior (sshd from the base layers). Adjust as needed.
+This matches the stack's inherited entrypoint behavior (sshd from the base layers). Adjust as needed.
 
 Volumes (optional)
 If you want your source code to live on the host and be available in the container, uncomment and modify:
@@ -137,7 +137,7 @@ When adding new development service folders:
   - Review logs: `docker logs dev-environment`
 - If coding agents fail to run due to missing keys:
   - Confirm the environment variables are correctly passed (docker compose config).
-  - Verify the agent CLI’s own documentation for additional setup needs.
+  - Verify the agent CLI's own documentation for additional setup needs.
 
 Documentation references
 - Gemini CLI: https://github.com/google-gemini/gemini-cli
