@@ -1,4 +1,4 @@
-# Nemotron Cascade 2 on RTX 5090 (Blackwell)
+# Nemotron-3-Nano-30B (Cascade 2) - Hardened for RTX 5090 (Blackwell)
 services:
   nemotron-cascade:
     image: vllm/vllm-openai:latest
@@ -9,7 +9,13 @@ services:
       - "8000:8000"
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface
-    ipc: host   
+    ipc: host
+    environment:
+      # --- BLACKWELL STABILITY OVERRIDES ---
+      - VLLM_USE_V1=0                             # Force stable V0 engine; V1 currently bugs out on 5090/WSL2
+      - VLLM_WORKER_MULTIPROC_METHOD=spawn        # Prevents the "Engine Core" handshake crash on new GPUs
+      - VLLM_USE_FLASHINFER_MOE_FP8=1             # Optimized kernels for Nemotron's hybrid architecture
+      - VLLM_FLASHINFER_MOE_BACKEND=throughput    # Prioritizes throughput for the 5090's high bandwidth
     deploy:
       resources:
         reservations:
@@ -17,30 +23,25 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]    
-    environment:
-      # Forcing V0 is mandatory for the 5090 right now to avoid the IPC/handshake crash
-      - VLLM_USE_V1=0 
-      # Fixes a common multiprocessing bug in WSL2 where the GPU and CPU lose sync
-      - VLLM_WORKER_MULTIPROC_METHOD=spawn 
     command: 
+      # Model is just too big:
+      # (EngineCore_DP0 pid=147) INFO 03-20 21:10:39 [default_loader.py:293] Loading weights took 18.43 seconds
+      # (EngineCore_DP0 pid=147) INFO 03-20 21:10:40 [gpu_model_runner.py:4364] Model loading took 58.91 GiB memory and 21.584911 seconds
+      # Using arguments directly (skipping 'serve' to avoid entrypoint conflicts)
       - "--model"
       - "nvidia/Nemotron-Cascade-2-30B-A3B"
       - "--trust-remote-code"
       - "--dtype"
       - "half"
-      # --- STABILITY TWEAKS FOR 5090 ---
-      # Lowering this to 0.70 ensures 10GB of VRAM is free. 
-      # If this works, we can try 0.85 later.
+      
+      # --- MEMORY MANAGEMENT ---
       - "--gpu-memory-utilization"
-      - "0.50" 
-      # Absolutely required to stop the "Profiling" crash on Blackwell
-      - "--enforce-eager"
-      # Limits the memory spike during the initial "warmup"
-      - "--max-model-len"
-      - "4096" 
-      # Moves the short-term memory to 8-bit to keep VRAM usage flat
+      - "0.75"             # Leaves 8GB VRAM for Windows/Driver; set to 0.50 if it still OOMs
+      - "--enforce-eager"  # Disables CUDA Graph capture to avoid the massive startup RAM spike
       - "--kv-cache-dtype"
-      - "fp8"
+      - "fp8"              # Essential for keeping context memory lean
+      - "--max-model-len"
+      - "8192"             # Starting context limit for stability; 5090 can handle more later
       
     networks:
       - development-network
