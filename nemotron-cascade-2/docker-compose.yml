@@ -9,9 +9,7 @@ services:
       - "8000:8000"
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface
-    ipc: host
-    environment:
-      - VLLM_USE_V1=0 # Forces the stable V0 engine to avoid 'Engine Core' handshake errors on Blackwell
+    ipc: host   
     deploy:
       resources:
         reservations:
@@ -19,37 +17,30 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]    
+    environment:
+      # Forcing V0 is mandatory for the 5090 right now to avoid the IPC/handshake crash
+      - VLLM_USE_V1=0 
+      # Fixes a common multiprocessing bug in WSL2 where the GPU and CPU lose sync
+      - VLLM_WORKER_MULTIPROC_METHOD=spawn 
     command: 
-      # --- vLLM CONFIGURATION DOCUMENTATION ---
-      # --model: Specified model from HF. 
       - "--model"
       - "nvidia/Nemotron-Cascade-2-30B-A3B"
-      
-      # --trust-remote-code: Required for Nemotron-Cascade's custom Mamba-hybrid layers.
       - "--trust-remote-code"
-      
-      # --dtype half: Forces FP16. Essential for MoE models on consumer cards to keep weights at ~30GB.
       - "--dtype"
       - "half"
-      
-      # --gpu-memory-utilization: 0.80 reserves 25.6GB of your 32GB VRAM. 
-      # Leaves 6.4GB for Windows/Driver overhead to prevent the WDDM "Black Screen" crash.
+      # --- STABILITY TWEAKS FOR 5090 ---
+      # Lowering this to 0.70 ensures 10GB of VRAM is free. 
+      # If this works, we can try 0.85 later.
       - "--gpu-memory-utilization"
-      - "0.80" 
-      
-      # --enforce-eager: Disables CUDA Graph pre-capture. 
-      # Prevents the massive 10GB+ memory spike during boot that freezes Windows.
-      - "--enforce-eager" 
-      
-      # --kv-cache-dtype fp8: Compresses context memory. 
-      # Allows longer conversations without hitting the 32GB VRAM ceiling.
+      - "0.50" 
+      # Absolutely required to stop the "Profiling" crash on Blackwell
+      - "--enforce-eager"
+      # Limits the memory spike during the initial "warmup"
+      - "--max-model-len"
+      - "4096" 
+      # Moves the short-term memory to 8-bit to keep VRAM usage flat
       - "--kv-cache-dtype"
       - "fp8"
-      
-      # --max-model-len: Caps context at 8k tokens. 
-      # Keeps the memory footprint predictable during your first successful run.
-      - "--max-model-len"
-      - "8192"  
       
     networks:
       - development-network
