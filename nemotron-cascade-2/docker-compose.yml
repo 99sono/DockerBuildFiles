@@ -3,11 +3,12 @@ services:
   nemotron-cascade:
     image: vllm/vllm-openai:latest
     container_name: nemotron-cascade-2
+    # This sets the internal hostname so the container knows itself as nemotron-cascade-2
+    hostname: nemotron-cascade-2
     platform: linux/amd64
     ports:
       - "8000:8000"
     volumes:
-      # Maps your WSL2 home cache to the container to avoid re-downloading
       - ~/.cache/huggingface:/root/.cache/huggingface
     ipc: host
     deploy:
@@ -18,12 +19,19 @@ services:
               count: all
               capabilities: [gpu]
     restart: unless-stopped
-    command: >
-      --model nvidia/Nemotron-Cascade-2-30B-A3B
-      --trust-remote-code
-      --dtype fp8
-      --gpu-memory-utilization 0.90
-      --max-model-len 4096
+    # Using the list format for the entrypoint/command is safer for newest vLLM versions
+    command: 
+      - "--model"
+      - "nvidia/Nemotron-Cascade-2-30B-A3B"
+      - "--trust-remote-code"
+      - "--dtype"
+      - "half"
+      - "--kv-cache-dtype"
+      - "fp8"
+      - "--gpu-memory-utilization"
+      - "0.90"
+      - "--max-model-len"
+      - "4096"
     networks:
       - development-network
 
