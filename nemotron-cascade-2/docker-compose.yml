@@ -1,28 +1,66 @@
+# Nemotron-Cascade-2-30B-A3B-NVFP4 (TurboQuant KV cache)
+# Optimized for RTX 5090 (Blackwell) – April 2026
 services:
-  vllm:
+  nemotron-cascade:
     image: vllm/vllm-openai:latest
-    container_name: nemotron-cascade-2-vllm
-    # Use GPU for inference
+    container_name: nemotron-cascade-2-nvfp4
+    hostname: nemotron-cascade-2-nvfp4
+    platform: linux/amd64
+    ports:
+      - "8000:8000"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    ipc: host
+    environment:
+      # Blackwell stability overrides (required for reliable startup on 5090/WSL2)
+      - VLLM_USE_V1=0
+      - VLLM_WORKER_MULTIPROC_METHOD=spawn
+      - VLLM_USE_FLASHINFER_MOE_FP8=1
+      - VLLM_FLASHINFER_MOE_BACKEND=throughput
+
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              count: all
               capabilities: [gpu]
-    ports:
-      - "8000:8000"
-    environment:
-      - HF_MODEL=chankhavu/Nemotron-Cascade-2-30B-A3B-NVFP4
-    # Important: --kv-cache-dtype turbo ensures TurboQuant is used for the KV cache
-    # --max-model-len sets the maximum context length (default: 32768)
-    # To test larger contexts like 256k, change --max-model-len to 262144
-    # Note: 256k context may exceed memory on some GPUs, test cautiously.
-    command: >
-      --model $HF_MODEL
-      --kv-cache-dtype turbo
-      --max-model-len 32768
-      --trust-remote-code
-    volumes:
-      - ~/.cache/huggingface:/root/.cache/huggingface
-    shm_size: 10g
+
+    command:
+      # ── MODEL SELECTION ─────────────────────────────────────────────────────
+      - "--model"
+      - "chankhavu/Nemotron-Cascade-2-30B-A3B-NVFP4"          # NVFP4 weights (native FP4 on Blackwell)
+
+      # ── REQUIRED HYBRID ARCHITECTURE FLAGS (from model card) ───────────────
+      - "--mamba_ssm_cache_dtype"
+      - "float32"                                             # Mamba SSM state must stay float32
+      - "--trust-remote-code"
+      - "--enable-auto-tool-choice"
+      - "--tool-call-parser"
+      - "qwen3_coder"
+      - "--reasoning-parser"
+      - "nemotron_v3"
+
+      # ── KV CACHE QUANTIZATION (TurboQuant – default) ───────────────────────
+      - "--kv-cache-dtype"
+      - "turboquant_k8v4"                                     # Default: mild TurboQuant (8-bit keys + 4-bit values)
+      # Alternatives (uncomment only one):
+      # - "turboquant_4bit_nc"                                # 4-bit keys + 4-bit values + norm correction
+      # - "turboquant_k3v4_nc"                                # 3-bit keys + 4-bit values + norm correction (more aggressive)
+      # - "turboquant_3bit_nc"                                # 3-bit keys + 3-bit values + norm correction (maximum compression)
+
+      # ── MEMORY & CONTEXT MANAGEMENT ────────────────────────────────────────
+      - "--dtype"
+      - "auto"                                                # Auto-detect NVFP4 weights
+      - "--gpu-memory-utilization"
+      - "0.75"                                                # Leaves ~8 GB headroom for host/driver on 5090 (32 GB card)
+      - "--enforce-eager"                                     # Critical on Blackwell to prevent CUDA Graph startup OOM
+      - "--max-model-len"
+      - "262144"                                              # Official maximum supported context (see tuning notes below)
+
+    networks:
+      - development-network
+
+networks:
+  development-network:
+    external: true
