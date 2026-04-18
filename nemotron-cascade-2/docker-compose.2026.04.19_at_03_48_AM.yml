@@ -1,0 +1,71 @@
+# Nemotron-Cascade-2-30B-A3B-NVFP4 + TriAttention
+# Optimized for RTX 5090 (Blackwell) + WSL2 – April 2026
+
+services:
+  nemotron-cascade:
+    image: vllm-triattention:1.0.0
+    container_name: nemotron-cascade-2-triattn
+    hostname: nemotron-cascade-2-triattn
+    platform: linux/amd64
+    ports:
+      - "8000:8000"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - ~/.cache/triattention:/root/.cache/triattention
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    environment:
+      # --- PLUGIN & ENGINE CORE ---
+      - VLLM_PLUGINS=triattention             # Required to load the .so/python entrypoints
+      - VLLM_WORKER_MULTIPROC_METHOD=spawn    # Essential for Blackwell (RTX 5090) + WSL2 stability
+      - VLLM_LOGGING_LEVEL=DEBUG
+
+      # --- TRIATTENTION CONFIGURATION ---
+      - TRIATTN_ENABLE=true
+      - TRIATTN_STATS_DIR=/root/.cache/triattention/stats
+      - TRIATTN_RUNTIME_KV_BUDGET=4096        # KV tokens to keep at full precision before compression
+      - TRIATTN_RUNTIME_PROTECT_PREFILL=true  # Prevents compression during the initial prompt pass
+      - TRIATTN_VERBOSE=1
+
+      # --- THE "SECRET SAUCE" FOR V1 ENGINE ---
+      # This forces vLLM to pass these variables down to the spawned GPU worker processes.
+      # Without this, the worker crashes because it can't see TRIATTN_STATS_DIR.
+      - VLLM_KEEP_ENV_VARS=TRIATTN_ENABLE,TRIATTN_STATS_DIR,TRIATTN_RUNTIME_KV_BUDGET,TRIATTN_RUNTIME_PROTECT_PREFILL,TRIATTN_VERBOSE
+
+      # --- LONG CONTEXT SUPPORT ---
+      - VLLM_ALLOW_LONG_MAX_MODEL_LEN=1
+    command:
+      - "chankhavu/Nemotron-Cascade-2-30B-A3B-NVFP4"
+      
+      # --- BACKEND SELECTION ---
+      - "--attention-backend"
+      - "TRITON_ATTN"                         # Required to allow TriAttention to hook kernels
+      
+      # --- MODEL ARCHITECTURE FLAGS ---
+      - "--mamba-ssm-cache-dtype"
+      - "float32"                             # Crucial for Nemotron-Cascade hybrid stability
+      - "--trust-remote-code"
+      - "--served-model-name"
+      - "chankhavu/Nemotron-Cascade-2-30B-A3B-NVFP4"
+      
+      # --- PERFORMANCE & MEMORY ---
+      - "--no-enable-prefix-caching"          # TriAttention is incompatible with vLLM prefix caching
+      - "--max-num-batched-tokens"
+      - "1024"
+      - "--enforce-eager"                     # Recommended for initial plugin debugging
+      - "--max-model-len"
+      - "262144"                              # The target context window
+      - "--gpu-memory-utilization"
+      - "0.85"
+
+    networks:
+      - development-network
+
+networks:
+  development-network:
+    external: true

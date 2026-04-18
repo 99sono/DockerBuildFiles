@@ -1,3 +1,19 @@
+I see exactly why the "Brute Force" wrapper is failing. It's a clash between Docker Compose's string parsing and how the `vllm/vllm-openai` base image expects commands.
+
+The official `vllm/vllm-openai` Dockerfile uses `ENTRYPOINT ["python3", "-m", "vllm.entrypoints.openai.api_server"]`. When you provide a `command:` in Docker Compose, it *appends* it to that entrypoint. 
+
+So, Docker was essentially executing this:
+`python3 -m vllm.entrypoints.openai.api_server /bin/sh -c 'export ...'`
+
+vLLM interpreted `/bin/sh` as the model name, and `-c` as the `--compilation-config` argument, which caused the JSON parsing error!
+
+### The True Fix: Overriding the Entrypoint
+
+We need to override the `ENTRYPOINT` to use `/bin/sh` instead of Python, and then pass our script as the `command`.
+
+Here is the fully corrected, drop-in replacement for your `docker-compose.yml`:
+
+```yaml
 # Nemotron-Cascade-2-30B-A3B-NVFP4 + TriAttention
 # Optimized for RTX 5090 (Blackwell) + WSL2 – April 2026
 
@@ -59,3 +75,9 @@ services:
 networks:
   development-network:
     external: true
+```
+
+### Why this will work
+By adding `entrypoint: ["/bin/sh", "-c"]`, Docker will now properly execute the shell string, export the variables to the OS level inside the container, and *then* launch `vllm`. 
+
+This guarantees the `TRIATTN_STATS_DIR` variable is hardcoded into the process environment before vLLM's V1 engine even wakes up, permanently solving the `stats_path_not_set` crash.
