@@ -14,6 +14,7 @@ services:
       - ~/.cache/triattention:/root/.cache/triattention
     ipc: host
 
+    # GPU reservation - using deploy block
     deploy:
       resources:
         reservations:
@@ -21,30 +22,31 @@ services:
             - capabilities: [gpu]
 
     environment:
-      # Blackwell / WSL2 stability
+      # Blackwell / WSL2 stability overrides
       - VLLM_USE_V1=0
       - VLLM_WORKER_MULTIPROC_METHOD=spawn
       - VLLM_USE_FLASHINFER_MOE_FP8=1
       - VLLM_FLASHINFER_MOE_BACKEND=throughput
 
-      # ── TriAttention (following official repo recommendations) ─────────────
-      - TRIATTN_ENABLE=true
-      - TRIATTN_RUNTIME_KV_BUDGET=4096                  # Start moderate; we'll increase for chat
+      # ── TriAttention Configuration (following official repo) ───────────────
+      - TRIATTN_ENABLE=true                     # Master switch
+      - TRIATTN_RUNTIME_KV_BUDGET=4096          # Moderate starting value (try 2048–8192 later)
       - TRIATTN_RUNTIME_PROTECT_PREFILL=true
       - TRIATTN_VERBOSE=1
 
       # Long context support
       - VLLM_ALLOW_LONG_MAX_MODEL_LEN=1
 
-      # Logging — keep DEBUG until we confirm activation
+      # Logging (DEBUG until TriAttention is confirmed working)
       - VLLM_LOGGING_LEVEL=DEBUG
 
     command:
+      # Positional model argument
       - "chankhavu/Nemotron-Cascade-2-30B-A3B-NVFP4"
 
       # ── REQUIRED HYBRID ARCHITECTURE FLAGS ───────────────
       - "--mamba-ssm-cache-dtype"
-      - "float32"
+      - "float32"                                             # Mamba SSM state must stay float32
       - "--trust-remote-code"
       - "--enable-auto-tool-choice"
       - "--tool-call-parser"
@@ -52,18 +54,24 @@ services:
       - "--reasoning-parser"
       - "nemotron_v3"
 
-      # ── CRITICAL TRIATTENTION FLAGS (from repo) ───────────────────────
-      - "--no-enable-prefix-caching"                    # Required by TriAttention
-      - "--max-num-batched-tokens"
-      - "1024"                                          # Required to avoid OOM during prefill
+      # ← FIX FOR 404 "model does not exist"
+      - "--served-model-name"
+      - "chankhavu/Nemotron-Cascade-2-30B-A3B-NVFP4"
 
-      # ── KV CACHE & MEMORY ─────────────────────────────────
+      # ── CRITICAL TRIATTENTION FLAGS ───────────────────────
+      - "--no-enable-prefix-caching"                          # Required by TriAttention
+      - "--max-num-batched-tokens"
+      - "1024"                                                # Helps stability on hybrid models
+
+      # ── KV CACHE QUANTIZATION ─────────────────────────────
       - "--kv-cache-dtype"
       - "fp8"
+
+      # ── MEMORY & CONTEXT MANAGEMENT ───────────────────────
       - "--dtype"
       - "auto"
       - "--gpu-memory-utilization"
-      - "0.85"
+      - "0.85"                                                # Safe increase thanks to TriAttention
       - "--enforce-eager"
       - "--max-model-len"
       - "262144"
