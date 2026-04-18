@@ -1,18 +1,17 @@
-# Nemotron-Cascade-2-30B-A3B-NVFP4 + TriAttention
-# Optimized for RTX 5090 (Blackwell) + WSL2 – April 2026
+# Nemotron-Cascade-2-30B-A3B-NVFP4 (Optimized Speed Path)
+# Hardware: RTX 5090 (Blackwell) + WSL2
+# Strategy: Native Blackwell FP4 execution with high batching
 
 services:
   nemotron-cascade:
-    image: vllm-triattention:1.0.0
-    container_name: nemotron-cascade-2-triattn
-    hostname: nemotron-cascade-2-triattn
+    image: vllm/vllm-openai:latest
+    container_name: nemotron-cascade-2-nvfp4
+    hostname: nemotron-cascade-2-nvfp4
     platform: linux/amd64
     ports:
       - "8000:8000"
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface
-      - ~/.cache/triattention:/root/.cache/triattention
-      - ./entrypoint.sh:/entrypoint.sh  # MOUNT THE WRAPPER
     ipc: host
 
     deploy:
@@ -21,29 +20,35 @@ services:
           devices:
             - capabilities: [gpu]
 
-    # --- THE CRITICAL FIX ---
-    # We must override the image's default Python entrypoint so we can use a shell script.
-    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    environment:
+      # Use 'spawn' for stability on Blackwell cards in WSL2
+      - VLLM_WORKER_MULTIPROC_METHOD=spawn
+      # Enable high-performance MoE kernels for FP8/FP4
+      - VLLM_USE_FLASHINFER_MOE_FP8=1
+      - VLLM_FLASHINFER_MOE_BACKEND=throughput
 
-    # The entrypoint.sh script exports variables and then execs the Python process.
     command:
-      - "--model"
       - "chankhavu/Nemotron-Cascade-2-30B-A3B-NVFP4"
       - "--served-model-name"
       - "chankhavu/Nemotron-Cascade-2-30B-A3B-NVFP4"
-      - "--attention-backend"
-      - "TRITON_ATTN"
+      - "--trust-remote-code"
+      - "--quantization"
+      - "modelopt_fp4"
+      - "--kv-cache-dtype"
+      - "fp8_e4m3"
+      - "--gpu-memory-utilization"
+      - "0.75"
+      - "--max-model-len"
+      - "131072"
+      - "--max-num-batched-tokens"
+      - "32768"
       - "--mamba-ssm-cache-dtype"
       - "float32"
-      - "--trust-remote-code"
-      - "--no-enable-prefix-caching"
-      - "--max-num-batched-tokens"
-      - "1024"
       - "--enforce-eager"
-      - "--max-model-len"
-      - "262144"
-      - "--gpu-memory-utilization"
-      - "0.85"
+      - "--tool-call-parser"
+      - "qwen3_coder"
+      - "--reasoning-parser"
+      - "nemotron_v3"
 
     networks:
       - development-network
