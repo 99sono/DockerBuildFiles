@@ -12,6 +12,7 @@ services:
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface
       - ~/.cache/triattention:/root/.cache/triattention
+      - ./entrypoint.sh:/entrypoint.sh  # MOUNT THE WRAPPER
     ipc: host
 
     deploy:
@@ -20,38 +21,29 @@ services:
           devices:
             - capabilities: [gpu]
 
-    environment:
-      # --- PLUGIN & ENGINE CORE ---
-      - VLLM_PLUGINS=triattention
-      - VLLM_WORKER_MULTIPROC_METHOD=spawn
-      - VLLM_LOGGING_LEVEL=DEBUG
-
-      # --- LONG CONTEXT SUPPORT ---
-      - VLLM_ALLOW_LONG_MAX_MODEL_LEN=1
-
     # --- THE CRITICAL FIX ---
     # We must override the image's default Python entrypoint so we can use a shell script.
-    entrypoint: ["/bin/sh", "-c"]
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
 
-    # Now the command is evaluated by the shell, forcing the variables into the environment
-    # before starting the Python process, bypassing vLLM's variable stripping.
-    command: >
-      "export TRIATTN_STATS_DIR=/root/.cache/triattention/stats &&
-      export TRIATTN_ENABLE=true &&
-      export TRIATTN_RUNTIME_KV_BUDGET=4096 &&
-      export TRIATTN_RUNTIME_PROTECT_PREFILL=true &&
-      export TRIATTN_VERBOSE=1 &&
-      python3 -m vllm.entrypoints.openai.api_server
-      --model chankhavu/Nemotron-Cascade-2-30B-A3B-NVFP4
-      --served-model-name chankhavu/Nemotron-Cascade-2-30B-A3B-NVFP4
-      --attention-backend TRITON_ATTN
-      --mamba-ssm-cache-dtype float32
-      --trust-remote-code
-      --no-enable-prefix-caching
-      --max-num-batched-tokens 1024
-      --enforce-eager
-      --max-model-len 262144
-      --gpu-memory-utilization 0.85"
+    # The entrypoint.sh script exports variables and then execs the Python process.
+    command:
+      - "--model"
+      - "chankhavu/Nemotron-Cascade-2-30B-A3B-NVFP4"
+      - "--served-model-name"
+      - "chankhavu/Nemotron-Cascade-2-30B-A3B-NVFP4"
+      - "--attention-backend"
+      - "TRITON_ATTN"
+      - "--mamba-ssm-cache-dtype"
+      - "float32"
+      - "--trust-remote-code"
+      - "--no-enable-prefix-caching"
+      - "--max-num-batched-tokens"
+      - "1024"
+      - "--enforce-eager"
+      - "--max-model-len"
+      - "262144"
+      - "--gpu-memory-utilization"
+      - "0.85"
 
     networks:
       - development-network
