@@ -4,38 +4,30 @@ This directory contains a configured environment to run the [Nemotron-Cascade-2-
 
 ## Overview
 
-This setup leverages vLLM's ability to run high-performance inference. It utilizes **TurboQuant** for the KV cache to optimize memory usage and performance.
+This setup leverages vLLM's ability to run high-performance inference on hybrid Attention/SSM architectures. The model uses **NVFP4 (NVIDIA Floating Point 4)** quantization, which is remarkably memory-efficient for its size (30B parameters).
 
 ## Configuration
 
 The main configuration is located in `docker-compose.yml`.
 
-### Docker Compose Options
+### Architecture & Memory Management
 
-- `HF_MODEL`: The HuggingFace model path.
-- `--kv-cache-dtype turbo`: Enables TurboQuant quantization for the KV cache. This is recommended for balancing memory footprint and performance.
-- `--max-model-len`: Sets the maximum sequence length (context window). The default is `32768`.
+- **NVFP4 Support**: Native support for the model's 4-bit weights.
+- **Hybrid SSM/Attention**: Nemotron-Cascade-2 uses a mix of Attention and Mamba layers. The SSM states are kept in `float32` for stability.
+- **Context Management**: `--max-model-len` is currently set to `131072` (128k) to balance deep context capacity with the RTX 5090's VRAM limits.
 
-### KV Cache Sizing Strategies
+### Current Implementation Status
 
-The KV cache size is determined by the `max-model-len` parameter.
+While advanced KV-cache compression techniques like **TurboQuant** and **TriAttention** were explored, they are currently disabled to maintain stability with the latest vLLM image and Blackwell/WSL2 environment. The current setup relies on the efficiency of the NVFP4 architecture.
 
-- **Small (Default)**: `32768` (32k). Generally fits on most modern high-end GPUs.
-- **Large/Experimental**: `262144` (256k).
-  - *Warning*: Setting a 256k context length requires substantial GPU VRAM. It may cause Out-Of-Memory (OOM) errors on consumer-grade GPUs, including the RTX 5090, depending on hardware constraints and quantization settings.
+## Deployment
 
-## Official vLLM Command
+The environment is managed via Docker Compose. The configuration includes a custom `entrypoint.sh` to ensure stability on Blackwell/WSL2 systems.
 
-The container executes the following command internally:
-
-```bash
-python3 -m vllm.entrypoints.openai.api_server \
-  --model chankhavu/Nemotron-Cascade-2-30B-A3B-NVFP4 \
-  --kv-cache-dtype turbo \
-  --max-model-len 32768 \
-  --trust-remote-code
-```
+### Running the model:
+1. Ensure the `development-network` exists.
+2. Run `./01_docker_compose_up.sh`.
 
 ## Testing
 
-Use the provided `04_test_vllm_curl.sh` script to test the model. You can modify `test/test_file_01_prompt.md` to change your input prompts and observe performance under different context lengths.
+Use the provided `04_test_vllm_curl.py` script to test the model. You can modify the prompts in the `test/` directory to observe performance under different context lengths.
