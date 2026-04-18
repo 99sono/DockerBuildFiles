@@ -1,0 +1,70 @@
+# Nemotron-Cascade-2-30B-A3B-NVFP4 (FP8 KV cache with TurboQuant placeholders)
+# Optimized for RTX 5090 (Blackwell) + WSL2 – April 2026
+# Using deploy.resources style (as requested - works well with Ollama on your setup)
+
+services:
+  nemotron-cascade:
+    image: vllm/vllm-openai:latest
+    container_name: nemotron-cascade-2-nvfp4
+    hostname: nemotron-cascade-2-nvfp4
+    platform: linux/amd64
+    ports:
+      - "8000:8000"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    ipc: host
+
+    # GPU reservation - using deploy block (your preferred style)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]               # Requests all available GPUs
+
+    environment:
+      # Blackwell stability overrides
+      - VLLM_USE_V1=0
+      - VLLM_WORKER_MULTIPROC_METHOD=spawn
+      - VLLM_USE_FLASHINFER_MOE_FP8=1
+      - VLLM_FLASHINFER_MOE_BACKEND=throughput
+
+    command:
+      # Positional model argument (required in recent vLLM versions)
+      - "chankhavu/Nemotron-Cascade-2-30B-A3B-NVFP4"
+
+      # ── REQUIRED HYBRID ARCHITECTURE FLAGS (from model card) ───────────────
+      - "--mamba-ssm-cache-dtype"
+      - "float32"                                             # Mamba SSM state must stay float32
+      - "--trust-remote-code"
+      - "--enable-auto-tool-choice"
+      - "--tool-call-parser"
+      - "qwen3_coder"
+      - "--reasoning-parser"
+      - "nemotron_v3"
+
+      # ── KV CACHE QUANTIZATION ───────────────────────────────────────────────
+      - "--kv-cache-dtype"
+      - "fp8"                                                 # Current stable & reliable option
+
+      # TurboQuant alternatives (commented out for now - will be available soon in latest image)
+      # Alternatives (uncomment only one when TurboQuant lands in vllm/vllm-openai:latest):
+      # - "turboquant_k8v4"                                   # Mildest: 8-bit keys + 4-bit values
+      # - "turboquant_4bit_nc"                                # 4-bit keys + 4-bit values + norm correction
+      # - "turboquant_k3v4_nc"                                # 3-bit keys + 4-bit values + norm correction (more aggressive)
+      # - "turboquant_3bit_nc"                                # 3-bit keys + 3-bit values + norm correction (maximum compression)
+
+      # ── MEMORY & CONTEXT MANAGEMENT ────────────────────────────────────────
+      - "--dtype"
+      - "auto"                                                # Auto-detect NVFP4 weights
+      - "--gpu-memory-utilization"
+      - "0.75"                                                # Leaves ~8 GB headroom for host/driver on 32 GB 5090
+      - "--enforce-eager"                                     # Critical on Blackwell/WSL2 to avoid CUDA Graph spikes
+      - "--max-model-len"
+      - "131072"                                              # Start conservative (128k). Increase to 262144 once stable
+
+    networks:
+      - development-network
+
+networks:
+  development-network:
+    external: true
