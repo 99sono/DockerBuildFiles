@@ -21,26 +21,28 @@ services:
             - capabilities: [gpu]
 
     environment:
+      # Blackwell / WSL2 stability
       - VLLM_USE_V1=0
       - VLLM_WORKER_MULTIPROC_METHOD=spawn
       - VLLM_USE_FLASHINFER_MOE_FP8=1
       - VLLM_FLASHINFER_MOE_BACKEND=throughput
 
-      # TriAttention
-      - TRIATTN_RUNTIME_KV_BUDGET=6144
+      # ── TriAttention (following official repo recommendations) ─────────────
+      - TRIATTN_ENABLE=true
+      - TRIATTN_RUNTIME_KV_BUDGET=4096                  # Start moderate; we'll increase for chat
       - TRIATTN_RUNTIME_PROTECT_PREFILL=true
-      - TRIATTN_VERBOSE=1                     # ← Helps see if plugin loaded
+      - TRIATTN_VERBOSE=1
 
-      # Long context override
+      # Long context support
       - VLLM_ALLOW_LONG_MAX_MODEL_LEN=1
 
-      # Logging
-      - VLLM_LOGGING_LEVEL=INFO
+      # Logging — keep DEBUG until we confirm activation
+      - VLLM_LOGGING_LEVEL=DEBUG
 
     command:
       - "chankhavu/Nemotron-Cascade-2-30B-A3B-NVFP4"
 
-      # Hybrid flags
+      # ── REQUIRED HYBRID ARCHITECTURE FLAGS ───────────────
       - "--mamba-ssm-cache-dtype"
       - "float32"
       - "--trust-remote-code"
@@ -50,12 +52,12 @@ services:
       - "--reasoning-parser"
       - "nemotron_v3"
 
-      # TriAttention required flags
-      - "--no-enable-prefix-caching"
+      # ── CRITICAL TRIATTENTION FLAGS (from repo) ───────────────────────
+      - "--no-enable-prefix-caching"                    # Required by TriAttention
       - "--max-num-batched-tokens"
-      - "1024"
+      - "1024"                                          # Required to avoid OOM during prefill
 
-      # KV & Memory
+      # ── KV CACHE & MEMORY ─────────────────────────────────
       - "--kv-cache-dtype"
       - "fp8"
       - "--dtype"
