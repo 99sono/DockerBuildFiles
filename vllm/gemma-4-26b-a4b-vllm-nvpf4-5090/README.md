@@ -47,7 +47,7 @@ Run the scripts in sequence for setup and orchestration:
 - `./00_d_pre_download_model.sh`: Downloads weights to global cache.
 
 ### Server Orchestration
-- `./01_a_up_normal.sh`: Starts the baseline (96K) configuration.
+- `./01_a_up_normal.sh`: Starts the baseline (64K) configuration.
 - `./01_b_up_turboquant.sh`: Starts the TurboQuant (~200K) configuration.
 - `./01_c_up_eagle3.sh`: Starts the EAGLE-3 speculative decoding configuration.
 - `./02_a_down_normal.sh`: Stops the normal server.
