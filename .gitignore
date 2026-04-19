@@ -15,3 +15,5 @@ dev-image/.vscode-server/extensionsCacheqwen3-6-moe-35b-a3b-vllm-nvpf4-5090/hf-c
 qwen3-6-moe-35b-a3b-vllm-nvpf4-5090/hf-cache/
 qwen3-6-moe-35b-a3b-vllm-nvpf4-5090/hf-cache/
 dev-image/.vscode-server/extensionsCache/
+
+.hf-cache
