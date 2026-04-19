@@ -36,7 +36,7 @@ services:
       - "--gpu-memory-utilization"
       - "0.90"
       - "--max-model-len"
-      - "98304"
+      - "65536"
       - "--kv-cache-dtype"
       - "fp8_e4m3"
       - "--quantization"
