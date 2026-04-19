@@ -36,7 +36,7 @@ services:
       - "--gpu-memory-utilization"
       - "0.80" # line in the sand the OS must continue working
       - "--max-model-len"
-      - "32768" # Try to find the sweet spot for the KV cache
+      - "16384" # Try to find the sweet spot for the KV cache
       - "--kv-cache-dtype"
       - "fp8_e4m3"
       - "--quantization"
