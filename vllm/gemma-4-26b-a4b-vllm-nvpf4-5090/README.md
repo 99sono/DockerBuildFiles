@@ -1,15 +1,17 @@
-# Gemma-4-26B NVFP4 - VRAM Recovery Setup (RTX 5090)
+# Gemma 4 26B-A4B - RTX 5090 High-Context Setup
 
-This setup represents a strategic shift from the 35B parameter "Blue Whale" models to a more balanced 26B architecture. By optimizing the parameter footprint, we reclaim over 5GB of VRAM, allowing for a massive context window within a stable 80% VRAM budget.
+This setup is optimized for the **RTX 5090 (32GB VRAM)** using the stable **vLLM v0.19.0+** engine. It focuses on maximizing context window capacity by leveraging the efficiency of the Gemma 4 26B MoE architecture.
 
-## The Strategy: "VRAM Recovery"
+## The VRAM Recovery Strategy
 - **The Problem:** 35B models (like Qwen 3.6) at NVFP4 quantization consume ~25.7GB of "static tax" (weights + kernels), leaving almost zero room for context at an 80% utilization limit.
-- **The Solution:** By moving to the **Gemma-4-26B** class, the static footprint drops to ~17GB. This "reclaimed" 8GB is converted entirely into KV cache.
-- **The Result:** We achieve a full **128K context window** while strictly respecting the "Line in the Sand" (80% utilization), leaving 20% (6.4GB) free for the host OS and WSL2.
+- **The Recovery:** By switching to the **Gemma-4-26B** class, we reduce the 'Static Tax' by approximately **9GB**. 
+- **The Result:** This reclaimed VRAM allows us to support a massive **96K context window (98,304 tokens)** while strictly respecting the "Line in the Sand" (80% utilization), leaving 20% (6.4GB) free for the host OS and WSL2.
 
-## Hardware Optimization: Blackwell SM 12.0
-- **Native FP4 Execution:** This setup uses the `NVFP4` weights + activations via Red Hat AI's optimized checkpoint.
-- **FlashInfer/CUTLASS Path:** We leverage `--moe-backend flashinfer_cutlass`, which is the high-speed path designed specifically for Blackwell Tensor Cores. Expect performance in the 250+ tokens/sec range.
+## Stable Engine: vLLM v0.19.0
+We have moved away from `nightly` builds to the stable `latest` release. This version includes:
+- **Native Gemma 4 Support:** Expert-routing and `p-RoPE` optimizations.
+- **Blackwell Stability:** Stable kernels for SM 12.0 (RTX 5090).
+- **Predictable Memory:** Improved buffer management compared to experimental builds.
 
 ## Quick Start
 1. **Prepare Host Environment:**
@@ -29,7 +31,7 @@ This setup represents a strategic shift from the 35B parameter "Blue Whale" mode
    ```
 
 ## Testing
-Verify the 128K context capacity and response quality:
+Verify the 96K context capacity and response quality:
 ```bash
 conda activate testVllmGemma
 python 04_test_vllm_curl.py
