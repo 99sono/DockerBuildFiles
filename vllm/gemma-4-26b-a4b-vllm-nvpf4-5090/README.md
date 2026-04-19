@@ -21,6 +21,13 @@ This setup is optimized for the **RTX 5090 (32GB VRAM)** using **vLLM nightly**.
 - **Use case:** Research and long-context processing (Needle-in-a-Haystack, deep reasoning).
 - **Warning:** TurboQuant is experimental in nightly builds. Monitor logs for errors related to Gemma-4's heterogeneous head dimensions.
 
+### 3. EAGLE-3 Speculative Decoding (High Speed)
+- **Speculator:** `RedHatAI/gemma-4-26B-A4B-it-speculator.eagle3` (0.9B parameters).
+- **Speed:** Expected 2-3× increase in generation speed.
+- **Context Window:** 96K tokens.
+- **Utilization:** 0.82 (Reduced to accommodate speculator weights and draft KV cache).
+- **Use case:** Maximum performance inference for long-form generation.
+
 ## Usage Scripts
 
 Run the scripts in sequence for setup and orchestration:
@@ -34,8 +41,10 @@ Run the scripts in sequence for setup and orchestration:
 ### Server Orchestration
 - `./01_a_up_normal.sh`: Starts the baseline (96K) configuration.
 - `./01_b_up_turboquant.sh`: Starts the TurboQuant (~200K) configuration.
+- `./01_c_up_eagle3.sh`: Starts the EAGLE-3 speculative decoding configuration.
 - `./02_a_down_normal.sh`: Stops the normal server.
 - `./02_b_down_turboquant.sh`: Stops the TurboQuant server.
+- `./02_c_down_eagle3.sh`: Stops the EAGLE-3 server.
 - `./05_docker_logs.sh`: Monitor the active container's logs.
 
 ### Testing
