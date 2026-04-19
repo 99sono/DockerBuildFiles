@@ -1,6 +1,6 @@
 services:
   qwen3-6-moe-nvfp4:
-    image: vllm/vllm-openai:latest
+    image: vllm/vllm-openai:nightly
     container_name: qwen3-6-moe-35b-a3b-nvfp4
     hostname: qwen3-6-moe-35b-a3b-nvfp4
     runtime: nvidia
