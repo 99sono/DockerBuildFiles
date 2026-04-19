@@ -1,0 +1,52 @@
+services:
+  gemma4-26b-nvfp4:
+    image: vllm/vllm-openai:nightly
+    container_name: gemma-4-26b-it-nvfp4
+    hostname: gemma-4-26b-it-nvfp4
+    runtime: nvidia
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - /dev/shm:/dev/shm
+    shm_size: "32g"
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - HF_HUB_ENABLE_HF_TRANSFER=1
+      - VLLM_WORKER_MULTIPROC_METHOD=spawn
+    command:
+      - "RedHatAI/gemma-4-26B-A4B-it-NVFP4"
+      - "--served-model-name"
+      - "gemma-4-26b-it-nvfp4"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+      - "--gpu-memory-utilization"
+      - "0.80"
+      - "--max-model-len"
+      - "131072"
+      - "--kv-cache-dtype"
+      - "fp8_e4m3"
+      - "--quantization"
+      - "compressed-tensors"
+      - "--moe-backend"
+      - "flashinfer_cutlass"
+      - "--enable-prefix-caching"
+      - "--enable-chunked-prefill"
+      - "--trust-remote-code"
+    networks:
+      - development-network
+
+networks:
+  development-network:
+    external: true
