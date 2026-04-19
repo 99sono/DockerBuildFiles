@@ -1,0 +1,41 @@
+services:
+  qwen3-6-moe-nvfp4:
+    image: vllm/vllm-openai:nightly
+    container_name: qwen3-6-moe-35b-a3b-nvfp4
+    runtime: nvidia
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./hf-cache:/root/.cache/huggingface
+      - /dev/shm:/dev/shm
+    shm_size: "32g"
+    ipc: host
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - HF_HUB_ENABLE_HF_TRANSFER=1
+      - VLLM_WORKER_MULTIPROC_METHOD=spawn
+      - VLLM_USE_V2_MODEL_RUNNER=1           # Essential for Blackwell V2 optimizations
+    command: >
+      vllm serve RedHatAI/Qwen3.6-35B-A3B-NVFP4
+        --host 0.0.0.0
+        --port 8000
+        --tensor-parallel-size 1
+        --gpu-memory-utilization 0.92
+        --max-model-len 131072
+        --kv-cache-dtype fp8_e4m3
+        --quantization compressed-tensors   # Specifically handles RedHat's packaging
+        --reasoning-parser qwen3
+        --tool-call-parser qwen3_coder
+        --moe-backend triton                # The "Golden Path" for SM 12.0 stability
+        --enable-prefix-caching
+        --enable-chunked-prefill
+        --max-num-seqs 256
+        --max-num-batched-tokens 32768
+        --trust-remote-code
+    networks:
+      - development-network
+
+networks:
+  development-network:
+    external: true
