@@ -11,9 +11,8 @@ downloaded_models
 dev-image/.vscode-server/bin
 dev-image/.vscode-server/data
 dev-image/.vscode-server/extensions
-dev-image/.vscode-server/extensionsCacheqwen3-6-moe-35b-a3b-vllm-nvpf4-5090/hf-cache/
-qwen3-6-moe-35b-a3b-vllm-nvpf4-5090/hf-cache/
-qwen3-6-moe-35b-a3b-vllm-nvpf4-5090/hf-cache/
 dev-image/.vscode-server/extensionsCache/
 
+# vLLM model cache ignores
+vllm/*/hf-cache/
 .hf-cache
