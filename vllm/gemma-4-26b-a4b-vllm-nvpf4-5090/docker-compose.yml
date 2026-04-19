@@ -1,6 +1,6 @@
 services:
   gemma-4-26b-it-nvfp4:
-    image: vllm/vllm-openai:latest
+    image: vllm/vllm-openai:nightly
     container_name: gemma-4-26b-it-nvfp4
     hostname: gemma-4-26b-it-nvfp4
     runtime: nvidia
