@@ -2,6 +2,7 @@ services:
   qwen3-6-moe-nvfp4:
     image: vllm/vllm-openai:latest
     container_name: qwen3-6-moe-35b-a3b-nvfp4
+    hostname: qwen3-6-moe-35b-a3b-nvfp4
     runtime: nvidia
     restart: unless-stopped
     ports:
@@ -11,16 +12,21 @@ services:
       - /dev/shm:/dev/shm
     shm_size: "32g"
     ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - HF_HUB_ENABLE_HF_TRANSFER=1
       - VLLM_WORKER_MULTIPROC_METHOD=spawn
       - VLLM_USE_V2_MODEL_RUNNER=1           # Essential for Blackwell V2 optimizations
     command:
-      - "vllm"
-      - "serve"
       - "RedHatAI/Qwen3.6-35B-A3B-NVFP4"
-      - "--model"
+      - "--served-model-name"
       - "RedHatAI/Qwen3.6-35B-A3B-NVFP4"
       - "--host"
       - "0.0.0.0"
