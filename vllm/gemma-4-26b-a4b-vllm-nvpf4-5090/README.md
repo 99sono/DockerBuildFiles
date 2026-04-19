@@ -62,3 +62,26 @@ Run the scripts in sequence for setup and orchestration:
 1. **Load Normal First:** Ensure the model loads and functions correctly with the normal configuration before trying TurboQuant.
 2. **Quality Monitoring:** In TurboQuant mode, pay close attention to output quality on very long sequences, as 4-bit value quantization may introduce artifacts.
 3. **VRAM Audit:** Compare VRAM usage and throughput (tokens/sec) between the 96K and 200K setups.
+
+## Monitoring & Optimization
+
+When running the vLLM server, monitor the following log patterns to ensure optimal performance and to avoid "undertuning" your configuration:
+
+### 1. KV Cache & Context Window
+To ensure you are not hitting the limits of your configured context window, watch these metrics:
+* **`GPU KV cache usage`**: A high percentage (e.s. >90%) indicates you are nearing the limit of your allocated-memory for the context window.
+* **`Available KV cache memory`**: If this value becomes very low or negative, you may need to increase `gpu_memory_utilization` or reduce `max_model_len`.
+* **`Prefix cache hit rate`**: A high hit rate (e.g., >80%) confirms that your prefix caching is working efficiently and saving computation.
+
+**Example log entry for these metrics:**
+`2026-04-19 18:00:49 [loggers.py:271] Engine 000: Avg prompt throughput: 384.9 tokens/s, Avg generation throughput: 104.7 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 5.0%, Prefix cache hit rate: 87.8%`
+
+### 2. Advanced Memory Profiling
+If you want more accurate memory accounting, use the following environment variable:
+`VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1`
+
+**Note:** When enabling this, you should increase your `--gpu-memory-utilization` (e.g., from `0.85` to `0.86`) to maintain the same effective KV cache size, as the profiling accounts for additional memory used by CUDA graphs.
+
+### 3. Troubleshooting
+* **`Out of Memory (OOM)`**: If you see CUDA OOM errors, your `max_model_len` is too large for your available VRAM or your `gpu_memory_utilization` is too low to accommodate the model weights and the requested context.
+* **`pin_memory=False`**: If you see this warning, it is often due to running in a WSL2 environment, which may slightly impact performance.
