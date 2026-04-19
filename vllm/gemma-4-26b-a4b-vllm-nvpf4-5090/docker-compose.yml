@@ -36,7 +36,7 @@ services:
       - "--gpu-memory-utilization"
       - "0.85" # Push to 95% to maximize the pool for that 98k cache
       - "--max-model-len"
-      - "98304" # Your required context length
+      - "65536" # Your required context length
       - "--max-num-batched-tokens"
       - "8192" # Massive increase to process long prompts faster
       - "--kv-cache-dtype"

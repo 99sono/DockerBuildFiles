@@ -21,12 +21,20 @@ This setup is optimized for the **RTX 5090 (32GB VRAM)** using **vLLM nightly**.
 - **Use case:** Research and long-context processing (Needle-in-a-Haystack, deep reasoning).
 - **Warning:** TurboQuant is experimental in nightly builds. Monitor logs for errors related to Gemma-4's heterogeneous head dimensions.
 
-### 3. EAGLE-3 Speculative Decoding (High Speed)
-- **Speculator:** `RedHatAI/gemma-4-26B-A4B-it-speculator.eagle3` (0.9B parameters).
-- **Speed:** Expected 2-3× increase in generation speed.
-- **Context Window:** 96K tokens.
-- **Utilization:** 0.82 (Reduced to accommodate speculator weights and draft KV cache).
-- **Use case:** Maximum performance inference for long-form generation.
+### 3. Inference Optimization & Speculative Decoding
+**Note:** Speculative decoding has been **disabled** in the production configuration.
+
+#### Speculative Decoding Experiment
+We attempted to use the `RedHatAI/gemma-4-26B-speculator-eagle-3` (0.9B) draft model to accelerate the `Gemma-4-26B-A4B` (NVFP4) base model. However, the experiment yielded the following results:
+
+* **Acceptance Rate:** The experiment showed a near-zero acceptance rate (**0.1% – 1.4%**), meaning the draft model failed to predict the base model's tokens effectively.
+* **Task Incompatibility:** The speculator struggled specifically with the complex syntax of **git diffs and code generation**, leading to a "Mean Acceptance Length" of ~1.00.
+* **Quantization Drift:** There appears to be a logical mismatch between the 4-bit NVFP4 base weights and the speculator's predictions, resulting in constant rejections.
+
+#### Decision & Architecture
+* **Reasoning:** The decision to disable speculative decoding was driven by data from the vLLM metrics logs.
+* **VRAM & Context:** By removing the speculator, we eliminated verification overhead and reclaimed VRAM to prioritize a more stable **64k context window**.
+* **Performance:** Standard generation via the **Triton/Cutlass** backends proved more performant and reliable for coding workflows.
 
 ## Usage Scripts
 
