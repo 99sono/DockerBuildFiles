@@ -16,3 +16,5 @@ dev-image/.vscode-server/extensionsCache/
 # vLLM model cache ignores
 vllm/*/hf-cache/
 .hf-cache
+
+*.diff
