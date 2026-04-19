@@ -1,5 +1,5 @@
 services:
-  gemma4-26b-nvfp4:
+  gemma-4-26b-it-nvfp4:
     image: vllm/vllm-openai:latest
     container_name: gemma-4-26b-it-nvfp4
     hostname: gemma-4-26b-it-nvfp4
@@ -25,8 +25,6 @@ services:
       - VLLM_WORKER_MULTIPROC_METHOD=spawn
     command:
       - "RedHatAI/gemma-4-26B-A4B-it-NVFP4"
-      - "--model"
-      - "RedHatAI/gemma-4-26B-A4B-it-NVFP4"
       - "--served-model-name"
       - "gemma-4-26b-it-nvfp4"
       - "--host"
@@ -41,6 +39,10 @@ services:
       - "fp8_e4m3"
       - "--quantization"
       - "compressed-tensors"
+      - "--reasoning-parser"
+      - "gemma4"
+      - "--tool-call-parser"
+      - "gemma4"
       - "--moe-backend"
       - "flashinfer_cutlass"
       - "--enable-prefix-caching"
