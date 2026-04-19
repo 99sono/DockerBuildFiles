@@ -34,9 +34,9 @@ services:
       - "--tensor-parallel-size"
       - "1"
       - "--gpu-memory-utilization"
-      - "0.90"
+      - "0.80" # line in the sand the OS must continue working
       - "--max-model-len"
-      - "65536"
+      - "32768" # Try to find the sweet spot for the KV cache
       - "--kv-cache-dtype"
       - "fp8_e4m3"
       - "--quantization"
