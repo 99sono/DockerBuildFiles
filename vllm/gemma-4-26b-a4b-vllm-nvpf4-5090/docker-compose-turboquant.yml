@@ -1,0 +1,68 @@
+# Gemma-4-26B NVFP4 - TurboQuant Experimental Configuration (~200K Context)
+# Uses TurboQuant KV cache compression (FP8 keys + 4-bit values).
+# Monitor output quality on long contexts as this is experimental.
+
+# Does not work:
+services:
+  gemma-4-26b-it-nvfp4-turbo:
+    image: vllm/vllm-openai:nightly
+    container_name: gemma-4-26b-it-nvfp4-turbo
+    hostname: gemma-4-26b-it-nvfp4-turbo
+    runtime: nvidia
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - /dev/shm:/dev/shm
+    shm_size: "32g"
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - HF_HUB_ENABLE_HF_TRANSFER=1
+      - VLLM_WORKER_MULTIPROC_METHOD=spawn
+      - VLLM_ATTENTION_BACKEND=FLASHINFER
+    command:
+      - "RedHatAI/gemma-4-26B-A4B-it-NVFP4"
+      - "--served-model-name"
+      - "gemma-4-26b-it-nvfp4"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+      - "--gpu-memory-utilization"
+      - "0.85"
+      - "--max-model-len"
+      - "196608" # ~200K Context enabled by TurboQuant
+      - "--max-num-batched-tokens"
+      - "8192"
+      - "--kv-cache-dtype"
+      - "turboquant_k8v4" # FP8 keys + 4-bit values
+      - "--quantization"
+      - "compressed-tensors"
+      - "--enable-prefix-caching"
+      - "--enable-chunked-prefill"
+      - "--max-num-seqs"
+      - "2"
+      - "--reasoning-parser"
+      - "gemma4"
+      - "--tool-call-parser"
+      - "gemma4"
+      - "--moe-backend"
+      - "cutlass"
+      - "--trust-remote-code"
+      - "--attention-config.flash_attn_version=2"  
+      - "--enforce-eager"                          
+    networks:
+      - development-network
+
+networks:
+  development-network:
+    external: true

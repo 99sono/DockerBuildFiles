@@ -1,67 +1,47 @@
 # Gemma 4 26B-A4B - RTX 5090 High-Context Setup
 
-This setup is optimized for the **RTX 5090 (32GB VRAM)** using the stable **vLLM v0.19.1+** engine. It represents the successful pivot from the "Blue Whale" (Qwen 3.6 35B) to the high-performance Gemma 4 architecture.
+This setup is optimized for the **RTX 5090 (32GB VRAM)** using **vLLM nightly**. It features two distinct configurations: a baseline high-quality setup and an experimental TurboQuant setup for extreme context windows.
 
-## The VRAM Recovery
-After hitting a physical VRAM dead-end with Qwen 3.6, this project reclaimed its capabilities by switching to **Gemma 4 26B-A4B**.
-- **Static Tax Reduced:** The weight footprint dropped from 22GB to ~13GB, reclaiming 9GB of VRAM.
-- **Context Breakthrough:** This reduction allowed the context window to expand from an unusable 8K to a **stable 96K (98,304 tokens)** while maintaining a strict **80% VRAM utilization limit**.
-- **Engine:** Powered by vLLM **v0.19.1+** for native Gemma 4 MoE support and stable Blackwell SM 12.0 kernel acceleration.
+## Configurations
 
-## Hardware Optimization
-- **Native FP4:** Uses `NVFP4` weights + activations via Red Hat AI.
-- **Blackwell Path:** Leveraging `flashinfer_cutlass` for maximum throughput on the 5090 (estimated 250+ tokens/sec).
-- **Stability:** Strict 20% headroom (0.80 utilization) ensures the host OS and WSL2 remain responsive.
+### 1. Normal (Baseline)
+- **KV Cache:** `fp8_e4m3` (Standard FP8 for high quality).
+- **Context Window:** 96K tokens.
+- **Utilization:** 0.92 (Strict ~2.5GB headroom for OS).
+- **Use case:** Default daily usage where quality and stability are paramount.
 
-## Quick Start
-1. **Prepare Host Environment:**
-   ```bash
-   chmod +x *.sh
-   ./00_a_pull_vllm_image.sh
-   ./00_b_create_conda_env.sh
-   ./00_c_install_packages.sh
-   ```
-2. **Pre-download Model:**
-   ```bash
-   ./00_d_pre_download_model.sh
-   ```
-3. **Launch Server:**
-   ```bash
-   ./01_up.sh
-   ```
+### 2. TurboQuant (Experimental)
+> [!CAUTION]
+> **CURRENTLY BROKEN:** This configuration is currently non-functional for Gemma-4 due to a known vLLM issue where the forced Triton attention backend (required for Gemma-4's heterogeneous head dimensions) does not yet support the TurboQuant KV cache data type. 
+> See tracked issue: [vLLM #40094](https://github.com/vllm-project/vllm/issues/40094)
 
-## Testing
-Verify the 96K context capacity and reasoning performance:
-```bash
-conda activate testVllmGemma
-python 04_test_vllm_curl.py
-```
+- **KV Cache:** `turboquant_k8v4` (FP8 keys + 4-bit values).
+- **Compression:** Expected 2.5–4× KV cache savings.
+- **Context Window:** **~200K tokens** (196,608).
+- **Use case:** Research and long-context processing (Needle-in-a-Haystack, deep reasoning).
+- **Warning:** TurboQuant is experimental in nightly builds. Monitor logs for errors related to Gemma-4's heterogeneous head dimensions.
 
-## API Access
-- **Endpoint:** `http://localhost:8000/v1`
-- **Model Name:** `gemma-4-26b-it-nvfp4`
-- **Reasoning:** Native `<thought>` block parsing enabled.
+## Usage Scripts
 
-## Connecting Cline to vLLM
+Run the scripts in sequence for setup and orchestration:
 
-To connect your local **Cline** extension to your **vLLM** server (Gemma-4-26B), you need to change the **API Provider** in your settings.
+### Environment Setup
+- `./00_a_pull_vllm_image.sh`: Fetches the `vllm-openai:nightly` image.
+- `./00_b_create_conda_env.sh`: Creates the `testVllmGemma` Conda environment.
+- `./00_c_install_packages.sh`: Installs Python dependencies.
+- `./00_d_pre_download_model.sh`: Downloads weights to global cache.
 
-Currently, your screenshot shows you are using the "Ollama" provider. While vLLM is OpenAI-compatible, Cline has a specific **"OpenAI Compatible"** provider setting that works best for vLLM's endpoint.
+### Server Orchestration
+- `./01_a_up_normal.sh`: Starts the baseline (96K) configuration.
+- `./01_b_up_turboquant.sh`: Starts the TurboQuant (~200K) configuration.
+- `./02_a_down_normal.sh`: Stops the normal server.
+- `./02_b_down_turboquant.sh`: Stops the TurboQuant server.
+- `./05_docker_logs.sh`: Monitor the active container's logs.
 
-### Suggested Settings:
+### Testing
+- `./04_test_vllm_curl.py`: Python client for API verification.
 
-1.  **API Provider**: Change this to **`OpenAI Compatible`**.
-2.  **Base URL**: Set this to **`http://localhost:8000/v1`**.
-    * *Note: vLLM usually expects the `/v1` suffix for the OpenAI-compatible routes.*
-3.  **API Key**: You **MUST** enter a dummy value (e.g., `vllm-token`). Leaving this field empty will cause authentication errors in Cline.
-4.  **Model ID**: Enter the model name exactly as it appears in your logs: **`gemma-4-26b-it-nvfp4`**.
-5.  **Model Context Window**: Keep it at **`98304`** to match your vLLM configuration.
-
----
-
-### Why this is better than the "Ollama" provider:
-* **Protocol**: vLLM implements the `/v1/chat/completions` endpoint. The Ollama provider in Cline specifically looks for Ollama’s own API format (port 11434).
-* **Tool Calling**: The "OpenAI Compatible" mode allows Cline to use the specialized `gemma4` reasoning and tool parsers you set up in your Docker command.
-
-### Troubleshooting Tip:
-If Cline still says "Unable to fetch models," it is because vLLM does not always broadcast its model list in a way every extension expects. Since you know the ID is `gemma-4-26b-it-nvfp4`, simply typing it into the **Model ID** field manually after selecting **OpenAI Compatible** will bypass the fetch error and allow you to start chatting.
+## Recommendations
+1. **Load Normal First:** Ensure the model loads and functions correctly with the normal configuration before trying TurboQuant.
+2. **Quality Monitoring:** In TurboQuant mode, pay close attention to output quality on very long sequences, as 4-bit value quantization may introduce artifacts.
+3. **VRAM Audit:** Compare VRAM usage and throughput (tokens/sec) between the 96K and 200K setups.
