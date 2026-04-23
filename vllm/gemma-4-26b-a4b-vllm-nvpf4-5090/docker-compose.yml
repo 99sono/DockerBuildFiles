@@ -1,15 +1,19 @@
+version: "3.9"
+
 services:
   gemma-4-26b-it-nvfp4:
     image: vllm/vllm-openai:nightly
-    container_name: gemma-4-26b-it-nvfp4
+    container_name: gemma-4-26b-it-nvfp4-stable
     hostname: gemma-4-26b-it-nvfp4
-    runtime: nvidia
-    restart: unless-stopped
+    platform: linux/amd64
+
     ports:
       - "8000:8000"
+
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface
       - /dev/shm:/dev/shm
+
     shm_size: "32g"
     ipc: host
 
@@ -20,40 +24,70 @@ services:
             - capabilities: [gpu]
 
     environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - HF_HUB_ENABLE_HF_TRANSFER=1
-      - VLLM_WORKER_MULTIPROC_METHOD=spawn
-      # Forces the most optimized attention kernel for long sequences
-      - VLLM_ATTENTION_BACKEND=FLASHINFER
+      # Required for Blackwell + WSL2 stability
+      VLLM_WORKER_MULTIPROC_METHOD: spawn
+
+      # Critical for very large KV-cache allocations
+      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+
+      # Optional but useful for faster model pulls
+      HF_HUB_ENABLE_HF_TRANSFER: "1"
+
     command:
+      # Model
       - "RedHatAI/gemma-4-26B-A4B-it-NVFP4"
       - "--served-model-name"
       - "gemma-4-26b-it-nvfp4"
+
+      # Required
+      - "--trust-remote-code"
+
+      # Networking
       - "--host"
       - "0.0.0.0"
       - "--port"
       - "8000"
+
+      # Memory budget
       - "--gpu-memory-utilization"
-      - "0.85" # Push to 95% to maximize the pool for that 98k cache
+      - "0.85"
+
+      # ===== Long-context experiment =====
       - "--max-model-len"
-      - "65536" # Your required context length
+      - "256000"
+
+      # Batching (intentionally conservative for long windows)
+      - "--max-num-seqs"
+      - "2"
       - "--max-num-batched-tokens"
-      - "8192" # Massive increase to process long prompts faster
+      - "16384"
+
+      # KV cache
       - "--kv-cache-dtype"
-      - "fp8_e4m3" # Essential to fit 98k on one GPU
+      - "fp8_e4m3"
+
+      # Quantization
       - "--quantization"
       - "compressed-tensors"
-      - "--enable-prefix-caching" # Huge speed boost for repeated context
-      - "--enable-chunked-prefill" # Prevents "stuttering" on long inputs
-      - "--max-num-seqs"
-      - "2" # Limiting concurrent requests to focus GPU power on one long context at a time
+
+      # Long-context ergonomics
+      - "--enable-prefix-caching"
+      - "--enable-chunked-prefill"
+
+      # Reasoning + tools
       - "--reasoning-parser"
       - "gemma4"
       - "--tool-call-parser"
       - "gemma4"
+
+      # NVFP4 MoE backend (performance path)
       - "--moe-backend"
       - "cutlass"
-      - "--trust-remote-code"
+
+      # Optional ultra-stability fallback (DISABLED by default)
+      # - "--moe-backend"
+      # - "marlin"
+
     networks:
       - development-network
 
