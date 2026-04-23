@@ -12,7 +12,13 @@ This setup is optimized for the **RTX 5090 (32GB VRAM)** using **vLLM nightly**.
 
 ### 2. TurboQuant (Experimental)
 > [!CAUTION]
-> **CURRENTLY BROKEN:** This configuration is currently non-functional for Gemma-4 due to a known vLLM issue where the forced Triton attention backend (required for Gemma-4's heterogeneous head dimensions) does not yet support the TurboQuant KV cache data type. 
+> **CURRENTLY BROKEN:** This configuration is currently non-functional for Gemma-4 due to a critical incompatibility between the **NVFP4 quantization** and the **Triton backend**. 
+> 
+> **The Problem:** The `vLLM` implementation for `NVFP4` (required for the Gemma-4-26B-A4B-it-NVFP4 model) does not support the `triton` based MoE backend because the specific kernels required for handling **GELU** activation in the NVFP4 path are not yet available in the `triton` backend.
+> 
+> **The Fix:** To avoid errors, use a supported backend such as `cutlass` or `marlin`.
+> 
+> See detailed analysis in the metadata.
 > See tracked issue: [vLLM #40094](https://github.com/vllm-project/vllm/issues/40094)
 
 - **KV Cache:** `turboquant_k8v4` (FP8 keys + 4-bit values).
