@@ -1,0 +1,83 @@
+version: "3.9"
+
+services:
+  qwen3-6-moe-nvfp4:
+    image: vllm/vllm-openai:v0.20.0-cu130-ubuntu2404
+    container_name: qwen3-6-moe-35b-a3b-nvfp4
+    hostname: qwen3-6-moe-35b-a3b-nvfp4
+    platform: linux/amd64
+    ports:
+      - "8000:8000"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - /dev/shm:/dev/shm
+    shm_size: "32g"
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+    environment:
+      VLLM_WORKER_MULTIPROC_METHOD: spawn
+      PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+      HF_HUB_ENABLE_HF_TRANSFER: "1"
+      # Asynchronous CPU/GPU overlap for max speed
+      # VLLM_USE_V2_MODEL_RUNNER: "1"
+
+    command:
+      - "--model"
+      - "RedHatAI/Qwen3.6-35B-A3B-NVFP4"
+      - "--served-model-name"
+      - "Qwen3.6-35B-A3B-NVFP4"
+      - "--trust-remote-code"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+
+      # --- MEMORY & CONTEXT (The 64k God Mode) ---
+      - "--gpu-memory-utilization"
+      - "0.90"  
+      - "--max-model-len"
+      - "65536"
+      - "--max-num-seqs"
+      - "1"
+
+      # --- BATCHING (Fast Prompt Processing) ---
+      - "--max-num-batched-tokens"
+      - "16384" # 8192 # 4096 #- "16384" 
+
+      # --- ARCHITECTURE & QUANTIZATION ---
+      - "--kv-cache-dtype"
+      - "fp8_e4m3"
+      - "--quantization"
+      - "compressed-tensors"
+      - "--reasoning-parser"
+      - "qwen3"
+      - "--tool-call-parser"
+      - "qwen3_coder"
+
+      # --- KERNEL FUSION (The Speed Unlock) ---
+      - "--moe-backend"
+      - "cutlass"
+      - "--enable-prefix-caching"
+      - "--enable-chunked-prefill"
+
+      # --- STARTUP OPTIMIZATIONS (Boot Faster) ---
+      # Force disk I/O overlap
+      - "--safetensors-load-strategy"
+      - "prefetch"
+      
+      # Stop capturing useless batch graphs you won't use in single-user mode
+      - "--max-cudagraph-capture-size"
+      - "1"
+
+    networks:
+      - development-network
+
+networks:
+  development-network:
+    external: true

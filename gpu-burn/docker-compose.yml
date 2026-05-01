@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  gpu-burn:
+    image: oguzpastirmaci/gpu-burn
+    container_name: gpu-burn
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    command: "60"
