@@ -1,47 +1,101 @@
-# ⚠️ Warning: Hardware Limitation (Technical Dead-End)
+# Qwen3.6-35B-A3B-NVFP4 on RTX 5090 (32GB)
 
-The **Qwen3.6-35B-A3B NVFP4** model is a "Blue Whale" for consumer-grade hardware. Despite the power of the RTX 5090 (32GB VRAM), this specific implementation has reached a technical dead-end under standard stability constraints.
+## Status: ✅ Working - 65K Context Achieved
 
-## Technical Post-Mortem: The "Static Tax"
+This folder contains the complete setup for running the **Qwen3.6-35B-A3B-NVFP4** quantized model via vLLM on an RTX 5090 (32GB VRAM). The configuration supports up to **65,536 tokens** of context (prompt + response).
 
-Extensive testing on an RTX 5090 (32GB) revealed that the model's **Static Tax** (Weights + Blackwell Kernels + Activation Buffers) is approximately **25.72 GB**. 
+## Requirements
 
-- **The 80% Utilization Wall:** If a strict 80% utilization limit (25.6 GB) is enforced to preserve system stability and OS headroom, the model physically cannot boot.
-- **The Failure of the "Absolute Floor":** Even when stripping the configuration to the bare minimum—**8K context** and only **32 parallel sequences**—the engine reported **-0.12 GiB available KV cache memory**.
-- **The Verdict:** On a 32GB card, this model is unusable for local agentic workflows unless the user is willing to push utilization to **95%+**, leaving zero VRAM headroom for the OS, WSL2, or display.
+- **GPU:** RTX 5090 (32GB VRAM)
+- **Docker:** With NVIDIA CUDA toolkit support
+- **Docker Compose:** v2.x+
 
-## Comparison: Qwen vs. Nemotron-Cascade-2
+## Quick Start
 
-For local development on a single 32GB card, architecture currently beats raw parameter count when context window is the priority:
-
-| Metric | Qwen 3.6-35B-A3B | Nemotron-Cascade-2 |
-| :--- | :--- | :--- |
-| **VRAM Footprint (Weights)** | ~22 GB (NVFP4) | ~14 GB (Stage 1 distillation) |
-| **Context Limit (on 32GB)** | **~8K - 16K** (at 90%+ util) | **100K+** (at 75% util) |
-| **Status on 5090** | **Dead End** for Agents | **Recommended** for Agents |
-
-## Scripts Overview (Archival/Debug Only)
-
-The following scripts remain for archival and debugging purposes, but they will likely fail on a single 32GB card under default settings.
-
-### 1. Environment & Model Setup
-- **`00_a_pull_vllm_image.sh`**: Fetches the `vllm/vllm-openai:nightly` Docker image.
-- **`00_b_create_conda_env.sh`**: Creates the `testVllmQwen` Conda environment.
-- **`00_c_install_packages.sh`**: Installs Python dependencies.
-- **`00_d_pre_download_model.sh`**: Downloads model weights to global cache.
-
-### 2. Orchestration
-- **`01_up.sh`**: Launches the server (Warning: High OOM risk).
-- **`02_down.sh`**: Stops the container.
-- **`03_enter_container.sh`**: Interactive shell access.
-
-### 3. Testing & Logs
-- **`04_test_vllm_curl.py`**: Python client for API verification.
-- **`05_docker_logs.sh`**: Monitor the initialization failure logs.
-
-## Hardware Optimization Tip (Host)
-To prevent the 5090 from staying in low-power P-states:
 ```bash
-nvidia-smi -pm 1
-nvidia-smi --lock-gpu-clocks=2500,2500
+# 1. Pull the vLLM image
+./00_a_pull_vllm_image.sh
+
+# 2. Pre-download model weights
+./00_d_pre_download_model.sh
+
+# 3. Start the server
+docker compose up -d
+
+# 4. Test the API
+python 04_test_vllm_curl.py
+
+# 5. Stop the server
+./02_down.sh
 ```
+
+## Key Configuration (docker-compose.yml)
+
+| Parameter | Value | Purpose |
+|-----------|-------|---------|
+| `--max-model-len` | 65536 | Maximum context window (prompt + response) |
+| `--max-num-batched-tokens` | 8192 | Prefill batch size (sweet spot for 65k context) |
+| `--gpu-memory-utilization` | 0.90 | 90% of 32GB ≈ 28.8 GB for model + KV cache |
+| `--max-num-seqs` | 1 | Single-user mode (saves memory) |
+| `--kv-cache-dtype` | fp8_e4m3 | FP8 KV cache for memory efficiency |
+| `--moe-backend` | cutlass | Fast MoE kernel fusion |
+
+### Context Length Limits
+
+With this configuration:
+- **Max total tokens:** 65,536 (prompt + response combined)
+- **Available KV cache:** ~75,000 tokens (slightly more than max-model-len)
+- **Example:** You can paste a 50K token document and receive a ~15K token response
+
+### Prefill Performance
+
+`--max-num-batched-tokens` controls how many tokens are processed during the prompt prefill phase (before output tokens start generating):
+
+| Batch Size | Prefill Speed | KV Cache Room | 65K Context? |
+|------------|---------------|---------------|--------------|
+| 16384 | Fastest | ~33K tokens | ❌ No (OOM) |
+| **8192** | **Good** | **~75K tokens** | ✅ **Yes (recommended)** |
+| 4096 | Slowest | ~75K+ tokens | ✅ Yes |
+
+## Model Architecture
+
+- **Model:** RedHatAI/Qwen3.6-35B-A3B-NVFP4
+- **Type:** Mixture-of-Experts (MoE) with active params ~35B, total ~191B
+- **Quantization:** NVFP4 (NVIDIA FP4)
+- **Activation:** Activates ~3.5B parameters per token
+- **KV Cache:** fp8_e4m3 (8-bit floating point)
+
+## Troubleshooting
+
+### OOM (Out of Memory)
+If you see OOM errors, try:
+1. Lower `--max-model-len` to 32768
+2. Lower `--max-num-batched-tokens` to 4096
+3. Reduce `--gpu-memory-utilization` to 0.85
+
+### Slow Startup
+The model takes ~90-120 seconds to load. Monitor progress with:
+```bash
+docker compose logs -f --tail=100
+```
+
+### V2 Model Runner Crash
+If enabling `VLLM_USE_V2_MODEL_RUNNER` causes crashes, keep it commented out. The V2 runner (async CPU/GPU overlap) requires additional memory during initialization and may not be compatible with 65K context on 32GB VRAM.
+
+## API Endpoint
+
+```
+http://localhost:8000/v1/chat/completions
+```
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| `docker-compose.yml` | Main orchestration config |
+| `00_a_pull_vllm_image.sh` | Pull vLLM Docker image |
+| `00_d_pre_download_model.sh` | Pre-download model weights |
+| `01_up.sh` / `02_down.sh` | Start/stop the server |
+| `03_enter_container.sh` | Enter container shell |
+| `04_test_vllm_curl.py` | Test API client |
+| `05_docker_logs.sh` | View container logs |
