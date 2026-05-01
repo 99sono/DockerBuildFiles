@@ -4,7 +4,7 @@
 > **Target**: RTX 5090 (32 GB GDDR7, SM 12.0, x86_64)  
 > **Model**: `Qwen/Qwen3.6-27B` (dense, GQA) + `z-lab/Qwen3.6-27B-DFlash` (2B drafter)  
 > **Quant**: NVFP4 target (hybrid) + FP8_e4m3 KV cache  
-> **Last Verified**: April 26, 2026 | vLLM cu130-nightly
+> **Last Verified**: April 26, 2026 | vLLM v0.20.0-cu130-ubuntu2404
 
 ---
 
@@ -37,8 +37,8 @@ vllm/qwen3.6-27b-dflash-5090/
 ```bash
 #!/bin/bash
 set -euo pipefail
-echo "📥 Pulling vLLM cu130-nightly image (Blackwell SM 12.0)..."
-docker pull vllm/vllm-openai:cu130-nightly
+echo "📥 Pulling vLLM v0.20.0-cu130-ubuntu2404 image (Blackwell SM 12.0)..."
+docker pull vllm/vllm-openai:v0.20.0-cu130-ubuntu2404
 echo "✅ Image ready"
 ```
 
@@ -120,7 +120,7 @@ echo "🚀 Next: ./01_a_up_dflash.sh"
 #!/bin/bash
 set -euo pipefail
 echo "🔍 Inspecting vLLM image entrypoint..."
-docker inspect vllm/vllm-openai:cu130-nightly --format '{{json .Config.Entrypoint}}'
+docker inspect vllm/vllm-openai:v0.20.0-cu130-ubuntu2404 --format '{{json .Config.Entrypoint}}'
 echo "✅ Done"
 ```
 
@@ -134,7 +134,7 @@ version: "3.9"
 
 services:
   qwen36-27b-dflash:
-    image: vllm/vllm-openai:cu130-nightly
+    image: vllm/vllm-openai:v0.20.0-cu130-ubuntu2404
     container_name: qwen36-27b-dflash-stable
     hostname: qwen36-27b-dflash
     platform: linux/amd64
@@ -172,6 +172,9 @@ services:
 
     command:
       # Model paths (pulled from global HF cache)
+      # there is an NVFP4 version https://huggingface.co/sakamakismile/Qwen3.6-27B-NVFP4
+      # https://huggingface.co/sakamakismile/Qwen3.6-27B-Text-NVFP4-MTP
+      # 
       - "Qwen/Qwen3.6-27B"
       - "--served-model-name"
       - "qwen3.6-27b-dflash"
@@ -321,7 +324,7 @@ docker logs -f qwen36-27b-dflash-stable 2>&1 | grep -E "(spec_decode|KV cache us
 #!/bin/bash
 set -e
 echo "💾 Dumping vLLM serve --help to vllm_serve_help.txt..."
-docker run --rm --gpus all vllm/vllm-openai:cu130-nightly vllm serve --help > vllm_serve_help.txt
+docker run --rm --gpus all vllm/vllm-openai:v0.20.0-cu130-ubuntu2404 vllm serve --help > vllm_serve_help.txt
 echo "✅ Saved"
 ```
 
@@ -400,7 +403,7 @@ watch -n 2 'nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | s
 ```markdown
 # Qwen3.6-27B + DFlash — RTX 5090 High-Context Setup
 
-Optimized for **RTX 5090 (32GB VRAM)** using **vLLM cu130-nightly**.  
+Optimized for **RTX 5090 (32GB VRAM)** using **vLLM v0.20.0-cu130-ubuntu2404**.  
 Features **GQA-aware memory management** + **DFlash block-diffusion speculative decoding**.
 
 ## Configuration

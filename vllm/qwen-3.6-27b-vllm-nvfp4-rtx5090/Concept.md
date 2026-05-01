@@ -107,7 +107,7 @@ version: '3.8'
 
 services:
   qwen36-dflash:
-    image: vllm/vllm-openai:cu130-nightly@sha256:<PIN_COMMIT_HASH>
+    image: vllm/vllm-openai:v0.20.0-cu130-ubuntu2404@sha256:<PIN_COMMIT_HASH>
     container_name: qwen36-dflash-5090
     restart: unless-stopped
     deploy:
