@@ -2,10 +2,10 @@ version: "3.9"
 
 services:
   qwen3-6-moe-nvfp4:
-    image: vllm/vllm-openai:v0.20.0-cu130-ubuntu2404
+    image: vllm/vllm-openai:v0.20.0-aarch64-cu130-ubuntu2404
     container_name: qwen3-6-moe-35b-a3b-nvfp4
     hostname: qwen3-6-moe-35b-a3b-nvfp4
-    platform: linux/amd64
+    platform: linux/arm64
     ports:
       - "8000:8000"
     volumes:
