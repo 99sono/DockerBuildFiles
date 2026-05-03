@@ -1,3 +1,118 @@
+# docker compose
+```compose
+version: "3.9"
+
+services:
+  qwen3-6-moe-nvfp4:
+    image: vllm/vllm-openai:v0.20.0-aarch64-cu130-ubuntu2404
+    container_name: qwen3-6-moe-35b-a3b-nvfp4
+    hostname: qwen3-6-moe-35b-a3b-nvfp4
+    platform: linux/arm64
+    ports:
+      - "8000:8000"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - /dev/shm:/dev/shm
+    shm_size: "32g"
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+    environment:
+      VLLM_WORKER_MULTIPROC_METHOD: spawn
+      PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+      HF_HUB_ENABLE_HF_TRANSFER: "1"
+      # Asynchronous CPU/GPU overlap for max speed
+      # VLLM_USE_V2_MODEL_RUNNER: "1"
+
+    command:
+      - "--model"
+      - "RedHatAI/Qwen3.6-35B-A3B-NVFP4"
+      - "--served-model-name"
+      - "Qwen3.6-35B-A3B-NVFP4"
+      - "--trust-remote-code"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+
+      # --- MEMORY & CONTEXT ---
+      # --gpu-memory-utilization: Fraction of GPU VRAM reserved for the model.
+      #   0.90 = 90% of 32GB = ~28.8 GB available for model weights + KV cache.
+      #   Higher values give more KV cache for longer context but risk OOM.
+      #
+      # --max-model-len: Maximum context length (prompt + response) in tokens.
+      #   This is the maximum number of tokens that can be active in the KV cache
+      #   at any time. 65536 = ~64K tokens = maximum context window.
+      #   - Prompt tokens + response tokens must fit within this limit.
+      #   - If you paste a 50K token document, the model can generate up to ~15K tokens.
+      #   - Lower this value (e.g., 32768) to free up KV cache memory for other settings.
+      #
+      # --max-num-seqs: Maximum number of concurrent request sequences.
+      #   Set to 1 for single-user mode (recommended to save memory).
+      - "--gpu-memory-utilization"
+      - "0.90"  
+      - "--max-model-len"
+      - "65536"
+      - "--max-num-seqs"
+      - "1"
+
+      # --- BATCHING / PREFILL OPTIMIZATION ---
+      # --max-num-batched-tokens controls how many tokens the model can process
+      # during the prompt prefill phase (before generating output tokens).
+      #
+      # Higher values = faster prompt processing but more GPU memory consumed
+      # for KV cache allocation. Lower values = slower prefill but more memory
+      # available for context window.
+      #
+      # DGX Spark (Grace Blackwell) trade-offs observed:
+      #   - 16384: Fastest prefill, but only 33k KV cache (OOM at 65k context)
+      #   -  8192: Good balance, 75k KV cache (supports 65k context) ★ RECOMMENDED
+      #   -  4096: Slowest prefill, but 75k+ KV cache (maximum context headroom)
+      #
+      # 8192 is the baseline for 65k context on this hardware.
+      - "--max-num-batched-tokens"
+      - "8192"
+
+      # --- ARCHITECTURE & QUANTIZATION ---
+      - "--kv-cache-dtype"
+      - "fp8_e4m3"
+      - "--quantization"
+      - "compressed-tensors"
+      - "--reasoning-parser"
+      - "qwen3"
+      - "--tool-call-parser"
+      - "qwen3_coder"
+
+      # --- KERNEL FUSION (The Speed Unlock) ---
+      - "--moe-backend"
+      - "cutlass"
+      - "--enable-prefix-caching"
+      - "--enable-chunked-prefill"
+
+      # --- STARTUP OPTIMIZATIONS (Boot Faster) ---
+      # Force disk I/O overlap
+      - "--safetensors-load-strategy"
+      - "prefetch"
+      
+      # Stop capturing useless batch graphs you won't use in single-user mode
+      - "--max-cudagraph-capture-size"
+      - "1"
+
+    networks:
+      - development-network
+
+networks:
+  development-network:
+    external: true
+
+```
+
+# vllm log
 WARNING 05-03 17:10:31 [argparse_utils.py:257] With `vllm serve`, you should provide the model as a positional argument or in a config file instead of via the `--model` option. The `--model` option will be removed in a future version.
 (APIServer pid=1) INFO 05-03 17:10:31 [utils.py:299] 
 (APIServer pid=1) INFO 05-03 17:10:31 [utils.py:299]        █     █     █▄   ▄█
@@ -36,14 +151,18 @@ INFO 05-03 17:10:55 [nixl_utils.py:32] NIXL is available
 (EngineCore pid=125) INFO 05-03 17:11:10 [cuda.py:368] Using FLASHINFER attention backend out of potential backends: ['FLASHINFER', 'TRITON_ATTN'].
 (EngineCore pid=125) INFO 05-03 17:11:12 [weight_utils.py:904] Filesystem type for checkpoints: EXT4. Checkpoint size: 23.32 GiB. Available RAM: 87.35 GiB.
 (EngineCore pid=125) INFO 05-03 17:11:12 [weight_utils.py:874] Prefetching checkpoint files into page cache started (in background)
-(EngineCore pid=125) Loading safetensors checkpoint shards:   0% Completed | 0/3 [00:00<?, ?it/s]
+(EngineCore pid=125) 
+Loading safetensors checkpoint shards:   0% Completed | 0/3 [00:00<?, ?it/s]
 (EngineCore pid=125) INFO 05-03 17:11:13 [weight_utils.py:851] Prefetching checkpoint files: 10% (1/3)
 (EngineCore pid=125) INFO 05-03 17:11:14 [weight_utils.py:851] Prefetching checkpoint files: 20% (2/3)
 (EngineCore pid=125) INFO 05-03 17:11:34 [weight_utils.py:851] Prefetching checkpoint files: 30% (3/3)
 (EngineCore pid=125) INFO 05-03 17:11:34 [weight_utils.py:869] Prefetching checkpoint files into page cache finished in 21.81s
-(EngineCore pid=125) Loading safetensors checkpoint shards:  33% Completed | 1/3 [01:52<03:44, 112.01s/it]
-(EngineCore pid=125) Loading safetensors checkpoint shards: 100% Completed | 3/3 [01:58<00:00, 31.36s/it]
-(EngineCore pid=125)  Loading safetensors checkpoint shards: 100% Completed | 3/3 [01:58<00:00, 39.42s/it]
+(EngineCore pid=125) 
+Loading safetensors checkpoint shards:  33% Completed | 1/3 [01:52<03:44, 112.01s/it]
+(EngineCore pid=125) 
+Loading safetensors checkpoint shards: 100% Completed | 3/3 [01:58<00:00, 31.36s/it]
+(EngineCore pid=125)  
+Loading safetensors checkpoint shards: 100% Completed | 3/3 [01:58<00:00, 39.42s/it]
 (EngineCore pid=125) 
 (EngineCore pid=125) INFO 05-03 17:13:10 [default_loader.py:384] Loading weights took 118.35 seconds
 (EngineCore pid=125) INFO 05-03 17:13:10 [nvfp4.py:485] Using MoEPrepareAndFinalizeNoDPEPModular
@@ -65,13 +184,31 @@ INFO 05-03 17:10:55 [nixl_utils.py:32] NIXL is available
 (EngineCore pid=125) INFO 05-03 17:14:33 [kv_cache_utils.py:1711] GPU KV cache size: 2,158,880 tokens
 (EngineCore pid=125) INFO 05-03 17:14:33 [kv_cache_utils.py:1716] Maximum concurrency for 65,536 tokens per request: 108.50x
 (EngineCore pid=125) 2026-05-03 17:14:40,528 - INFO - autotuner.py:457 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
-(EngineCore pid=125) [AutoTuner]: Tuning fp4_gemm:   0%|          | 0/14 [00:00<?, ?profile/s][AutoTuner]: Tuning fp4_gemm:  86%|████████▌ | 12/14 [00:00<00:00, 109.64profile/s][AutoTuner]: Tuning fp4_gemm: 100%|██████████| 14/14 [00:00<00:00, 94.71profile/s] 
-(EngineCore pid=125) [AutoTuner]: Tuning fp4_gemm:   0%|          | 0/14 [00:00<?, ?profile/s][AutoTuner]: Tuning fp4_gemm:  93%|█████████▎| 13/14 [00:00<00:00, 127.19profile/s][AutoTuner]: Tuning fp4_gemm: 100%|██████████| 14/14 [00:00<00:00, 110.05profile/s]
-(EngineCore pid=125) [AutoTuner]: Tuning fp4_gemm:   0%|          | 0/14 [00:00<?, ?profile/s][AutoTuner]: Tuning fp4_gemm:  57%|█████▋    | 8/14 [00:00<00:00, 76.21profile/s][AutoTuner]: Tuning fp4_gemm: 100%|██████████| 14/14 [00:00<00:00, 39.16profile/s]
-(EngineCore pid=125) [AutoTuner]: Tuning fp4_gemm:   0%|          | 0/14 [00:00<?, ?profile/s][AutoTuner]: Tuning fp4_gemm:  86%|████████▌ | 12/14 [00:00<00:00, 103.88profile/s][AutoTuner]: Tuning fp4_gemm: 100%|██████████| 14/14 [00:00<00:00, 73.15profile/s] 
+(EngineCore pid=125) 
+[AutoTuner]: Tuning fp4_gemm:   0%|          | 0/14 [00:00<?, ?profile/s]
+[AutoTuner]: Tuning fp4_gemm:  86%|████████▌ | 12/14 [00:00<00:00, 109.64profile/s]
+[AutoTuner]: Tuning fp4_gemm: 100%|██████████| 14/14 [00:00<00:00, 94.71profile/s] 
+(EngineCore pid=125) 
+[AutoTuner]: Tuning fp4_gemm:   0%|          | 0/14 [00:00<?, ?profile/s]
+[AutoTuner]: Tuning fp4_gemm:  93%|█████████▎| 13/14 [00:00<00:00, 127.19profile/s]
+[AutoTuner]: Tuning fp4_gemm: 100%|██████████| 14/14 [00:00<00:00, 110.05profile/s]
+(EngineCore pid=125) 
+[AutoTuner]: Tuning fp4_gemm:   0%|          | 0/14 [00:00<?, ?profile/s]
+[AutoTuner]: Tuning fp4_gemm:  57%|█████▋    | 8/14 [00:00<00:00, 76.21profile/s]
+[AutoTuner]: Tuning fp4_gemm: 100%|██████████| 14/14 [00:00<00:00, 39.16profile/s]
+(EngineCore pid=125) 
+[AutoTuner]: Tuning fp4_gemm:   0%|          | 0/14 [00:00<?, ?profile/s]
+[AutoTuner]: Tuning fp4_gemm:  86%|████████▌ | 12/14 [00:00<00:00, 103.88profile/s]
+[AutoTuner]: Tuning fp4_gemm: 100%|██████████| 14/14 [00:00<00:00, 73.15profile/s] 
 (EngineCore pid=125) 2026-05-03 17:14:43,132 - INFO - autotuner.py:466 - flashinfer.jit: [Autotuner]: Autotuning process ends
-(EngineCore pid=125) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/1 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 1/1 [00:00<00:00,  9.87it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 1/1 [00:00<00:00,  9.86it/s]
-(EngineCore pid=125) Capturing CUDA graphs (decode, FULL):   0%|          | 0/1 [00:00<?, ?it/s]Capturing CUDA graphs (decode, FULL): 100%|██████████| 1/1 [00:00<00:00,  4.04it/s]Capturing CUDA graphs (decode, FULL): 100%|██████████| 1/1 [00:00<00:00,  4.04it/s]
+(EngineCore pid=125) 
+Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/1 [00:00<?, ?it/s]
+Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 1/1 [00:00<00:00,  9.87it/s]
+Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 1/1 [00:00<00:00,  9.86it/s]
+(EngineCore pid=125) 
+Capturing CUDA graphs (decode, FULL):   0%|          | 0/1 [00:00<?, ?it/s]
+Capturing CUDA graphs (decode, FULL): 100%|██████████| 1/1 [00:00<00:00,  4.04it/s]
+Capturing CUDA graphs (decode, FULL): 100%|██████████| 1/1 [00:00<00:00,  4.04it/s]
 (EngineCore pid=125) INFO 05-03 17:14:44 [gpu_model_runner.py:6133] Graph capturing finished in 1 secs, took 0.64 GiB
 (EngineCore pid=125) INFO 05-03 17:14:44 [gpu_worker.py:599] CUDA graph pool memory: 0.64 GiB (actual), 0.43 GiB (estimated), difference: 0.2 GiB (31.6%).
 (EngineCore pid=125) INFO 05-03 17:14:44 [core.py:299] init engine (profile, create kv cache, warmup model) took 92.21 s (compilation: 33.09 s)
