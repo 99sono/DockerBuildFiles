@@ -102,18 +102,20 @@ services:
       # N-Gram Speculative Decoding: Uses existing KV cache to guess
       # repeating tokens. Zero memory overhead. Can push generation from
       # ~112 tokens/s → 150-200+ tokens/s if acceptance rate > 50%.
-      - "--speculative-model"
-      - "[ngram]"
-      - "--num-speculative-tokens"
-      - "5"
+      # - "--speculative-model"
+      # - "[ngram]"
+      # - "--num-speculative-tokens"
+      # - "5"
+      # error: vllm: error: unrecognized arguments: --speculative-model [ngram] --num-speculative-tokens 5
+      # something is wrong there. 
 
       # --- MTP ALTERNATIVE (Commented Out) ---
       # Qwen3.6 native Multi-Token Prediction — enabled for reference.
       # To use, uncomment below and comment out the ngram flags above.
       # Requires vLLM 0.20.0+ with MTP support.
       #
-      # - "--speculative-config"
-      # - '{"method":"qwen3_next_mtp","num_speculative_tokens":2}'
+      - "--speculative-config"
+      - '{"method":"qwen3_next_mtp","num_speculative_tokens":2}'
 
     networks:
       - development-network
