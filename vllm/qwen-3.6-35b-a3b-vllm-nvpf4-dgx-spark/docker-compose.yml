@@ -2,10 +2,10 @@ version: "3.9"
 
 services:
   qwen3-6-moe-nvfp4:
-    image: vllm/vllm-openai:v0.20.0-cu130-ubuntu2404
+    image: vllm/vllm-openai:v0.20.0-aarch64-cu130-ubuntu2404
     container_name: qwen3-6-moe-35b-a3b-nvfp4
     hostname: qwen3-6-moe-35b-a3b-nvfp4
-    platform: linux/amd64
+    platform: linux/arm64
     ports:
       - "8000:8000"
     volumes:
@@ -40,24 +40,21 @@ services:
 
       # --- MEMORY & CONTEXT ---
       # --gpu-memory-utilization: Fraction of GPU VRAM reserved for the model.
-      #   0.90 = 90% of 32GB = ~28.8 GB available for model weights + KV cache.
-      #   Higher values give more KV cache for longer context but risk OOM.
+      #   0.85 = 85% of 128GB UMA = ~108.8 GB for model weights + KV cache.
+      #   Dropped from 0.90 to leave more room for System/CPU in the unified memory architecture.
       #
       # --max-model-len: Maximum context length (prompt + response) in tokens.
-      #   This is the maximum number of tokens that can be active in the KV cache
-      #   at any time. 65536 = ~64K tokens = maximum context window.
-      #   - Prompt tokens + response tokens must fit within this limit.
-      #   - If you paste a 50K token document, the model can generate up to ~15K tokens.
-      #   - Lower this value (e.g., 32768) to free up KV cache memory for other settings.
+      #   262144 = ~256K tokens = maximum context window.
+      #   With 128GB UMA, the Spark can handle massive context windows.
       #
       # --max-num-seqs: Maximum number of concurrent request sequences.
-      #   Set to 1 for single-user mode (recommended to save memory).
+      #   Set to 8 for multi-agent / multi-user parallelism.
       - "--gpu-memory-utilization"
-      - "0.90"  
+      - "0.85"
       - "--max-model-len"
-      - "65536"
+      - "262144"
       - "--max-num-seqs"
-      - "1"
+      - "8"
 
       # --- BATCHING / PREFILL OPTIMIZATION ---
       # --max-num-batched-tokens controls how many tokens the model can process
@@ -67,14 +64,14 @@ services:
       # for KV cache allocation. Lower values = slower prefill but more memory
       # available for context window.
       #
-      # DGX Spark (Grace Blackwell) trade-offs observed:
-      #   - 16384: Fastest prefill, but only 33k KV cache (OOM at 65k context)
-      #   -  8192: Good balance, 75k KV cache (supports 65k context) ★ RECOMMENDED
-      #   -  4096: Slowest prefill, but 75k+ KV cache (maximum context headroom)
+      # DGX Spark (Grace Blackwell) trade-offs:
+      #   - 65536: Massive prefill for high-speed document ingestion (★ GODZILLA MODE)
+      #   - 32768: Fast prefill, still excellent KV cache headroom
+      #   -  8192: Conservative prefill, good for smaller contexts
       #
-      # 8192 is the baseline for 65k context on this hardware.
+      # 65536 leverages the 128GB unified memory for blazing-fast prefill.
       - "--max-num-batched-tokens"
-      - "8192"
+      - "65536"
 
       # --- ARCHITECTURE & QUANTIZATION ---
       - "--kv-cache-dtype"
@@ -88,7 +85,7 @@ services:
 
       # --- KERNEL FUSION (The Speed Unlock) ---
       - "--moe-backend"
-      - "cutlass"
+      - "flashinfer_cutlass"
       - "--enable-prefix-caching"
       - "--enable-chunked-prefill"
 
@@ -101,9 +98,28 @@ services:
       - "--max-cudagraph-capture-size"
       - "1"
 
+      # --- SPECULATIVE DECODING (Speed Enhancement) ---
+      # N-Gram Speculative Decoding: Uses existing KV cache to guess
+      # repeating tokens. Zero memory overhead. Can push generation from
+      # ~112 tokens/s → 150-200+ tokens/s if acceptance rate > 50%.
+      # - "--speculative-model"
+      # - "[ngram]"
+      # - "--num-speculative-tokens"
+      # - "5"
+      # error: vllm: error: unrecognized arguments: --speculative-model [ngram] --num-speculative-tokens 5
+      # something is wrong there. 
+
+      # --- MTP ALTERNATIVE (Commented Out) ---
+      # Qwen3.6 native Multi-Token Prediction — enabled for reference.
+      # To use, uncomment below and comment out the ngram flags above.
+      # Requires vLLM 0.20.0+ with MTP support.
+      #
+      - "--speculative-config"
+      - '{"method":"qwen3_next_mtp","num_speculative_tokens":2}'
+
     networks:
       - development-network
 
 networks:
   development-network:
-    external: trueernal: true
+    external: true
