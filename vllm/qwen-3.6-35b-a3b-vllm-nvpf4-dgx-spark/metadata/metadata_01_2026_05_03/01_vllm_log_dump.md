@@ -253,3 +253,73 @@ Capturing CUDA graphs (decode, FULL): 100%|██████████| 1/1 [
 (APIServer pid=1) INFO:     Started server process [1]
 (APIServer pid=1) INFO:     Waiting for application startup.
 (APIServer pid=1) INFO:     Application startup complete.
+
+# log continuation first prompt
+(APIServer pid=1) INFO:     Started server process [1]
+(APIServer pid=1) INFO:     Waiting for application startup.
+(APIServer pid=1) INFO:     Application startup complete.
+(APIServer pid=1) INFO:     192.168.1.243:47574 - "GET /v1/models HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     192.168.1.243:46918 - "GET /v1/models HTTP/1.1" 200 OK
+(APIServer pid=1) INFO:     192.168.1.243:47772 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 05-03 17:32:22 [loggers.py:271] Engine 000: Avg prompt throughput: 4987.5 tokens/s, Avg generation throughput: 9.3 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.7%, Prefix cache hit rate: 0.0%
+(APIServer pid=1) INFO:     192.168.1.243:47772 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(APIServer pid=1) INFO 05-03 17:32:32 [loggers.py:271] Engine 000: Avg prompt throughput: 1259.5 tokens/s, Avg generation throughput: 19.2 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.8%, Prefix cache hit rate: 43.6%
+(APIServer pid=1) INFO 05-03 17:32:42 [loggers.py:271] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 36.8 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.8%, Prefix cache hit rate: 43.6%
+(APIServer pid=1) INFO 05-03 17:32:52 [loggers.py:271] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 36.9 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.8%, Prefix cache hit rate: 43.6%
+(APIServer pid=1) INFO 05-03 17:33:02 [loggers.py:271] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 15.6 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 43.6%
+
+
+# Qwen 3.6 Moe opinion
+
+I've analyzed the vllm log dump. Here's my opinion:
+
+---
+
+## 1. MOE Backend: `cutlass` vs `flashinfer_cutlass`
+
+The HF guide says `--moe_backend flashinfer_cutlass`, but your config has `--moe-backend cutlass`.
+
+**Good news**: Looking at **line 150** of the log:
+```
+Using 'VLLM_CUTLASS' NvFp4 MoE backend out of potential backends: ['FLASHINFER_TRTLLM', 'FLASHINFER_CUTEDSL', 'FLASHINFER_CUTEDSL_BATCHED', 'FLASHINFER_CUTLASS', 'VLLM_CUTLASS', 'MARLIN', 'EMULATION'].
+```
+
+vLLM resolved `cutlass` to **`VLLM_CUTLASS`** — this is the VLLM-native cutlass implementation. The HF guide's `flashinfer_cutlass` would map to `FLASHINFER_CUTLASS` in vLLM's backend enum. Both are valid cutlass-based backends for FP4 MoE inference. The `VLLM_CUTLASS` backend is the recommended default for most deployments and is working correctly.
+
+**No action needed** here — the backend is functioning properly.
+
+---
+
+## 2. Context Window — You're Actually Fine
+
+The log shows:
+- **Line 164**: `GPU KV cache size: 2,158,880 tokens` — that's ~2.1M token KV cache capacity
+- **Line 165**: `Maximum concurrency for 65,536 tokens per request: 108.50x`
+
+You set `--max-model-len 65536` and `--max-num-batched-tokens 8192`, and the system allocated **~2.1M tokens** of KV cache. This is more than enough for the 65K context window. The earlier comment in the docker-compose about "giving very little context window permission" was from an earlier iteration — the current config with `gpu-memory-utilization=0.90` gives plenty of KV cache memory.
+
+---
+
+## 3. Overall Health: Server Started Successfully
+
+Key log lines showing success:
+- **Line 167**: `Loading safetensors checkpoint shards: 100% Completed | 3/3 [01:58<00:00, 39.42s/it]` — Model loaded in ~2 minutes
+- **Line 218**: `Starting vLLM server on http://0.0.0.0:8000`
+- **Line 255**: `Application startup complete.`
+
+The server is fully operational on port 8000. All endpoints are initialized (generate, chat/completions, completions, messages, etc.).
+
+---
+
+## Summary
+
+| Item | Status | Notes |
+|------|--------|-------|
+| MOE Backend | ✅ OK | `cutlass` resolves to `VLLM_CUTLASS`, working correctly |
+| KV Cache | ✅ OK | 2.1M tokens available, supports 65K context |
+| Server Status | ✅ Running | Started successfully on port 8000 |
+| Model Load | ✅ Done | 121.5 seconds total, 21.86 GB loaded |
+
+The only minor note is the **Mamba cache mode warning** (line 131-132), but this is informational — not an error.
+
+Would you like me to make any changes based on this analysis, or should this be sent to Gemini as-is?
