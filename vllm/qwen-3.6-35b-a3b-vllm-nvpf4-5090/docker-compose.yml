@@ -85,6 +85,16 @@ services:
       - "qwen3"
       - "--tool-call-parser"
       - "qwen3_coder"
+      # Auto tool choice is needed for open code, otherwise a snippet of code like the one bellow will raise an error HTTO 400 (bad request).
+      #       response = client.chat.completions.create(
+      # model="meta-llama/Llama-3.1-8B-Instruct",
+      # messages=[{"role": "user", "content": "What's the weather in Paris?"}],
+      # tools=tools,
+      # tool_choice="auto"
+      # )
+      # ❌ Raises: 400 "auto" 
+      # In short: tool choice requires --enable-auto-tool-choice and --tool-call-parser to be set
+      - "--enable-auto-tool-choice"
 
       # --- KERNEL FUSION (The Speed Unlock) ---
       - "--moe-backend"
