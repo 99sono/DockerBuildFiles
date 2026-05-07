@@ -32,6 +32,8 @@ services:
       - "RedHatAI/Qwen3.6-35B-A3B-NVFP4"
       - "--served-model-name"
       - "Qwen3.6-35B-A3B-NVFP4"
+      - "--api-key"
+      - "dummy-key"
       - "--trust-remote-code"
       - "--host"
       - "0.0.0.0"
