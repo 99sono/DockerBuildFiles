@@ -1,0 +1,4 @@
+.env
+nginx-proxy/ssl/private.key
+nginx-proxy/ssl/cert.pem
+nginx-proxy/ssl/*.crt

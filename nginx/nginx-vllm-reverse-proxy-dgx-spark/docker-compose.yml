@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  nginx:
+    image: nginx:1.30-alpine
+    container_name: vllm-nginx-proxy
+    platform: linux/arm64/v8
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx-proxy/ssl/cert.pem:/etc/nginx/ssl/cert.pem:ro
+      - ./nginx-proxy/ssl/private.key:/etc/nginx/ssl/private.key:ro
+    restart: unless-stopped
+    networks:
+      - development-network
+
+networks:
+  development-network:
+    external: true
