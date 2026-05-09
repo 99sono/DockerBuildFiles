@@ -14,3 +14,10 @@
 # This key is used in the Authorization header:
 #   Authorization: Bearer $VLLM_API_KEY
 VLLM_API_KEY=dummy-key
+
+# ============================================================
+# DGX HOSTNAME
+# ============================================================
+# Set the hostname of the DGX server that vLLM is running on.
+# This is used to construct URLs for testing.
+DGX_HOSTNAME=localhost

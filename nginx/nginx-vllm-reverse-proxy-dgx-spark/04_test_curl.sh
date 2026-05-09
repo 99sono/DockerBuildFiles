@@ -21,18 +21,18 @@ echo ""
 
 # Test 1: Health check (using -k to bypass cert until CA install)
 echo "=== Test 1: GET /health (HTTPS with -k) ==="
-curl -s -k https://localhost/health
+curl -s -k https://$DGX_HOSTNAME/health
 echo ""
 
 # Test 2: Check models endpoint (Authorization header required by vLLM)
 echo "=== Test 2: GET /v1/models (HTTPS with -k) ==="
-curl -s -k https://localhost/v1/models \
+curl -s -k https://$DGX_HOSTNAME/v1/models \
   -H "Authorization: Bearer $VLLM_API_KEY" | head -50
 echo ""
 
 # Test 3: Chat completion
 echo "=== Test 3: POST /v1/chat/completions ==="
-curl -s -k https://localhost/v1/chat/completions \
+curl -s -k https://$DGX_HOSTNAME/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $VLLM_API_KEY" \
   -d '{
@@ -45,7 +45,7 @@ echo ""
 echo "=== Test 4: GET /invocations (should return 403) ==="
 curl -s -k -o /dev/null -w "HTTP Status: %{http_code}\n" \
   -H "Authorization: Bearer $VLLM_API_KEY" \
-  https://localhost/invocations
+  https://$DGX_HOSTNAME/invocations
 echo ""
 
 echo "All tests complete."
