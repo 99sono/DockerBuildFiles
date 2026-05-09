@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CERT_FILE="${SCRIPT_DIR}/nginx-proxy/ssl/cert.pem"
+CERT_FILE="${SCRIPT_DIR}/nginx-proxy/ssl/nginx-selfsigned.crt"
 
 if [[ ! -f "$CERT_FILE" ]]; then
     echo "ERROR: ${CERT_FILE} not found."
