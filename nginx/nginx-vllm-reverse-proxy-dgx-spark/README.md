@@ -27,7 +27,7 @@ This setup follows the official install guide:
 ./00_b_generate_self_signed_cert.sh
 
 # 2. Install certificate in Ubuntu trust store
-./01_install_ca_cert.sh
+./01_a_install_ca_cert.sh
 
 # 3. Pull nginx image
 ./00_a_pull_nginx_image.sh
@@ -158,7 +158,8 @@ http {
 | `docker-compose.yml` | nginx service — shares the external `development-network` with existing vLLM |
 | `nginx.conf` | nginx configuration with TLS, streaming support, and proxy settings |
 | `00_b_generate_self_signed_cert.sh` | Generates self-signed certificate with CN=spark-8ddc |
-| `01_install_ca_cert.sh` | Installs certificate in Ubuntu's system trust store |
+| `01_a_install_ca_cert.sh` | Installs certificate in Ubuntu's system trust store |
+| `01_b_remove_ca_cert.sh` | Removes certificate from Ubuntu's system trust store |
 | `01_up.sh` | Starts the nginx reverse proxy container |
 | `02_down.sh` | Stops all containers managed by compose |
 | `03_enter_container.sh` | Opens shell in the nginx container |
@@ -215,7 +216,8 @@ nginx-vllm-reverse-proxy-dgx-spark/
 ├── .gitignore                # Excludes sensitive files
 ├── 00_a_pull_nginx_image.sh  # Pull nginx image
 ├── 00_b_generate_self_signed_cert.sh  # Generate SSL certificate
-├── 01_install_ca_cert.sh     # Install CA cert in Ubuntu trust store
+├── 01_a_install_ca_cert.sh     # Install CA cert in Ubuntu trust store
+├── 01_b_remove_ca_cert.sh     # Remove CA cert from Ubuntu trust store
 ├── 01_up.sh                  # Start the reverse proxy
 ├── 02_down.sh                # Stop the reverse proxy
 ├── 03_enter_container.sh     # Enter the nginx container

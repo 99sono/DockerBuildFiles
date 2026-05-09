@@ -21,3 +21,11 @@ VLLM_API_KEY=dummy-key
 # Set the hostname of the DGX server that vLLM is running on.
 # This is used to construct URLs for testing.
 DGX_HOSTNAME=localhost
+
+# ============================================================
+# SSL IP ADDRESS
+# ============================================================
+# IP address to include in the certificate SAN extension.
+# This ensures browser trust compatibility (Chrome 58+).
+# Set this to your local network IP (e.g., 192.168.1.55)
+SSL_IP_ADDRESS=127.0.0.1
