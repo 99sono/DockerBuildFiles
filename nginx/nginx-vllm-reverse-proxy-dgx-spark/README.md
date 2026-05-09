@@ -1,120 +1,179 @@
-# NGINX Reverse Proxy for vLLM HTTPS (DGX Spark)
+# NGINX Reverse Proxy for vLLM HTTPS (Self-Signed Certificate)
 
-## Status: ⚠️ Unverified — Reference Guide
+This guide sets up an Nginx reverse proxy to add HTTPS in front of an already running vLLM container. The proxy handles SSL termination, request buffering (disabled for streaming), and security hardening.
 
-This folder contains the complete configuration for running an nginx reverse proxy with a self-signed SSL certificate, providing HTTPS access to a vLLM instance running on the shared Docker network.
+## Key Features
 
-## Requirements
+1. Self-signed certificate (clients must install it explicitly)
+2. Streaming support (`proxy_buffering off`)
+3. Blocks the vulnerable `/invocations` endpoint (CVE-2026-22778 mitigation)
+4. HTTP → HTTPS redirect on port 80
 
-- **Architecture:** ARM64 (DGX Spark / Grace Blackwell)
-- **Docker:** With Docker Compose v2.x+
-- **Network:** vLLM container must already be running on the `development-network`
-- **CA Trust:** Self-signed certificate must be installed in Ubuntu's CA trust store
+## Reference
+
+This setup follows the official install guide:
+[HTTPS via Nginx Reverse Proxy with vLLM](https://github.com/99sono/install_guides/blob/main/nvidia_dgx_spark_vllm/HTTPS-via-nginx-reverse-proxy-with-vLLM.md)
+
+## Prerequisites
+
+1. A running vLLM container on the `development-network` Docker network, without publishing its port to the host.
+2. Docker and Docker Compose installed on the same host.
+3. The DGX Spark hostname: `dgx-8ddc`
 
 ## Quick Start
 
 ```bash
-# 1. Copy env template and set your DGX IP
-cp .env.example .env
-# Edit .env — replace [DGX_IP] with your DGX Spark's actual static IP (e.g. 192.168.1.50)
-
-# 2. Generate self-signed certificate
+# 1. Generate self-signed certificate
 ./00_b_generate_self_signed_cert.sh
 
-# 3. Install certificate in Ubuntu trust store
+# 2. Install certificate in Ubuntu trust store
 ./01_install_ca_cert.sh
 
-# 4. Pull nginx image
+# 3. Pull nginx image
 ./00_a_pull_nginx_image.sh
 
-# 5. Start the reverse proxy
+# 4. Start the reverse proxy
 ./01_up.sh
 
-# 6. Test the API
-python 04_test_curl.py
+# 5. Test the API
+bash 04_test_curl.sh
 
-# 7. Stop the reverse proxy
+# 6. Stop the reverse proxy
 ./02_down.sh
 ```
 
-## Key Configuration (docker-compose.yml)
+## API Endpoint
+
+```
+https://dgx-8ddc/v1/chat/completions
+https://dgx-8ddc/v1/models
+https://dgx-8ddc/health
+```
+
+## Docker Compose Configuration
 
 | Parameter | Value | Purpose |
 |-----------|-------|---------|
-| `image` | `nginx:1.30-alpine` | Lightweight nginx container |
+| `image` | `nginx:latest` | Latest nginx container |
 | `ports` | `80:80, 443:443` | HTTP and HTTPS exposure |
-| `platform` | `linux/arm64/v8` | ARM64 for DGX Spark |
 | `network` | `development-network` (external) | Shared with existing vLLM container |
 
-### nginx.conf
+## nginx.conf
+
+```nginx
+events {
+    worker_connections 1024;
+}
+
+http {
+    # Disable request/response buffering for streaming
+    proxy_buffering off;
+    proxy_request_buffering off;
+
+    server {
+        listen 443 ssl;
+        server_name _;
+
+        ssl_certificate     /etc/nginx/ssl/nginx-selfsigned.crt;
+        ssl_certificate_key /etc/nginx/ssl/nginx-selfsigned.key;
+
+        # Security hardening
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers HIGH:!aNULL:!MD5;
+
+        # Block the vulnerable /invocations endpoint
+        location = /invocations {
+            return 403;
+        }
+
+        # Proxy everything else to vLLM
+        location / {
+            proxy_pass http://vllm:8000;
+            proxy_set_header Host $proxy_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+}
+```
+
+### Key Configuration Points
 
 | Setting | Value | Purpose |
 |---------|-------|---------|
-| `client_max_body_size` | `64m` | Allow large prompt uploads |
-| `proxy_read_timeout` | `300s` | vLLM long-running requests |
-| `proxy_buffering` | `off` | Streaming passthrough |
-| `ssl_protocols` | `TLSv1.2 TLSv1.3` | Secure TLS versions |
+| `server_name` | `_` | Matches any incoming Host header |
+| `proxy_set_header Host` | `$proxy_host` | Forwards the upstream container name |
+| `proxy_buffering` | `off` | Streaming passthrough for token-by-token output |
+| `/invocations` | `return 403` | Blocks vulnerable endpoint |
 
-### Route Restrictions
+## Maintenance Scripts
 
-| Route | Action | Description |
-|-------|--------|-------------|
-| `/v1/...` | Proxy to vLLM | OpenAI-compatible API |
-| `/models` | Proxy to vLLM | Model listing |
-| `/health` | Proxy to vLLM | Health check |
-| `/invocations` | **403 Forbidden** | Blocked (CVE-2026-22778) |
-| `/*` | **404 Not found** | Everything else denied |
+| Script | Purpose |
+|--------|---------|
+| `06_a_nginx_reload_config.sh` | Gracefully reload nginx config in-place without container restart |
+| `06_b_nginx_verify_config.sh` | Validate nginx.conf syntax before applying changes |
 
-### Security Features
+## File Descriptions
 
-- **Route restriction:** Only `/v1/*`, `/models`, `/health` routes are accessible; all others return 404.
-- **CVE-2026-22778 mitigation:** `/invocations` is explicitly blocked with a 403 Forbidden response.
-- **TLS hardening:** Only TLSv1.2 and TLSv1.3 allowed; weak ciphers excluded.
-- **Self-signed certificate:** Certificate SAN includes `localhost`, `127.0.0.1`, and the DGX IP address from `.env`.
+| File | Purpose |
+|------|---------|
+| `docker-compose.yml` | nginx service — shares the external `development-network` with existing vLLM |
+| `nginx.conf` | nginx configuration with TLS, streaming support, and proxy settings |
+| `00_b_generate_self_signed_cert.sh` | Generates self-signed certificate with CN=dgx-8ddc |
+| `01_install_ca_cert.sh` | Installs certificate in Ubuntu's system trust store |
+| `01_up.sh` | Starts the nginx reverse proxy container |
+| `02_down.sh` | Stops all containers managed by compose |
+| `03_enter_container.sh` | Opens shell in the nginx container |
+| `04_test_curl.sh` | Tests all HTTPS endpoints |
+| `05_docker_logs.sh` | Follows container logs in real-time |
+| `06_a_nginx_reload_config.sh` | Reloads nginx configuration without restart |
+| `06_b_nginx_verify_config.sh` | Validates nginx configuration syntax |
+| `nginx-proxy/ssl/` | Generated SSL files (git-ignored) |
 
-## nginx Alpine File Structure
+## Client-Side Certificate Installation
 
-This project uses the `nginx:1.30-alpine` image. Below is the default directory layout of an nginx Alpine container — useful for context when using `docker exec` or troubleshooting container issues.
+Every client that needs to access the vLLM API must trust the self-signed certificate.
 
+### On Linux (Ubuntu/Debian)
+
+```bash
+sudo cp nginx-proxy/ssl/nginx-selfsigned.crt /usr/local/share/ca-certificates/nginx.crt
+sudo update-ca-certificates
 ```
-/etc/nginx/              # Configuration root
-├── nginx.conf           # Main configuration file (mounted from project root)
-├── mime.types           # MIME type mappings
-├── conf.d/
-│   └── *.conf           # Server configs (not used here, nginx.conf is self-contained)
-├── sites-enabled/       # Included sites (not used here)
-├── snippets/            # Reusable config fragments (not used here)
-/var/log/nginx/          # Access and error logs (redirected to STDOUT/STDERR)
-/var/cache/nginx/        # Cached proxy data (disabled; proxy_cache off)
-/etc/ssl/                # System certificate store (used for SSL certificate files)
+
+### On macOS
+
+```bash
+sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain nginx-selfsigned.crt
 ```
 
-### What You Mount
+### On Windows
 
-This project mounts only three things:
+1. Double-click the `.crt` file
+2. Click **Install Certificate**
+3. Choose **Local Machine** → Place all certificates in the following store → **Trusted Root Certification Authorities**
+4. Click **Finish**
 
-| Mount point | Source (project) | Purpose |
-|-------------|-----------------|---------|
-| `/etc/nginx/nginx.conf` | `nginx.conf` | Main nginx configuration — TLS, routing, proxy settings |
-| `/etc/nginx/ssl/cert.pem` | `nginx-proxy/ssl/cert.pem` | SSL public certificate |
-| `/etc/nginx/ssl/private.key` | `nginx-proxy/ssl/private.key` | SSL private key |
+### Python / requests
 
-All other nginx paths (`/var/log/`, `/var/cache/`, etc.) use the Alpine defaults. This container uses only `nginx.conf` as its sole configuration file — no `conf.d/`, `sites-enabled/`, or `snippets/` are needed.
+If you can't install system-wide, point to the cert file explicitly:
 
-### Common Paths When Inside the Container
+```python
+import requests
 
-| Path | What You'll Find |
-|------|-----------------|
-| `/etc/nginx/nginx.conf` | Only file you'll edit — server config + all directives |
-| `/var/log/nginx/access.log` | HTTP access log (redirected to STDOUT by default) |
-| `/var/log/nginx/error.log` | Error log (redirected to STDERR by default) |
-| `/usr/share/nginx/html/` | Default nginx landing page content directory |
+response = requests.post(
+    "https://dgx-8ddc/v1/completions",
+    headers={"Authorization": "Bearer your-api-key"},
+    json={"prompt": "Hello", "max_tokens": 10},
+    verify="./nginx-proxy/ssl/nginx-selfsigned.crt"
+)
+```
 
 ## Directory Structure
 
 ```
 nginx-vllm-reverse-proxy-dgx-spark/
-├── .env.example              # Template (not committed to git)
 ├── .gitignore                # Excludes sensitive files
 ├── 00_a_pull_nginx_image.sh  # Pull nginx image
 ├── 00_b_generate_self_signed_cert.sh  # Generate SSL certificate
@@ -122,68 +181,26 @@ nginx-vllm-reverse-proxy-dgx-spark/
 ├── 01_up.sh                  # Start the reverse proxy
 ├── 02_down.sh                # Stop the reverse proxy
 ├── 03_enter_container.sh     # Enter the nginx container
-├── 04_test_curl.py           # Test HTTPS endpoints
+├── 04_test_curl.sh           # Test HTTPS endpoints
 ├── 05_docker_logs.sh         # View container logs
-├── docker-compose.yml        # nginx service only (no vLLM)
+├── 06_a_nginx_reload_config.sh  # Reload nginx config in-place
+├── 06_b_nginx_verify_config.sh  # Validate nginx config syntax
+├── docker-compose.yml        # nginx service configuration
 ├── nginx.conf                # nginx reverse proxy configuration
-└── nginx-proxy/
-    └── ssl/                  # Generated SSL certificate files (git-ignored)
+├── logs/                     # nginx log files (mounted from container)
+├── nginx-proxy/
+│   └── ssl/                  # Generated SSL files (git-ignored)
+│       ├── nginx-selfsigned.crt
+│       └── nginx-selfsigned.key
+├── metadata/                 # Debug information and logs
+└── test/                     # Test configurations
 ```
 
-## Workflow
+## Troubleshooting
 
-This guide adds an nginx reverse-proxy layer on top of your **existing bare vLLM container**. Your DGX Spark already runs vLLM directly on port 8000 (HTTP). The docker-compose.yml below replaces that direct port exposure — the nginx proxy now handles all external HTTPS traffic and forwards internal HTTP requests to the vLLM container on the shared Docker network.
-
-## API Endpoint
-
-```
-https://<DGX_IP>/v1/chat/completions
-https://<DGX_IP>/v1/models
-https://<DGX_IP>/health
-```
-
-## .env Configuration
-
-The `.env` file must be created from `.env.example` before running any scripts:
-
-```bash
-# Your DGX Spark's actual static IP address (REQUIRED)
-DGX_IP=192.168.1.50
-
-# vLLM API key for authentication
-VLLM_API_KEY=dummy-key
-```
-
-> ⚠️ The certificate generation script (`00_b_generate_self_signed_cert.sh`) will **refuse to run** if `DGX_IP` is still set to the placeholder value `[DGX_IP]`. You must replace it with your real DGX IP address before proceeding.
-
-## Key Differences from Bare vLLM
-
-| Aspect | Bare vLLM | With nginx reverse proxy |
-|--------|-----------|-------------------------|
-| Port | `8000` (HTTP) | `443` (HTTPS), `80` redirects to HTTPS |
-| Certificate | None | Self-signed (generated per machine) |
-| Client trust | Always needs curl `-k` | Trusts after CA install (`update-ca-certificates`) |
-| Streaming | Works | Works (`proxy_buffering off`) |
-| URL | `http://localhost:8000` | `https://<DGX_IP>` |
-| Route access | All routes open | Restricted to `/v1/`, `/models`, `/health` |
-
-## File Descriptions
-
-| File | Purpose |
-|------|---------|
-| `docker-compose.yml` | nginx service only — shares the external `development-network` with existing vLLM |
-| `nginx.conf` | nginx configuration with TLS, route restrictions, and proxy settings |
-| `00_b_generate_self_signed_cert.sh` | Generates self-signed certificate with DGX IP in SAN |
-| `01_install_ca_cert.sh` | Installs certificate in Ubuntu's system trust store |
-| `01_up.sh` | Starts the nginx reverse proxy container |
-| `02_down.sh` | Stops all containers managed by compose |
-| `03_enter_container.sh` | Opens shell in the nginx container |
-| `04_test_curl.py` | Tests all HTTPS endpoints (models, health, chat) |
-| `05_docker_logs.sh` | Follows container logs in real-time |
-| `nginx-proxy/ssl/` | Generated SSL files (git-ignored) |
-| `metadata/` | Configuration dumps and logs |
-| `test/` | Test configurations |
-
-## Optional: Real Certificate
-
-Replace the self-signed cert with a Let's Encrypt certificate using the nginx-proxy docker image `nginx/nginx:latest` + [`nginx-letsencrypt`](https://github.com/directust/nginx-letsencrypt) or [`linuxserver/swag`](https://github.com/linuxserver/docker-swag). The `nginx.conf` structure remains nearly identical — just mount the certificate files instead of generating them locally.
+| Symptom | Likely Cause | Solution |
+|---------|--------------|----------|
+| 502 Bad Gateway | Nginx cannot reach vLLM | Check that both containers are on the same Docker network and vLLM is running. |
+| SSL errors (client side) | Certificate not trusted | Install the self-signed cert on the client as shown in Client-Side Certificate Installation. |
+| Streaming hangs | Buffering re-enabled | Ensure `proxy_buffering off;` is present in the `http` block. |
+| Host header mismatch | vLLM expects a specific host | Use `proxy_set_header Host $proxy_host;` (already in the config). |

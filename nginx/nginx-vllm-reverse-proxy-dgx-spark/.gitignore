@@ -1,4 +1,13 @@
+# Environment and secrets
 .env
-nginx-proxy/ssl/private.key
-nginx-proxy/ssl/cert.pem
+*.key
+nginx-selfsigned.key
+nginx-selfsigned.crt
+
+# Certificate directory (exclude all SSL files)
 nginx-proxy/ssl/*.crt
+nginx-proxy/ssl/*.key
+nginx-proxy/ssl/*.pem
+
+# Logs directory
+logs/

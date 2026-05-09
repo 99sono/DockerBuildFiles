@@ -10,9 +10,8 @@ and should never be committed.
 
 | File | Description |
 |------|-------------|
-| `cert.pem` | Public certificate (server cert + CA cert for self-signed) |
-| `private.key` | Private key — keep secure |
-| `ca.crt` | Optional CA bundle (created as a convenience) |
+| `nginx-selfsigned.crt` | Self-signed certificate (public) |
+| `nginx-selfsigned.key` | Private key — keep secure |
 
 ### Regenerating certificates
 
