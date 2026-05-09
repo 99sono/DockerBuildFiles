@@ -1,14 +1,18 @@
 # Environment and secrets
+# These files contain sensitive credentials (API keys, passwords) and must never be committed.
 .env
 00_env.sh
+
+# Private key files - sensitive cryptographic material, never commit.
 *.key
 nginx-selfsigned.key
 nginx-selfsigned.crt
 
-# Certificate directory (exclude all SSL files)
+# Self-signed certificate - should not be shared, as users generate their own.
+# Certificate directory (exclude all SSL files generated locally).
 nginx-proxy/ssl/*.crt
 nginx-proxy/ssl/*.key
 nginx-proxy/ssl/*.pem
 
-# Logs directory
+# Logs directory - runtime logs contain sensitive request/response data.
 logs/
