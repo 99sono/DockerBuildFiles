@@ -7,7 +7,7 @@ services:
   gemma-4-26b-it-nvfp4-turbo:
     image: vllm/vllm-openai:nightly
     container_name: gemma-4-26b-it-nvfp4-turbo
-    hostname: gemma-4-26b-it-nvfp4-turbo
+    hostname: vllm
     runtime: nvidia
     restart: unless-stopped
     ports:

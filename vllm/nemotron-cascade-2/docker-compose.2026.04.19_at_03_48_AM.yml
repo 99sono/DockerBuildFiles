@@ -5,7 +5,7 @@ services:
   nemotron-cascade:
     image: vllm-triattention:1.0.0
     container_name: nemotron-cascade-2-triattn
-    hostname: nemotron-cascade-2-triattn
+    hostname: vllm
     platform: linux/amd64
     ports:
       - "8000:8000"

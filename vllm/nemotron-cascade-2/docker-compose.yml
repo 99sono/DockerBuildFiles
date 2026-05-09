@@ -4,7 +4,7 @@ services:
   nemotron-cascade:
     image: vllm/vllm-openai:nightly
     container_name: nemotron-cascade-2-nvfp4-stable
-    hostname: nemotron-cascade-2-nvfp4
+    hostname: vllm
     platform: linux/amd64
 
     ports:
