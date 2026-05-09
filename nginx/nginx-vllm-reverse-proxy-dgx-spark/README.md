@@ -107,6 +107,13 @@ http {
 | `proxy_buffering` | `off` | Streaming passthrough for token-by-token output |
 | `/invocations` | `return 403` | Blocks vulnerable endpoint |
 
+## Logging Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `05_a_follow_logs.sh` | Follow container logs in real-time (like `tail -f`) |
+| `05_b_dump_logs.sh` | Dump container logs to a local file for analysis |
+
 ## Maintenance Scripts
 
 | Script | Purpose |
@@ -126,7 +133,8 @@ http {
 | `02_down.sh` | Stops all containers managed by compose |
 | `03_enter_container.sh` | Opens shell in the nginx container |
 | `04_test_curl.sh` | Tests all HTTPS endpoints |
-| `05_docker_logs.sh` | Follows container logs in real-time |
+| `05_a_follow_logs.sh` | Follows container logs in real-time |
+| `05_b_dump_logs.sh` | Dumps container logs to local file |
 | `06_a_nginx_reload_config.sh` | Reloads nginx configuration without restart |
 | `06_b_nginx_verify_config.sh` | Validates nginx configuration syntax |
 | `nginx-proxy/ssl/` | Generated SSL files (git-ignored) |
@@ -182,7 +190,8 @@ nginx-vllm-reverse-proxy-dgx-spark/
 ├── 02_down.sh                # Stop the reverse proxy
 ├── 03_enter_container.sh     # Enter the nginx container
 ├── 04_test_curl.sh           # Test HTTPS endpoints
-├── 05_docker_logs.sh         # View container logs
+├── 05_a_follow_logs.sh          # Follow container logs in real-time
+├── 05_b_dump_logs.sh            # Dump container logs to file
 ├── 06_a_nginx_reload_config.sh  # Reload nginx config in-place
 ├── 06_b_nginx_verify_config.sh  # Validate nginx config syntax
 ├── docker-compose.yml        # nginx service configuration
