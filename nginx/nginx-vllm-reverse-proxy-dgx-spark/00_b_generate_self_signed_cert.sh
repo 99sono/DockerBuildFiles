@@ -14,7 +14,7 @@ mkdir -p "$CERT_DIR"
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout "$KEY_FILE" \
   -out "$CERT_FILE" \
-  -subj "/CN=dgx-8ddc"
+  -subj "/CN=spark-8ddc"
 
 echo ""
 echo "Certificate generated successfully:"

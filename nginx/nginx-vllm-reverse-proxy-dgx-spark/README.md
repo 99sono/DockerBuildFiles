@@ -18,7 +18,7 @@ This setup follows the official install guide:
 
 1. A running vLLM container on the `development-network` Docker network, without publishing its port to the host.
 2. Docker and Docker Compose installed on the same host.
-3. The DGX Spark hostname: `dgx-8ddc`
+3. The DGX Spark hostname: `spark-8ddc`
 
 ## Quick Start
 
@@ -45,9 +45,9 @@ bash 04_test_curl.sh
 ## API Endpoint
 
 ```
-https://dgx-8ddc/v1/chat/completions
-https://dgx-8ddc/v1/models
-https://dgx-8ddc/health
+https://spark-8ddc/v1/chat/completions
+https://spark-8ddc/v1/models
+https://spark-8ddc/health
 ```
 
 ## Expected Output
@@ -157,7 +157,7 @@ http {
 |------|---------|
 | `docker-compose.yml` | nginx service — shares the external `development-network` with existing vLLM |
 | `nginx.conf` | nginx configuration with TLS, streaming support, and proxy settings |
-| `00_b_generate_self_signed_cert.sh` | Generates self-signed certificate with CN=dgx-8ddc |
+| `00_b_generate_self_signed_cert.sh` | Generates self-signed certificate with CN=spark-8ddc |
 | `01_install_ca_cert.sh` | Installs certificate in Ubuntu's system trust store |
 | `01_up.sh` | Starts the nginx reverse proxy container |
 | `02_down.sh` | Stops all containers managed by compose |
@@ -201,7 +201,7 @@ If you can't install system-wide, point to the cert file explicitly:
 import requests
 
 response = requests.post(
-    "https://dgx-8ddc/v1/completions",
+    "https://spark-8ddc/v1/completions",
     headers={"Authorization": "Bearer your-api-key"},
     json={"prompt": "Hello", "max_tokens": 10},
     verify="./nginx-proxy/ssl/nginx-selfsigned.crt"
