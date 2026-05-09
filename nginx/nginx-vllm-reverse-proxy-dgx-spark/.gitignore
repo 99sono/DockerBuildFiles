@@ -1,5 +1,6 @@
 # Environment and secrets
 .env
+00_env.sh
 *.key
 nginx-selfsigned.key
 nginx-selfsigned.crt
