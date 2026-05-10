@@ -1,16 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 05_b_dump_logs.sh
-# Dump nginx container logs to a local file for analysis.
-# Use this to capture a snapshot of logs for debugging or review.
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
+source "$SCRIPT_DIR/00_env.sh"
 
-echo "Dumping nginx-proxy container logs ..."
+CONTAINER_NAME="$NGINX_CONTAINER_NAME"
 
-docker logs nginx-proxy > nginx_logs_dump.txt 2>&1
+if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
+    echo "Error: Container '$CONTAINER_NAME' is not running." >&2
+    exit 1
+fi
+
+echo "Dumping $CONTAINER_NAME container logs ..."
+
+docker logs "$CONTAINER_NAME" > nginx_logs_dump.txt 2>&1
 
 echo "Done! Logs saved to nginx_logs_dump.txt"
 echo "Last 20 lines:"

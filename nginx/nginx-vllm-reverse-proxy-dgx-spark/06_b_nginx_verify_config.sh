@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 06_b_nginx_verify_config.sh
-# Validate nginx.conf syntax before applying changes.
-# Use this to verify configuration is valid before running 06_a_nginx_reload_config.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+source "$SCRIPT_DIR/00_env.sh"
 
-echo "Validating nginx configuration in 'nginx-proxy' container ..."
-docker exec nginx-proxy nginx -t
+CONTAINER_NAME="$NGINX_CONTAINER_NAME"
 
-echo "Done. Configuration syntax validated."
+if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
+    echo "Error: Container '$CONTAINER_NAME' is not running." >&2
+    exit 1
+fi
+
+echo "Validating nginx configuration in '$CONTAINER_NAME' container ..."
+if docker exec "$CONTAINER_NAME" nginx -t; then
+    echo "Done. Configuration syntax validated."
+else
+    echo "Error: Configuration syntax validation failed." >&2
+    exit 1
+fi

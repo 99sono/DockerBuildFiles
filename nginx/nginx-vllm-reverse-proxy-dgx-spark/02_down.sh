@@ -3,5 +3,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
+source "$SCRIPT_DIR/00_env.sh"
 
-docker compose --project-name vllm-https down
+docker compose --project-name "$PROJECT_NAME" down

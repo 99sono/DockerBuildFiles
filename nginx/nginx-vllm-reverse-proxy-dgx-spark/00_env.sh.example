@@ -29,3 +29,14 @@ DGX_HOSTNAME=localhost
 # This ensures browser trust compatibility (Chrome 58+).
 # Set this to your local network IP (e.g., 192.168.1.55)
 SSL_IP_ADDRESS=127.0.0.1
+
+# ============================================================
+# CONTAINER NAMES
+# ============================================================
+# Docker container and project names used by the scripts.
+# These should match the docker-compose.yml configuration.
+#
+# NGINX_CONTAINER_NAME: The explicit container_name in docker-compose.yml
+# PROJECT_NAME: Used with --project-name flag for docker compose commands
+NGINX_CONTAINER_NAME=nginx-proxy
+PROJECT_NAME=vllm-https

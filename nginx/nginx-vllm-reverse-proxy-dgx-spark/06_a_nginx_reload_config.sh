@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 06_a_nginx_reload_config.sh
-# Gracefully reload nginx configuration without restarting the container.
-# Use this after making changes to nginx.conf inside the container.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+source "$SCRIPT_DIR/00_env.sh"
 
-echo "Reloading nginx configuration in 'nginx-proxy' container ..."
-docker exec nginx-proxy nginx -s reload
+CONTAINER_NAME="$NGINX_CONTAINER_NAME"
 
-echo "Done. Nginx configuration reloaded gracefully."
+if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
+    echo "Error: Container '$CONTAINER_NAME' is not running." >&2
+    exit 1
+fi
+
+echo "Reloading nginx configuration in '$CONTAINER_NAME' container ..."
+if docker exec "$CONTAINER_NAME" nginx -s reload; then
+    echo "Done. Nginx configuration reloaded gracefully."
+else
+    echo "Error: Failed to reload nginx." >&2
+    exit 1
+fi
