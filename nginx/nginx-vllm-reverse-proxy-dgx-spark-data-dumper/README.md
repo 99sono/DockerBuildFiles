@@ -74,16 +74,21 @@ The Nginx worker processes in this container run as the user `nobody`. While the
 
 **Problem:** If the mounted `./logs` directory is owned by `root` or your host user, the Lua script will fail to create `requests.log` and `responses.log`.
 
-**Solution:** Create the log files on the host first, then make them world-writable. Since `./logs` is a host-mounted volume (`./logs:/var/log/nginx`), the container's `nobody` user writes directly to the host filesystem. Run these commands on the **host** before starting the container:
+**Solution:** Create the log files on the host first, set the directory to be world-accessible, then apply targeted permissions to individual files. Since `./logs` is a host-mounted volume (`./logs:/var/log/nginx`), the container's `nobody` user writes directly to the host filesystem. Run these commands on the **host** before starting the container:
 
 ```bash
-mkdir -p logs && touch logs/requests.log logs/responses.log && chmod -R 777 logs
+mkdir -p logs
+touch logs/requests.log logs/responses.log logs/access.log logs/error.log
+chmod 777 logs                  # directory: world-accessible for file creation
+chmod 666 logs/requests.log logs/responses.log  # Lua scripts: read+write
+chmod 644 logs/access.log logs/error.log        # nginx master (root): owner read+write
 ```
 
 This ensures:
 1. The files exist before the container starts (no file creation race conditions)
-2. The `nobody` user inside the container can read and write to them
-3. The host directory permissions match what the Lua scripts expect
+2. The `logs/` directory is world-accessible so the `nobody` user can create/append files
+3. `requests.log` and `responses.log` are world-readable+writable for Lua I/O
+4. `access.log` and `error.log` remain owner-only (written by nginx master as root)
 
 > **Note:** In a hardened production environment, you would `chown` the directory to the specific UID of the Nginx worker instead of using `777`.
 

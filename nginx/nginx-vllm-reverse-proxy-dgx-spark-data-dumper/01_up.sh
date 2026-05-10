@@ -13,10 +13,13 @@ source "$SCRIPT_DIR/00_env.sh"
 # ============================================================
 # The Nginx worker runs as 'nobody' and needs write access to create
 # and append to log files. Since ./logs is a host-mounted volume,
-# we ensure the directory and files are world-writable.
+# the directory must be world-writable for file creation, while
+# specific files need targeted permissions.
 mkdir -p ./logs
-chmod -R 777 ./logs
 touch ./logs/requests.log ./logs/responses.log ./logs/access.log ./logs/error.log
+chmod 777 ./logs                  # directory: world-accessible for file creation
+chmod 666 ./logs/requests.log ./logs/responses.log  # Lua scripts: read+write
+chmod 644 ./logs/access.log ./logs/error.log        # nginx master (root): owner read+write
 
 # ============================================================
 # Main: Start the debug proxy in detached mode
