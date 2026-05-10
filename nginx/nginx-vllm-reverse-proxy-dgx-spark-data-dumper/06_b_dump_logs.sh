@@ -19,7 +19,7 @@ fi
 # ============================================================
 # Main: Dump container logs to local file for analysis
 # ============================================================
-LOG_FILE="$SCRIPT_DIR/debug_logs/docker_logs_dump.txt"
+LOG_FILE="$SCRIPT_DIR/logs/docker_logs_dump.txt"
 echo "Dumping $DEBUG_CONTAINER_NAME container logs to $(basename "$LOG_FILE") ..."
 
 docker logs "$DEBUG_CONTAINER_NAME" > "$LOG_FILE" 2>&1

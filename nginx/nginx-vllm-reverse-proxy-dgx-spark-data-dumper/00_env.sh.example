@@ -15,7 +15,7 @@ DEBUG_CONTAINER_NAME=nginx-proxy-debug
 COMPOSE_PROJECT_NAME=nginx-debug
 
 # Directory for debug log files
-DEBUG_LOGS_DIR="./debug_logs"
+DEBUG_LOGS_DIR="./logs"
 
 # vLLM backend hostname (same as production)
 VLLM_BACKEND=vllm

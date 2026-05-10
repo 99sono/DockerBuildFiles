@@ -1,4 +1,4 @@
-debug_logs/*.log
-debug_logs/*.txt
-debug_logs/requests.log
-debug_logs/responses.log
+logs/*.log
+logs/*.txt
+logs/requests.log
+logs/responses.log

@@ -34,8 +34,15 @@ This is a **temporary debugging tool** that runs alongside the production nginx 
 ```
 
 ## Logs Location
-- Request bodies: `debug_logs/requests.log`
-- Response bodies: `debug_logs/responses.log`
+
+All logs are mounted to a single directory on the host: `./logs/`
+
+| Log Type | Path (container) | Path (host) |
+|----------|-----------------|-------------|
+| Standard access log | `/var/log/nginx/access.log` | `./logs/access.log` |
+| Standard error log | `/var/log/nginx/error.log` | `./logs/error.log` |
+| Captured requests | `/var/log/nginx/requests.log` | `./logs/requests.log` |
+| Captured responses | `/var/log/nginx/responses.log` | `./logs/responses.log` |
 
 ## Log Format
 
@@ -76,10 +83,15 @@ nginx-vllm-reverse-proxy-dgx-spark-data-dumper/
 ├── 03_enter_container.sh        # Enter container shell
 ├── 04_follow_requests.sh        # Tail request logs
 ├── 05_follow_responses.sh       # Tail response logs
+├── 06_a_follow_logs.sh          # Follow docker container logs
+├── 06_b_dump_logs.sh            # Dump docker container logs to file
 ├── docker-compose.debug.yml     # OpenResty service
 ├── nginx.debug.conf             # Nginx config with Lua
 ├── README.md                    # This file
-├── debug_logs/                  # Captured bodies (gitignored)
+├── logs/                        # Captured bodies + nginx logs (gitignored)
+│   ├── access.log
+│   ├── error.log
 │   ├── requests.log
-│   └── responses.log
-└── .gitignore                   # Excludes debug_logs/
+│   ├── responses.log
+│   └── docker_logs_dump.txt
+└── .gitignore                   # Excludes logs/

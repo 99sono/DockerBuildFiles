@@ -9,12 +9,9 @@ services:
       - "${DEBUG_PROXY_PORT:-8888}:8888"
     volumes:
       - ./nginx.debug.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro
-      - ./debug_logs:/var/log/debug
+      - ./logs:/var/log/nginx
     networks:
       - development-network
-    command: >
-      sh -c "mkdir -p /var/log/nginx && 
-             /usr/local/openresty/bin/openresty -g 'daemon off;'"
 
 networks:
   development-network:
