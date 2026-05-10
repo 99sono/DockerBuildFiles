@@ -12,7 +12,6 @@ services:
       - ./debug_logs:/var/log/debug
     networks:
       - development-network
-    restart: unless-stopped
 
 networks:
   development-network:
