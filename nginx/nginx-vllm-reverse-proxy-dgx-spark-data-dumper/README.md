@@ -65,6 +65,22 @@ Body:
 ---
 ```
 
+## ⚠️ Permissions & Pitfalls
+
+### Log Directory Permissions
+
+The Nginx worker processes in this container run as the user `nobody`. While the Nginx master process (running as `root`) can write to the standard `access.log` and `error.log`, the **Lua scripts** use standard file I/O which inherits the worker's permissions.
+
+**Problem:** If the mounted `./logs` directory is owned by `root` or your host user, the Lua script will fail to create `requests.log` and `responses.log`.
+
+**Solution:** Ensure the host directory is world-writable so the `nobody` user can create and append to the log files:
+
+```bash
+chmod -R 777 ./logs
+```
+
+> **Note:** In a hardened production environment, you would instead `chown` the directory to the specific UID of the Nginx worker, but for debug/development, `777` is the standard path to verify functionality.
+
 ## Important Notes
 - **HTTP only** – API key appears in logs; change it after debugging
 - **No SSL** – certificates not needed
