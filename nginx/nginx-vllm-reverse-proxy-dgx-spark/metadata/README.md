@@ -10,6 +10,7 @@ This directory accumulates nginx reverse proxy metadata including:
 - **Configuration backups** — copies of `nginx.conf` or `docker-compose.yml` snapshots
 - **Error logs** — captured from `logs/error.log` or Docker logs
 - **Session notes** — troubleshooting documentation and testing results
+- **HTTP traffic tracking** — guides for capturing and debugging HTTP traffic between OpenCode and vLLM (see `01_http_traffic_tracking.md`)
 
 ## Usage
 
