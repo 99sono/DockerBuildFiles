@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-docker exec -it nginx-proxy sh
+docker exec -it nginx-proxy /bin/bash
