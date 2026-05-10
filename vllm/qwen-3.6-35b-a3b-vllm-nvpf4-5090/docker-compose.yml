@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   qwen3-6-moe-nvfp4:
     image: vllm/vllm-openai:v0.20.1-ubuntu2404

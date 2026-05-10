@@ -14,6 +14,7 @@ This is a **temporary debugging tool** that runs alongside the production nginx 
 | Protocol | HTTPS (443) | HTTP (8888) |
 | Body logging | None | Full request/response bodies |
 | Container | `nginx-proxy` | `nginx-proxy-debug` |
+| Streaming | Responses stream token-by-token | Responses buffered; UI appears to "hang" until response complete |
 
 ## Quick Start
 
@@ -73,13 +74,46 @@ The Nginx worker processes in this container run as the user `nobody`. While the
 
 **Problem:** If the mounted `./logs` directory is owned by `root` or your host user, the Lua script will fail to create `requests.log` and `responses.log`.
 
-**Solution:** Ensure the host directory is world-writable so the `nobody` user can create and append to the log files:
+**Solution:** Create the log files on the host first, then make them world-writable. Since `./logs` is a host-mounted volume (`./logs:/var/log/nginx`), the container's `nobody` user writes directly to the host filesystem. Run these commands on the **host** before starting the container:
 
 ```bash
-chmod -R 777 ./logs
+mkdir -p logs && touch logs/requests.log logs/responses.log && chmod -R 777 logs
 ```
 
-> **Note:** In a hardened production environment, you would instead `chown` the directory to the specific UID of the Nginx worker, but for debug/development, `777` is the standard path to verify functionality.
+This ensures:
+1. The files exist before the container starts (no file creation race conditions)
+2. The `nobody` user inside the container can read and write to them
+3. The host directory permissions match what the Lua scripts expect
+
+> **Note:** In a hardened production environment, you would `chown` the directory to the specific UID of the Nginx worker instead of using `777`.
+
+
+## 🔒 Security & Decommissioning
+
+### ⚠️ SECURITY ALERT — Ephemeral Use Only
+
+**This container is for short-term diagnostic use only.**
+
+Because it logs raw request and response bodies, the `logs/` directory will contain:
+- **Plaintext API keys** (from request headers)
+- **Sensitive prompts and user data**
+- **Model responses that may contain proprietary information**
+
+Treat the `logs/` folder like **toxic waste**: useful for the job, but something you want to dispose of immediately after you're done.
+
+### Decommissioning Protocol
+
+As soon as your debugging session is over:
+
+```bash
+# 1. Stop the debug proxy
+./02_down.sh
+
+# 2. Remove captured log files (keeps the directory structure intact)
+rm -f ./logs/requests.log ./logs/responses.log ./logs/access.log ./logs/error.log
+```
+
+Do **not** leave the `.log` files sitting on your disk after debugging — they contain sensitive data. The `./logs/` directory itself must remain intact (it is expected by docker-compose). Every minute the container runs, more sensitive data accumulates. Clean up promptly.
 
 ## Important Notes
 - **HTTP only** – API key appears in logs; change it after debugging

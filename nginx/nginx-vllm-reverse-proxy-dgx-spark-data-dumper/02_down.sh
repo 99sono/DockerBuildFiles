@@ -14,4 +14,17 @@ source "$SCRIPT_DIR/00_env.sh"
 echo "Stopping debug proxy ..."
 docker compose -f "$SCRIPT_DIR/docker-compose.debug.yml" down
 
+# ============================================================
+# Optional: Clear captured log files for privacy/cleanup
+# ============================================================
+echo ""
+echo "Would you like to clear captured log files? [y/N]"
+read -r response
+if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+  rm -f ./logs/requests.log ./logs/responses.log ./logs/access.log ./logs/error.log
+  echo "Captured logs cleared."
+else
+  echo "Log files preserved in ./logs/."
+fi
+
 echo "Debug proxy stopped."

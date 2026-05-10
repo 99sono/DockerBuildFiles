@@ -9,6 +9,16 @@ cd "$SCRIPT_DIR"
 source "$SCRIPT_DIR/00_env.sh"
 
 # ============================================================
+# Ensure logs directory has correct permissions for Lua scripts
+# ============================================================
+# The Nginx worker runs as 'nobody' and needs write access to create
+# and append to log files. Since ./logs is a host-mounted volume,
+# we ensure the directory and files are world-writable.
+mkdir -p ./logs
+chmod -R 777 ./logs
+touch ./logs/requests.log ./logs/responses.log ./logs/access.log ./logs/error.log
+
+# ============================================================
 # Main: Start the debug proxy in detached mode
 # ============================================================
 echo "Starting debug proxy on port $DEBUG_PROXY_PORT ..."

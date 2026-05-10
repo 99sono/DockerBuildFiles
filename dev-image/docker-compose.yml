@@ -9,8 +9,6 @@
 # - Provide API keys via environment variables if you plan to use coding agents that require them.
 # - This template is minimal by design and intended as a starting point.
 
-version: "3.9"
-
 services:
   dev:
     # Replace this with your final assembled image reference (built from Layer 04).

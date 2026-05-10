@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   nginx-debug:
     image: openresty/openresty:1.29.2.3-alpine-fat

@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   nemotron-cascade:
     image: vllm/vllm-openai:nightly
