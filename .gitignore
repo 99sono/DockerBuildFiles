@@ -17,6 +17,9 @@ dev-image/.vscode-server/extensionsCache/
 vllm/*/hf-cache/
 .hf-cache
 
+# Local env files - should never be committed, use *.example instead
+**/00_env.sh
+
 *.diff
 
 deleteMe*

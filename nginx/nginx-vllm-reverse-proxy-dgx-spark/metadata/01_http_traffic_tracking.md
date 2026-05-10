@@ -284,3 +284,107 @@ docker exec nginx-proxy tail -f /var/log/nginx/vllm_upstream.log
 4. **Use nginx debug logging** for quick header/timing inspection
 
 For most debugging scenarios, **mitmproxy is the fastest path to understanding what is happening**.
+
+---
+
+## Method 4: Self-Contained Debug Proxy (Lua Dumper)
+
+For debugging without external tools or client changes, use the **parallel debug proxy** in `nginx-vllm-reverse-proxy-dgx-spark-data-dumper/`.
+
+### How it works
+- Runs on **port 8888 (HTTP only)** – no SSL complexity
+- **Buffers all requests/responses** (unlike production proxy which has buffering off)
+- Dumps raw JSON/XML bodies to local log files using inline Lua in nginx
+- Completely separate from production nginx – both can run simultaneously
+
+### Project Structure
+
+```
+nginx-vllm-reverse-proxy-dgx-spark-data-dumper/
+├── 00_env.sh                    # Environment variables
+├── 00_env.sh.example            # Template
+├── 01_up.sh                     # Start debug proxy
+├── 02_down.sh                   # Stop debug proxy
+├── 03_enter_container.sh        # Enter container shell
+├── 04_follow_requests.sh        # Tail request logs
+├── 05_follow_responses.sh       # Tail response logs
+├── docker-compose.debug.yml     # OpenResty service
+├── nginx.debug.conf             # Nginx config with inline Lua
+├── README.md                    # Documentation
+├── .gitignore                   # Excludes debug_logs/
+└── debug_logs/                  # Captured bodies (gitignored)
+    ├── requests.log
+    └── responses.log
+```
+
+### Quick Start
+
+```bash
+cd nginx-vllm-reverse-proxy-dgx-spark-data-dumper/
+
+# 1. Start the debug proxy
+./01_up.sh
+
+# 2. Point OpenCode to http://<spark-host>:8888
+
+# 3. Watch logs in real-time (separate terminals)
+./04_follow_requests.sh    # Terminal 1: request bodies
+./05_follow_responses.sh   # Terminal 2: response bodies
+
+# 4. Trigger the bug in OpenCode
+
+# 5. Stop when done
+./02_down.sh
+```
+
+### Log Format
+
+**requests.log:**
+```
+2026-05-10 08:30:00 REQUEST
+Method: POST
+URI: /v1/chat/completions
+Body:
+{"model": "...", "messages": [...], "tools": [...]}
+---
+```
+
+**responses.log:**
+```
+2026-05-10 08:30:01 RESPONSE
+Status: 200
+Body:
+{"id": "chatcmpl-...", "object": "chat.completion", ...}
+---
+```
+
+### Key Differences from Production
+
+| Aspect | Production | Debug Variant |
+|--------|-----------|---------------|
+| Image | `nginx:latest` | `openresty/openresty:alpine` |
+| Buffering | OFF (streaming) | ON (full capture) |
+| Protocol | HTTPS (443) | HTTP (8888) |
+| Body logging | None | Full request/response |
+| Container | `nginx-proxy` | `nginx-proxy-debug` |
+
+### When to use this
+- You don't want to install mitmproxy
+- You can't configure OpenCode's proxy settings
+- You need to see complete bodies without streaming chunk boundaries
+- You want a completely self-contained, single-port solution
+
+### Limitations
+- **HTTP only** – API key visible in logs; change it after debugging
+- Adds buffering latency – not for production use
+- Logs are appended – manually delete old logs when done debugging
+- Requires OpenResty image (larger than plain nginx)
+
+### Technical Details
+
+The debug proxy uses OpenResty with inline Lua scripts:
+
+- **Request capture:** `access_by_lua_block` reads the full request body and writes to `debug_logs/requests.log`
+- **Response capture:** `body_filter_by_lua_block` accumulates all chunks and writes the complete body to `debug_logs/responses.log` when the last chunk arrives
+- **Buffering enabled:** `proxy_buffering on` and `proxy_request_buffering on` allow full body access (opposite of production)
+-------

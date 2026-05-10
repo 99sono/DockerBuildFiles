@@ -1,0 +1,4 @@
+debug_logs/*.log
+debug_logs/*.txt
+debug_logs/requests.log
+debug_logs/responses.log
