@@ -17,8 +17,12 @@ conda activate "$ENV_NAME"
 # Install main dependencies
 conda install -y -c conda-forge huggingface_hub jq curl
 
+# Install Python OpenAI SDK for test script
+pip install openai
+
 echo ""
 echo "✅ Packages installed successfully!"
 echo ""
 echo "You can now run tests using:"
 echo "    conda activate $ENV_NAME"
+echo "    python 04_test_curl.py"

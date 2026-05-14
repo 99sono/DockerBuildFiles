@@ -22,8 +22,8 @@
 # 3. Start the server
 ./01_a_up_server.sh
 
-# 4. Test the server
-./04_test_curl.sh
+# 4. Test the server (Python script - requires `pip install openai`)
+python 04_test_curl.py
 
 # 5. Monitor logs
 ./05_docker_logs.sh
@@ -42,7 +42,7 @@ llamacpp/qwen-3.6-27b-mtp-5090/
 ├── 01_a_up_server.sh            # Start server (docker compose up -d)
 ├── 02_a_down_server.sh          # Stop server (docker compose down)
 ├── 03_enter_container.sh        # Enter container for debugging
-├── 04_test_curl.sh              # Test API call on port 8081
+├── 04_test_curl.py              # Test API call on port 8081 (Python)
 ├── 05_docker_logs.sh            # Follow server logs
 ├── 06_dump_help.sh              # Dump server version/help
 ├── .env.example                 # Environment variables template
@@ -108,8 +108,10 @@ The `-hf` flag in docker-compose.yml loads the GGUF model directly from the Hugg
 
 ### Quick Test
 ```bash
-./04_test_curl.sh
+python 04_test_curl.py
 ```
+
+The test reads the prompt from `test/test_file_01_prompt.md`, sends it to the server, and saves the response to `test/test_output_01.md`.
 
 ### Manual cURL Test
 
