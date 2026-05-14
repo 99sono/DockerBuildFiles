@@ -1,0 +1,68 @@
+services:
+  qwen-27b-mtp-server:
+    # CUDA 12.8+ base ensures Blackwell SM120 support is native.
+    image: havenoammo/llama:cuda13-server
+    container_name: qwen-3.6-27b-mtp-5090
+    hostname: llama-server
+    platform: linux/amd64
+    # Port 8081 prevents collisions with your vLLM (8000) or other llama-servers (8080).
+    ports:
+      - "8081:8080"
+    
+    volumes:
+      # Use the central workstation cache to avoid redundant 20GB downloads.
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      # Shared memory access is vital for high-speed KV cache paging in WSL2.
+      - /dev/shm:/dev/shm
+    
+    # 32GB shm_size matches your VRAM; crucial for large context windows (128k+).
+    shm_size: "32g"
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu] # Pass-through for the 5090.
+
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      # Critical: Forces the container to use Blackwell-optimized libraries.
+      # This enables the 5.7x speedup via MMQ kernels.
+      - LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64
+      - HF_HOME=/root/.cache/huggingface
+      - NVIDIA_VISIBLE_DEVICES=0
+
+    command: >
+      # Loads directly from your central cache via the -hf flag.
+      -hf unsloth/Qwen3.6-27B-MTP-GGUF:Qwen3.6-27B-UD-Q4_K_XL.gguf
+      --host 0.0.0.0
+      --port 8080
+      # Ensure 100% of the model stays on the 5090's 32GB VRAM.
+      --n-gpu-layers 999
+      # Blackwell-native acceleration for long-context attention.
+      --flash-attn
+      # Q8_0 KV-cache: High precision (8-bit) to avoid "doom loop" logic errors.
+      --cache-type-k q8_0
+      --cache-type-v q8_0
+      # 128k context is the 'goldilocks' zone for high-performance coding tasks.
+      --ctx-size 131072
+      # --- SPECULATIVE DECODING ---
+      # MTP is the engine behind the 140-220 tokens/s performance.
+      --spec-type mtp
+      # 2 draft tokens is the verified 'sweet spot' for Qwen 3.6 acceptance rates.
+      --spec-draft-n-max 2
+      # --- SAMPLING ---
+      --temp 1.0
+      --top-p 0.95
+      --top-k 20
+      # Slightly higher penalty to keep the model focused during long code generations.
+      --presence-penalty 1.5
+
+    networks:
+      - development-network
+
+networks:
+  # Allows this server to communicate with your other internal tools/proxies.
+  development-network:
+    external: true
