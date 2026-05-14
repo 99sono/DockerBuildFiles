@@ -1,6 +1,6 @@
 services:
   gemma-4-26b-it-nvfp4:
-    image: vllm/vllm-openai:v0.20.0-cu130-ubuntu2404
+    image: vllm/vllm-openai:v0.20.2-ubuntu2404
     container_name: gemma-4-26b-it-nvfp4-stable
     hostname: vllm
     platform: linux/amd64

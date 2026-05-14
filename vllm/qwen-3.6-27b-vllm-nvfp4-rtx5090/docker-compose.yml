@@ -1,6 +1,6 @@
 services:
   qwen-3-6-27b-nvfp4-mtp:
-    image: vllm/vllm-openai:v0.20.0-cu130-ubuntu2404
+    image: vllm/vllm-openai:v0.20.2-ubuntu2404
     container_name: qwen-3-6-27b-nvfp4-mtp-stable
     hostname: vllm
     platform: linux/amd64

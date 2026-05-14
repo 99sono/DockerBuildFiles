@@ -5,7 +5,7 @@
 # Does not work:
 services:
   gemma-4-26b-it-nvfp4-turbo:
-    image: vllm/vllm-openai:nightly
+    image: vllm/vllm-openai:v0.20.2-ubuntu2404
     container_name: gemma-4-26b-it-nvfp4-turbo
     hostname: vllm
     runtime: nvidia
