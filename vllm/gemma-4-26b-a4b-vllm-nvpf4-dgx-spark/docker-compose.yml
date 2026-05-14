@@ -30,8 +30,8 @@ services:
       HF_HUB_ENABLE_HF_TRANSFER: "1"
 
     command:
-      # --- MODEL ---
-      - "RedHatAI/gemma-4-26B-A4B-it-NVFP4"
+      # --- MODEL (NVIDIA official NVFP4 checkpoint) ---
+      - "nvidia/Gemma-4-26B-A4B-NVFP4"
       - "--served-model-name"
       - "gemma-4-26b-it-nvfp4"
       - "--trust-remote-code"
@@ -60,9 +60,9 @@ services:
       - "compressed-tensors"
 
       # --- PERFORMANCE PATH ---
-      # Flashinfer_cutlass is the optimized path for Blackwell MoE kernels
+      # NVIDIA docs say: TP=1 only, use cutlass or marlin backend
       - "--moe-backend"
-      - "flashinfer_cutlass"
+      - "cutlass"
       - "--enable-prefix-caching"
       - "--enable-chunked-prefill"
 

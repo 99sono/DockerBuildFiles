@@ -1,6 +1,6 @@
 # Gemma-4-26B-A4B-NVFP4 on DGX Spark (128GB UMA)
 
-## Status: 🚧 In Progress
+## Status: ✅ Working - NVIDIA Official Model
 
 This folder contains the complete setup for running the **Gemma-4-26B-A4B-NVFP4** quantized model via vLLM on a **DGX Spark** (Grace Blackwell, 128GB Unified Memory).
 
@@ -44,14 +44,14 @@ python 04_test_vllm_curl.py
 | `--gpu-memory-utilization` | 0.85 | 85% of 128GB UMA reserved for model + KV cache |
 | `--max-num-seqs` | 4 | Concurrent request sequences |
 | `--kv-cache-dtype` | fp8_e4m3 | FP8 KV cache for memory efficiency |
-| `--moe-backend` | flashinfer_cutlass | Fast MoE kernel fusion for Blackwell |
+| `--moe-backend` | cutlass | Fast MoE kernel fusion (TP=1 only) |
 
-### Context Length Limits
+### Benchmark Parameters
 
-With this configuration:
-- **Max total tokens:** 256,000 (prompt + response combined)
-- **Available KV cache:** ~300,000+ tokens (slightly more than max-model-len)
-- **Example:** You can process a large document and receive a response within the context window
+Test script uses NVIDIA's benchmark parameters:
+- `temperature=1.0`
+- `top_p=0.95`
+- `max_new_tokens=131072`
 
 ### Memory Optimization
 
@@ -61,14 +61,26 @@ The DGX Spark's 128GB Unified Memory Architecture allows for:
 
 ### No Speculative Decoding
 
-Speculative decoding has been **removed** from this configuration as it was proven unstable on DGX Spark. The setup runs pure vLLM with MoE kernels only.
+Speculative decoding has been **removed** from this configuration. The setup runs pure vLLM with MoE kernels only.
 
 ## Model Architecture
 
-- **Model:** RedHatAI/gemma-4-26B-A4B-it-NVFP4
+- **Model:** nvidia/Gemma-4-26B-A4B-NVFP4 (NVIDIA official)
 - **Type:** Mixture-of-Experts (MoE)
 - **Quantization:** NVFP4 (NVIDIA FP4)
 - **KV Cache:** fp8_e4m3 (8-bit floating point)
+- **Context Window:** 256K tokens
+- **Platform:** ARM64 / Blackwell
+
+### Benchmark Results (NVIDIA official vs RedHat community)
+
+| Benchmark | RedHat AI | NVIDIA Official |
+|-----------|-----------|-----------------|
+| GPQA Diamond | 79.90% | 79.90% |
+| AIME 2025 | 88.95% | 90.00% |
+| MMLU Pro | 84.80% | 84.80% |
+| LiveCodeBench | 79.80% | 79.80% |
+| IFEval | 96.40% | 96.40% |
 
 ## Troubleshooting
 
@@ -99,7 +111,7 @@ http://localhost:8000/v1/chat/completions
 
 | File | Purpose |
 |------|---------|
-| `docker-compose.yml` | Main orchestration config (ARM64, no speculative decoding) |
+| `docker-compose.yml` | Main orchestration config (ARM64, cutlass backend) |
 | `.env.example` | Environment variable template |
 | `00_env.sh` | Environment variable setup |
 | `00_a_pull_vllm_image.sh` | Pull vLLM Docker image |
@@ -109,6 +121,6 @@ http://localhost:8000/v1/chat/completions
 | `01_up.sh` | Start the server |
 | `02_down.sh` | Stop the server |
 | `03_enter_container.sh` | Enter container shell |
-| `04_test_vllm_curl.py` | Test API client |
+| `04_test_vllm_curl.py` | Test API client (temperature=1.0, top_p=0.95) |
 | `05_docker_logs.sh` | View container logs |
 | `06_dump_vllm_help.sh` | Dump vLLM serve help output |

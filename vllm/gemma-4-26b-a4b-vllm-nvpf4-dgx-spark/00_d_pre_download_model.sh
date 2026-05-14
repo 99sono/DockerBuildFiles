@@ -2,12 +2,12 @@
 # =============================================================================
 # 00_d_pre_download_model.sh
 # =============================================================================
-# Pre-download the Gemma 4 model weights to the local HuggingFace cache.
+# Pre-download the NVIDIA Gemma 4 model weights to the local HuggingFace cache.
 
 set -euo pipefail
 
 ENV_NAME="testVllmGemmaSpark"
-MODEL_ID="RedHatAI/gemma-4-26B-A4B-it-NVFP4"
+MODEL_ID="nvidia/Gemma-4-26B-A4B-NVFP4"
 CACHE_DIR="$HOME/.cache/huggingface"
 
 echo "📥 Preparing to pre-download model to cache:"
