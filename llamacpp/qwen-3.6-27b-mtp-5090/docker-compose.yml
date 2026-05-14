@@ -37,7 +37,7 @@ services:
       # Loads directly from your central cache via the -hf flag.
       - "-hf"
       # Model: Qwen3.6-27B MTP quantization (UD-Q4_K_XL).
-      - "unsloth/Qwen3.6-27B-MTP-GGUF:Qwen3.6-27B-UD-Q4_K_XL.gguf"
+      - "unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL"
       # Bind to all interfaces for network access.
       - "--host"
       - "0.0.0.0"
@@ -49,6 +49,7 @@ services:
       - "999"
       # Blackwell-native acceleration for long-context attention.
       - "--flash-attn"
+      - "on"
       # Q8_0 KV-cache: High precision (8-bit) to avoid "doom loop" logic errors.
       - "--cache-type-k"
       - "q8_0"
