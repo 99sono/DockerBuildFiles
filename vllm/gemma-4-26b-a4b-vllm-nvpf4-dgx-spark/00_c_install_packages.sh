@@ -13,8 +13,7 @@ echo "📦 Installing packages into: $ENV_NAME"
 source $(conda info --base)/etc/profile.d/conda.sh
 conda activate "$ENV_NAME"
 
-python -m pip install --upgrade pip
-python -m pip install openai rich huggingface_hub
+conda install -y -c conda-forge openai rich huggingface_hub
 
 echo ""
 echo "✅ Packages installed successfully!"
