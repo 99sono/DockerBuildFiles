@@ -20,15 +20,7 @@ if ! conda env list | grep -q "^$ENV_NAME "; then
 fi
 
 echo "🚀 Starting download..."
-# Try 'hf' first as requested by the system hint, then fallback to huggingface-cli
-if command -v hf &> /dev/null; then
-    hf download "$MODEL_ID"
-elif conda run -n "$ENV_NAME" huggingface-cli --help &> /dev/null; then
-    conda run -n "$ENV_NAME" huggingface-cli download "$MODEL_ID"
-else
-    echo "❌ Neither 'hf' nor 'huggingface-cli' could be found."
-    exit 1
-fi
+hf download "$MODEL_ID"
 
 echo ""
 echo "✅ Download complete! Weights are stored in $CACHE_DIR"

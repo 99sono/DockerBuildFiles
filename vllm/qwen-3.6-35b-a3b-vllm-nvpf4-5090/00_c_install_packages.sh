@@ -17,8 +17,7 @@ source $(conda info --base)/etc/profile.d/conda.sh
 conda activate "$ENV_NAME"
 
 # Install main dependencies
-pip install --upgrade pip
-pip install openai rich huggingface_hub
+conda install -y -c conda-forge openai rich huggingface_hub
 
 echo ""
 echo "✅ Packages installed successfully!"

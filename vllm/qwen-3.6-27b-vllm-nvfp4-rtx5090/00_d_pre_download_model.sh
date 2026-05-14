@@ -18,11 +18,7 @@ if ! conda env list | grep -q "^$ENV_NAME "; then
 fi
 
 echo "🚀 Starting download of target model..."
-if command -v hf &> /dev/null; then
-    hf download "$MODEL_ID"
-else
-    conda run -n "$ENV_NAME" huggingface-cli download "$MODEL_ID"
-fi
+hf download "$MODEL_ID"
 
 echo ""
 echo "✅ Download complete! Models cached at: $CACHE_DIR"

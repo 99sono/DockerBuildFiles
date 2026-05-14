@@ -14,9 +14,7 @@ echo "📦 Installing packages into conda environment: $ENV_NAME"
 conda activate "$ENV_NAME"
 
 # Install main dependencies
-pip install --upgrade pip
-
-pip install openai rich  # 'rich' gives nice colored output
+conda install -y -c conda-forge openai rich
 
 echo ""
 echo "✅ Packages installed successfully!"
