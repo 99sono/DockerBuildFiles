@@ -1,0 +1,85 @@
+services:
+  gemma-4-26b-it-nvfp4:
+    image: vllm/vllm-openai:v0.20.2-ubuntu2404
+    container_name: gemma-4-26b-it-nvfp4-spark
+    hostname: vllm
+    # DGX Spark is ARM64, ensured this matches your hardware
+    platform: linux/arm64 
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - /dev/shm:/dev/shm
+
+    shm_size: "32g"
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+    environment:
+      # Required for Blackwell + WSL2 stability
+      VLLM_WORKER_MULTIPROC_METHOD: spawn
+      # Critical for unified memory management on Spark
+      PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+      HF_HUB_ENABLE_HF_TRANSFER: "1"
+
+    command:
+      # --- MODEL ---
+      - "RedHatAI/gemma-4-26B-A4B-it-NVFP4"
+      - "--served-model-name"
+      - "gemma-4-26b-it-nvfp4"
+      - "--trust-remote-code"
+
+      # --- NETWORKING ---
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+
+      # --- MEMORY & CONTEXT ---
+      # 0.85 is the sweet spot for Spark's 128GB UMA
+      - "--gpu-memory-utilization"
+      - "0.85"
+      - "--max-model-len"
+      - "256000"
+      - "--max-num-seqs"
+      - "4"
+      - "--max-num-batched-tokens"
+      - "32768"
+
+      # --- COMPRESSION & QUANTIZATION ---
+      - "--kv-cache-dtype"
+      - "fp8_e4m3"
+      - "--quantization"
+      - "compressed-tensors"
+
+      # --- PERFORMANCE PATH ---
+      # Flashinfer_cutlass is the optimized path for Blackwell MoE kernels
+      - "--moe-backend"
+      - "flashinfer_cutlass"
+      - "--enable-prefix-caching"
+      - "--enable-chunked-prefill"
+
+      # --- REASONING & TOOLS ---
+      - "--reasoning-parser"
+      - "gemma4"
+      - "--tool-call-parser"
+      - "gemma4"
+      - "--enable-auto-tool-choice"
+
+      # --- DISK I/O ---
+      - "--safetensors-load-strategy"
+      - "prefetch"
+
+    networks:
+      - development-network
+
+networks:
+  development-network:
+    external: true
