@@ -3,7 +3,7 @@
 > Multi-Token Prediction speculative decoding • Blackwell SM 12.0 Optimized • Microwave-ready Docker
 
 **Target Hardware:** RTX 5090 (32 GB GDDR7, SM 12.0, x86_64)
-**Model:** `unsloth/Qwen3.6-27B-MTP-GGUF:Qwen3.6-27B-UD-Q4_K_XL.gguf`
+**Model:** `unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL`
 **Speculative Decoding:** MTP (Multi-Token Prediction) with `--spec-draft-n-max 2`
 **Server Port:** `8081`
 
@@ -60,7 +60,7 @@ llamacpp/qwen-3.6-27b-mtp-5090/
 | Setting | Value | Purpose |
 |---------|-------|---------|
 | **Image** | `havenoammo/llama:cuda13-server` | Pre-built CUDA 12.8+ for MMQ kernels |
-| **Model** | `-hf unsloth/Qwen3.6-27B-MTP-GGUF:Qwen3.6-27B-UD-Q4_K_XL.gguf` | Load from HuggingFace hub |
+| **Model** | `-hf unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL` | Load from HuggingFace hub |
 | **Port** | `8081:8080` | Host 8081 → Container 8080 |
 | **GPU Layers** | `999` | Full GPU offload (all layers) |
 | **Context Size** | `131072` (128K) | Max context window |
@@ -78,7 +78,7 @@ The `-hf` flag in docker-compose.yml loads the GGUF model directly from the Hugg
 
 ```bash
 # Core model loading
--hf unsloth/Qwen3.6-27B-MTP-GGUF:Qwen3.6-27B-UD-Q4_K_XL.gguf
+-hf unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL
 --host 0.0.0.0
 --port 8080
 
@@ -123,7 +123,7 @@ curl -s http://localhost:8081/v1/models | jq .
 curl -s http://localhost:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "unsloth/Qwen3.6-27B-MTP-GGUF:Qwen3.6-27B-UD-Q4_K_XL.gguf",
+    "model": "unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL",
     "messages": [
       {"role": "user", "content": "Hello!"}
     ],
