@@ -239,6 +239,48 @@ nginx-vllm-reverse-proxy-dgx-spark/
 └── test/                     # Test configurations
 ```
 
+## Common Issues
+
+### nginx-proxy exits immediately with code 1
+
+**Symptom:** Running `./01_up.sh` shows the container starts and then exits instantly.
+
+```
+[+] up 0/1
+ ⠴ Container nginx-proxy Waiting          0.5s
+container nginx-proxy exited (1)
+```
+
+**How to diagnose:** Check the container logs.
+
+```bash
+docker logs nginx-proxy
+```
+
+**Typical error:**
+
+```
+nginx: [emerg] host not found in upstream "inference-server" in /etc/nginx/nginx.conf:28
+```
+
+**Cause:** Nginx resolves the upstream hostname at **startup**, not at request time. If no container with `hostname: inference-server` exists on the `development-network` yet, nginx will fail to start and exit with code 1.
+
+**Solution:** Start the inference server first, then start nginx.
+
+```bash
+# 1. Start the inference server (vLLM or llamacpp)
+cd ~/dev/DockerBuildFiles/vllm/<your-model-folder>
+docker compose up -d
+
+# 2. Verify it's running and has the correct hostname
+docker inspect --format '{{.Config.Hostname}}' <container-name>
+# Should output: inference-server
+
+# 3. Then start nginx
+cd ~/dev/DockerBuildFiles/nginx/nginx-vllm-reverse-proxy-dgx-spark
+./01_up.sh
+```
+
 ## Troubleshooting
 
 | Symptom | Likely Cause | Solution |

@@ -12,10 +12,11 @@ source "$SCRIPT_DIR/00_env.sh"
 CONTAINER_NAME="$NGINX_CONTAINER_NAME"
 
 # ============================================================
-# Pre-flight check: Verify container is running
+# Pre-flight check: Verify container exists (running or stopped)
 # ============================================================
-if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
-    echo "Error: Container '$CONTAINER_NAME' is not running." >&2
+if ! docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
+    echo "Error: Container '$CONTAINER_NAME' does not exist." >&2
+    echo "Have you started it with ./01_up.sh yet?" >&2
     exit 1
 fi
 
