@@ -1,0 +1,23 @@
+#!/bin/bash
+# =============================================================================
+# 00_env.sh.example
+# =============================================================================
+# Copy this file to .env and edit with your actual values.
+# Do NOT commit the real .env or 00_env.sh files - they contain secrets.
+#
+# Usage:
+#   cp 00_env.sh.example .env
+#   # Edit .env with your values
+#   source 00_env.sh
+# =============================================================================
+
+set -euo pipefail
+
+# Load from .env if it exists
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
+
+# Default values (can be overridden by .env)
+# Replace with your actual vLLM API key
+export VLLM_API_KEY="${VLLM_API_KEY:-dummy-key}"
