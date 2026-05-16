@@ -32,6 +32,9 @@ services:
     command:
       # --- MODEL (NVIDIA official NVFP4 checkpoint) ---
       - "nvidia/Gemma-4-26B-A4B-NVFP4"
+      # --- API KEY AUTHENTICATION ---
+      - "--api-key"
+      - "${VLLM_API_KEY:-dummy-key}"
       - "--served-model-name"
       - "gemma-4-26b-it-nvfp4"
       - "--trust-remote-code"

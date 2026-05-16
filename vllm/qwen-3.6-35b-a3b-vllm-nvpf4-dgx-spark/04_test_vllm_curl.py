@@ -7,11 +7,16 @@ import sys
 from pathlib import Path
 from openai import OpenAI
 
+# Load API key from .env
+from dotenv import load_dotenv
+load_dotenv()
+
 # ========================= CONFIGURATION =========================
 TEST_PROMPT_FILE = Path("test/test_file_01_prompt.md")
 OUTPUT_FILE = Path("test/test_output_01.md")
 URL = "http://localhost:8000/v1"
 MODEL = "Qwen3.6-35B-A3B-NVFP4"
+VLLM_API_KEY = "dummy-key"
 
 # ========================= VALIDATION =========================
 if not TEST_PROMPT_FILE.exists():
@@ -31,7 +36,7 @@ print("-" * 60)
 # ========================= CLIENT SETUP =========================
 client = OpenAI(
     base_url=URL,
-    api_key="dummy-key",   # vLLM doesn't require a real key
+    api_key=VLLM_API_KEY,
 )
 
 # ========================= SEND REQUEST =========================
