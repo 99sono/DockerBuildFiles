@@ -17,8 +17,8 @@ conda activate "$ENV_NAME"
 # Install main dependencies
 conda install -y -c conda-forge huggingface_hub jq curl
 
-# Install Python OpenAI SDK for test script
-pip install openai
+# Install Python OpenAI SDK and dotenv for API key loading
+pip install openai python-dotenv
 
 echo ""
 echo "✅ Packages installed successfully!"

@@ -31,12 +31,16 @@ services:
       - CUDA_VISIBLE_DEVICES=0
       - NVIDIA_VISIBLE_DEVICES=0
       - HF_HOME=/root/.cache/huggingface
+      - LLAMA_API_KEY=${LLAMA_API_KEY:-dummy-key}
 
     command:
       # Loads directly from central cache via the -hf flag.
       - "-hf"
       # Model: Qwen3.6-27B MTP quantization (UD-Q4_K_XL).
       - "unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL"
+      # API key authentication (Bearer token on all routes).
+      - "--api-key"
+      - "${LLAMA_API_KEY:-dummy-key}"
       # Bind to all interfaces for network access.
       - "--host"
       - "0.0.0.0"
