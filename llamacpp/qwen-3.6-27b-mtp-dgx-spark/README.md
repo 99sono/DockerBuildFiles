@@ -35,7 +35,7 @@ python 04_test_curl.py
 
 ```
 llamacpp/qwen-3.6-27b-mtp-dgx-spark/
-├── 00_a_pull_image.sh          # Pull ghcr.io/ggerganov/llama.cpp:cuda (ARM64)
+├── 00_a_pull_image.sh          # Pull ghcr.io/ggml-org/llama.cpp:server-cuda13 (ARM64)
 ├── 00_b_create_conda_env.sh    # Create conda env for host tools
 ├── 00_c_install_packages.sh    # Install huggingface-hub, jq, curl
 ├── docker-compose.yml           # llama-server MTP spec config (GB10 optimized)
@@ -58,7 +58,7 @@ llamacpp/qwen-3.6-27b-mtp-dgx-spark/
 
 | Setting | Value | Purpose |
 |---------|-------|---------|
-| **Image** | `ghcr.io/ggerganov/llama.cpp:cuda` | Official multi-arch CUDA image (ARM64) |
+| **Image** | `ghcr.io/ggml-org/llama.cpp:server-cuda13` | Official multi-arch CUDA 13 image (ARM64, built by ggml-org) |
 | **Model** | `-hf unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL` | Load from HuggingFace hub |
 | **Port** | `8081:8080` | Host 8081 → Container 8080 |
 | **Platform** | `linux/arm64` | Native ARMv9 Grace CPU |
@@ -198,7 +198,7 @@ free -h
 |--------|----------------------|------------------------------|
 | **Architecture** | x86_64, discrete VRAM | ARM64, unified memory (128GB) |
 | **GPU Memory** | 32GB GDDR7 | 128GB LPDDR5X (~273 GB/s) |
-| **Docker Image** | `havenoammo/llama:cuda13-server` | `ghcr.io/ggerganov/llama.cpp:cuda` |
+| **Docker Image** | `havenoammo/llama:cuda13-server` | `ghcr.io/ggml-org/llama.cpp:server-cuda13` |
 | **Platform** | `linux/amd64` | `linux/arm64` |
 | **Memory Lock** | Not set | `--mlock` (required) |
 | **Spec Flag** | `--spec-type mtp` | `--spec-type draft-mtp` |
@@ -208,8 +208,25 @@ free -h
 
 ---
 
+## Docker Image
+
+The DGX Spark uses `ghcr.io/ggml-org/llama.cpp:server-cuda13` instead of the older `ghcr.io/ggerganov/llama.cpp:cuda` tag.
+
+### Why `ggml-org` over `ggerganov`
+
+- **True Multi-Arch Manifests:** The `ggml-org` image has dedicated, parallel execution slices compiled explicitly for `linux/arm64`. The older `ggerganov/llama.cpp:cuda` tag does not include an ARM64 manifest and will fail to pull on DGX Spark.
+- **Latest Upstream MTP Fixes:** The `ggml-org` image is built directly from the upstream project, including the latest performance optimizations for Multi-Token Prediction (such as the `draft-mtp` flag and parallel evaluation sequencing).
+
+### Where to find available tags
+
+This image is hosted on GitHub Container Registry, not Docker Hub:
+
+- **GitHub Repository:** [ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp)
+- **Available Tags:** [ghcr.io/ggml-org/llama.cpp versions](https://github.com/ggml-org/llama.cpp/pkgs/container/llama.cpp/versions)
+
 ## License & Credits
 
 - **llama.cpp**: [ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp)
 - **Model**: [unsloth/Qwen3.6-27B-MTP-GGUF](https://huggingface.co/unsloth/Qwen3.6-27B-MTP-GGUF)
-- **Docker Image**: [ggerganov/llama.cpp](https://github.com/ggerganov/llama.cpp)
+- **Docker Image**: [ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp)
+- **Image Registry**: [ghcr.io/ggml-org/llama.cpp (available tags)](https://github.com/ggml-org/llama.cpp/pkgs/container/llama.cpp/versions)

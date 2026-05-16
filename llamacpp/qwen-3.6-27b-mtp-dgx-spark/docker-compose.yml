@@ -1,7 +1,7 @@
 services:
   qwen-27b-mtp-server:
-    # Official multi-arch image with CUDA support for ARM64 / aarch64.
-    image: ghcr.io/ggerganov/llama.cpp:cuda
+    # Official multi-arch image with CUDA 13 support for ARM64 / aarch64.
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda13
     container_name: qwen-3.6-27b-mtp-dgx-spark
     hostname: inference-server
     platform: linux/arm64
