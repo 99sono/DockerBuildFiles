@@ -9,10 +9,10 @@ cd "$SCRIPT_DIR"
 source "$SCRIPT_DIR/00_env.sh"
 
 # ============================================================
-# Pre-flight check: Verify container is running
+# Pre-flight check: Verify container exists (running or stopped)
 # ============================================================
-if ! docker ps --format '{{.Names}}' | grep -qx "$DEBUG_CONTAINER_NAME"; then
-    echo "Error: Container '$DEBUG_CONTAINER_NAME' is not running." >&2
+if ! docker ps -a --format '{{.Names}}' | grep -qx "$DEBUG_CONTAINER_NAME"; then
+    echo "Error: Container '$DEBUG_CONTAINER_NAME' does not exist." >&2
     exit 1
 fi
 
