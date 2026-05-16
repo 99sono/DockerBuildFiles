@@ -4,7 +4,7 @@
 
 **Target Hardware:** Acer Veriton GN100 / DGX Spark (NVIDIA GB10, 128GB Unified Memory LPDDR5X, ARM64/aarch64)
 **Model:** `sakamakismile/Qwen3.6-27B-Text-NVFP4-MTP`
-**Speculative Decoding:** Native MTP (`qwen3_5_mtp`) with `num_speculative_tokens: 3`
+**Speculative Decoding:** Native MTP (`mtp`) with `num_speculative_tokens: 3`
 **Quantization:** modelopt NVFP4 (native fast path on Blackwell SM120)
 
 ---

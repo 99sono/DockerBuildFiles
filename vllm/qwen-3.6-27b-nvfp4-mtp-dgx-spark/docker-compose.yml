@@ -44,7 +44,7 @@ services:
       - "--quantization"
       - "modelopt"
       - "--gpu-memory-utilization"
-      - "0.9"
+      - "0.65"
       - "--max-model-len"
       - "262144"
       - "--max-num-seqs"
@@ -65,7 +65,7 @@ services:
       - "--max-cudagraph-capture-size"
       - "1"
       - "--speculative-config"
-      - '{"method":"qwen3_5_mtp","num_speculative_tokens":3}'
+      - '{"method":"mtp","num_speculative_tokens":3}'
 
     networks:
       - development-network
