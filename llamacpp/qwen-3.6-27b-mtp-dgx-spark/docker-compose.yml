@@ -1,0 +1,93 @@
+services:
+  qwen-27b-mtp-server:
+    # Official multi-arch image with CUDA support for ARM64 / aarch64.
+    image: ghcr.io/ggerganov/llama.cpp:cuda
+    container_name: qwen-3.6-27b-mtp-dgx-spark
+    hostname: llama-server
+    platform: linux/arm64
+    # Port 8081 prevents collisions with vLLM (8000) or other llama-servers (8080).
+    ports:
+      - "8081:8080"
+
+    volumes:
+      # Central workstation cache to avoid redundant 20GB downloads.
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      # Shared memory for high-speed KV cache paging.
+      - /dev/shm:/dev/shm
+
+    # 16GB shm_size sufficient for GB10 unified memory architecture.
+    shm_size: "16g"
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=0
+      - HF_HOME=/root/.cache/huggingface
+
+    command:
+      # Loads directly from central cache via the -hf flag.
+      - "-hf"
+      # Model: Qwen3.6-27B MTP quantization (UD-Q4_K_XL).
+      - "unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL"
+      # Bind to all interfaces for network access.
+      - "--host"
+      - "0.0.0.0"
+      # Internal container port.
+      - "--port"
+      - "8080"
+      # Load the full graph into the unified memory pool.
+      - "--n-gpu-layers"
+      - "999"
+      # Native FlashAttention-2 acceleration for deep context layers.
+      - "--flash-attn"
+      - "on"
+      # Q8_0 KV-cache: High precision (8-bit) to avoid "doom loop" logic errors.
+      - "--cache-type-k"
+      - "q8_0"
+      - "--cache-type-v"
+      - "q8_0"
+      # 128k context window for high-performance coding tasks.
+      - "--ctx-size"
+      - "131072"
+      # --- UNIFIED MEMORY LOCKING ---
+      # Forces the OS to lock/pin memory footprint, preventing paging on GB10.
+      - "--mlock"
+      # --- BATCH OPTIMIZATION ---
+      # Calibrated for high-bandwidth LPDDR5X unified controllers.
+      - "--batch-size"
+      - "512"
+      - "--ubatch-size"
+      - "512"
+      # --- SPECULATIVE DECODING (MTP) ---
+      # Standardized upstream syntax for Multi-Token Prediction models.
+      - "--spec-type"
+      - "draft-mtp"
+      # 2 draft tokens matches Qwen 3.6 MTP parallel head design.
+      - "--spec-draft-n-max"
+      - "2"
+      # --- SAMPLING ---
+      - "--temp"
+      - "1.0"
+      - "--top-p"
+      - "0.95"
+      - "--top-k"
+      - "20"
+      # Slightly higher penalty to keep the model focused during long code generations.
+      - "--presence-penalty"
+      - "1.5"
+
+    networks:
+      - development-network
+
+networks:
+  # Allows this server to communicate with other internal tools/proxies.
+  development-network:
+    external: true
