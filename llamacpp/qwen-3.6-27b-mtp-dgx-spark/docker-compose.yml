@@ -3,11 +3,11 @@ services:
     # Official multi-arch image with CUDA support for ARM64 / aarch64.
     image: ghcr.io/ggerganov/llama.cpp:cuda
     container_name: qwen-3.6-27b-mtp-dgx-spark
-    hostname: llama-server
+    hostname: inference-server
     platform: linux/arm64
     # Port 8081 prevents collisions with vLLM (8000) or other llama-servers (8080).
     ports:
-      - "8081:8080"
+      - "8000:8000"
 
     volumes:
       # Central workstation cache to avoid redundant 20GB downloads.
@@ -32,7 +32,6 @@ services:
       - NVIDIA_VISIBLE_DEVICES=0
       - HF_HOME=/root/.cache/huggingface
       - LLAMA_API_KEY=${LLAMA_API_KEY:-dummy-key}
-
     command:
       # Loads directly from central cache via the -hf flag.
       - "-hf"
@@ -46,7 +45,7 @@ services:
       - "0.0.0.0"
       # Internal container port.
       - "--port"
-      - "8080"
+      - "8000"
       # Load the full graph into the unified memory pool.
       - "--n-gpu-layers"
       - "999"

@@ -2,7 +2,7 @@ services:
   nemotron-cascade:
     image: vllm/vllm-openai:nightly
     container_name: nemotron-cascade-2-nvfp4-stable
-    hostname: vllm
+    hostname: inference-server
     platform: linux/amd64
 
     ports:

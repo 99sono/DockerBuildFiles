@@ -5,7 +5,7 @@ services:
   gemma-4-26b-it-nvfp4-eagle3:
     image: vllm/vllm-openai:nightly
     container_name: gemma-4-26b-it-nvfp4-eagle3
-    hostname: vllm
+    hostname: inference-server
     runtime: nvidia
     restart: unless-stopped
     ports:

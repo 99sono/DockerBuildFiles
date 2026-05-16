@@ -2,13 +2,14 @@ services:
   gemma-4-26b-it-nvfp4:
     image: vllm/vllm-openai:v0.20.2-ubuntu2404
     container_name: gemma-4-26b-it-nvfp4-spark
-    hostname: vllm
+    hostname: inference-server
     # DGX Spark is ARM64, ensured this matches your hardware
     platform: linux/arm64 
 
-    ports:
-      - "8000:8000"
-
+    # ports are not exposed.
+    # use the nginx/nginx-vllm-reverse-proxy-dgx-spark/nginx.conf to speak with the model
+    # ports:
+      # - "8000:8000"
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface
       - /dev/shm:/dev/shm

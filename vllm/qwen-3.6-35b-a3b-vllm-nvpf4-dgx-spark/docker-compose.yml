@@ -2,10 +2,12 @@ services:
   qwen3-6-moe-nvfp4:
     image: vllm/vllm-openai:v0.20.2-ubuntu2404
     container_name: qwen3-6-moe-35b-a3b-nvfp4
-    hostname: vllm
+    hostname: inference-server
     platform: linux/arm64
-    ports:
-      - "8000:8000"
+    # ports are not exposed.
+    # use the nginx/nginx-vllm-reverse-proxy-dgx-spark/nginx.conf to speak with the model
+    # ports:
+      # - "8000:8000"
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface
       - /dev/shm:/dev/shm

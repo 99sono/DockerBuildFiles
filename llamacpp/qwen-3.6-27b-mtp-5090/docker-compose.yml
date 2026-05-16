@@ -3,11 +3,11 @@ services:
     # CUDA 12.8+ base ensures Blackwell SM120 support is native.
     image: havenoammo/llama:cuda13-server
     container_name: qwen-3.6-27b-mtp-5090
-    hostname: llama-server
+    hostname: inference-server
     platform: linux/amd64
     # Port 8081 prevents collisions with your vLLM (8000) or other llama-servers (8080).
     ports:
-      - "8081:8080"
+      - "8000:8000"
 
     volumes:
       # Use the central workstation cache to avoid redundant 20GB downloads.
@@ -43,7 +43,7 @@ services:
       - "0.0.0.0"
       # Internal container port.
       - "--port"
-      - "8080"
+      - "8000"
       # Ensure 100% of the model stays on the 5090's 32GB VRAM.
       - "--n-gpu-layers"
       - "999"
