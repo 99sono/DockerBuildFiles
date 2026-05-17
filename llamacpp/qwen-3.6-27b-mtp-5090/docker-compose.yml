@@ -2,6 +2,20 @@ services:
   qwen-27b-mtp-server:
     # CUDA 12.8+ base ensures Blackwell SM120 support is native.
     image: havenoammo/llama:cuda13-server
+    # Necessary to use the havenammo image. the llama cpp still lacks MTP. They will build it soon.
+    #     2026-05-17 10:32:17.831 | warn: LLAMA_ARG_HOST environment variable is set, but will be overwritten by command line argument --host
+    # 2026-05-17 10:32:17.832 | error while handling argument "--spec-type": unknown speculative type: mtp
+    # 2026-05-17 10:32:17.832 | 
+    # 2026-05-17 10:32:17.832 | usage:
+    # 2026-05-17 10:32:17.832 | --spec-type none,draft-simple,draft-eagle3,ngram-simple,ngram-map-k,ngram-map-k4v,ngram-mod,ngram-cache
+    # 2026-05-17 10:32:17.832 |                                         comma-separated list of types of speculative decoding to use (default:
+    # 2026-05-17 10:32:17.832 |                                         none)
+    # 2026-05-17 10:32:17.832 |                                         
+    # 2026-05-17 10:32:17.832 |                                         (env: LLAMA_ARG_SPEC_TYPE)
+    # 2026-05-17 10:32:17.832 | 
+    # 2026-05-17 10:32:17.832 | 
+    # 2026-05-17 10:32:17.832 | to show complete usage, run with -h
+        # image: ghcr.io/ggml-org/llama.cpp:server-cuda13
     container_name: qwen-3.6-27b-mtp-5090
     hostname: inference-server
     platform: linux/amd64
@@ -55,16 +69,30 @@ services:
       - "q8_0"
       - "--cache-type-v"
       - "q8_0"
-      # 128k context is the 'goldilocks' zone for high-performance coding tasks.
+      # 128k context — goldilocks zone for high-performance coding tasks.
       - "--ctx-size"
       - "131072"
+
+      # --- THREADING OPTIMIZATION ---
+      # 12 threads for single-token generation (lean, CPU cache friendly).
+      # 24 threads for batch/MTP verification bursts using SMT cores on the 5950X.
+      - "--threads"
+      - "12"
+      - "--threads-batch"
+      - "24"
+
       # --- SPECULATIVE DECODING ---
-      # MTP is the engine behind the 140-220 tokens/s performance.
+      # MTP draft: parallel multi-token prediction, verified in one forward pass.
       - "--spec-type"
-      - "mtp"
-      # 2 draft tokens is the verified 'sweet spot' for Qwen 3.6 acceptance rates.
+      - "draft-mtp"
+      # 2 tokens (not 3) to prevent acceptance collapse at deep context.
+      # At ~52% per-token acceptance: 0.52^2 = 27% chain success vs 0.52^3 = 14%.
       - "--spec-draft-n-max"
       - "2"
+      # Strict confidence threshold to avoid garbage draft tokens.
+      - "--spec-draft-p-min"
+      - "0.8"
+
       # --- SAMPLING ---
       - "--temp"
       - "1.0"
@@ -72,7 +100,7 @@ services:
       - "0.95"
       - "--top-k"
       - "20"
-      # Slightly higher penalty to keep the model focused during long code generations.
+      # Keeps the model focused during long code generations.
       - "--presence-penalty"
       - "1.5"
 
