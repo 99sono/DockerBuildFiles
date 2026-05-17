@@ -7,7 +7,7 @@
 set -euo pipefail
 
 ENV_NAME="testVllmQwen"
-MODEL_ID="unsloth/Qwen3.6-35B-A3B-NVFP4"
+MODEL_ID="RedHatAI/Qwen3.6-35B-A3B-NVFP4"
 CACHE_DIR="$HOME/.cache/huggingface"
 
 echo "📥 Preparing to pre-download model: $MODEL_ID to global cache"
