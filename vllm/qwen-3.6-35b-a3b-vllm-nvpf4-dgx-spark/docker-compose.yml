@@ -127,7 +127,7 @@ services:
       # Requires vLLM 0.20.0+ with MTP support.
       #
       - "--speculative-config"
-      - '{"method":"qwen3_next_mtp","num_speculative_tokens":2}'
+      - '{"method":"mtp","num_speculative_tokens":2}'
 
     networks:
       - development-network
