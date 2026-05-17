@@ -1,0 +1,81 @@
+# Atlas inference setup for Qwen3.6-35B-A3B NVFP4 on DGX Spark (GB10)
+#
+# Reference post by Azeez (Atlas team):
+#   https://x.com/AtlasInference/status/2055740933057007745?s=20
+# Atlas GitHub: https://github.com/Avarok-Cybersecurity/atlas
+
+services:
+  qwen-atlas-nvfp4:
+    image: avarok/atlas-gb10:latest
+    container_name: qwen-3-6-35b-a3b-nvfp4-atlas
+    hostname: inference-server
+    platform: linux/arm64
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - /dev/shm:/dev/shm
+
+    shm_size: "32g"
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+    environment:
+      HF_HUB_ENABLE_HF_TRANSFER: "1"
+
+    command:
+      # Serve the Qwen3.6-35B-A3B NVFP4 model via Atlas inference engine
+      # Vanilla config from: https://x.com/AtlasInference/status/2055740933057007745?s=20
+      - "serve"
+      - "RedHatAI/Qwen3.6-35B-A3B-NVFP4"
+
+      # --- API & NETWORKING ---
+      - "--port"
+      - "8000"
+
+      # Atlas uses --auth-token (single bearer token). Token leaks via ps but
+      # that's fine for dev — use --auth-tokens-file in production.
+      # Value comes from ATLAS_API_KEY in .env (gitignored, see .env.example).
+      - "--require-auth"
+      - "--auth-token"
+      - "${ATLAS_API_KEY:-dummy-key}"
+
+      # --- MEMORY & CONTEXT ---
+      # --max-seq-len: Maximum sequence length in tokens.
+      #   131072 = ~128K tokens for long context windows.
+      #
+      # --gpu-memory-utilization: Fraction of GPU VRAM for model + KV cache.
+      #   0.65 = 65% of GB10 memory (~78GB), leaving headroom for system overhead.
+      #   Tuned down from 0.88 for DGX Spark stability per Atlas quickstart guidance.
+      - "--max-seq-len"
+      - "131072"
+      - "--kv-cache-dtype"
+      - "fp8"
+      - "--gpu-memory-utilization"
+      - "0.65"
+
+      # --- SCHEDULING & TOOLS ---
+      # --scheduling-policy slai: Shared-latency-aware inference scheduling.
+      # --tool-call-parser qwen3_coder: Required for tool calling with Qwen3 models.
+      # --enable-prefix-caching: Reuse KV cache across requests with common prefixes.
+      # --speculative: Enable MTP speculative decoding for faster token generation.
+      - "--scheduling-policy"
+      - "slai"
+      - "--tool-call-parser"
+      - "qwen3_coder"
+      - "--enable-prefix-caching"
+      - "--speculative"
+
+    networks:
+      - development-network
+
+networks:
+  development-network:
+    external: true
