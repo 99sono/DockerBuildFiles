@@ -72,15 +72,19 @@ services:
       # Standardized upstream syntax for Multi-Token Prediction models.
       - "--spec-type"
       - "draft-mtp"
-      # 3 draft tokens: higher speculation depth for better throughput on GB10.
-      # With ~75% acceptance rate per token, 3-token chains still succeed ~42% of the time.
+      # Conservative: 2 draft tokens with high confidence threshold.
+      # Benchmarks showed aggressive settings (n=3, p=0.75) actually DEGRADED performance:
+      #   - Old (n=2): 18-22 tok/s, 72-94% acceptance
+      #   - New (n=3, p=0.75): 14-17 tok/s, 53-64% acceptance (WORSE)
+      # Lesson: MTP heads are already accurate (~80%+), so shorter chains with higher
+      # confidence avoid expensive verification overhead on failed long sequences.
       - "--spec-draft-n-max"
-      - "3"
-      # Lower confidence threshold (0.75) to accept more draft sequences faster.
-      # Trade-off: some incorrect tokens may slip through but get corrected,
-      # overall throughput improves due to fewer full regeneration cycles.
+      - "2"
+      # High confidence threshold (0.85) to be very selective.
+      # Only accept draft tokens the model is very confident about,
+      # reducing wasted compute on rejected speculative paths.
       - "--spec-draft-p-min"
-      - "0.75"
+      - "0.85"
       # --- SAMPLING ---
       - "--temp"
       - "1.0"

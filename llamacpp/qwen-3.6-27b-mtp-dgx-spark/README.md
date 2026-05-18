@@ -4,7 +4,7 @@
 
 **Target Hardware:** Acer Veriton GN100 / DGX Spark (NVIDIA GB10, 128GB Unified Memory LPDDR5X, ARM64/aarch64)
 **Model:** `unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL`
-**Speculative Decoding:** MTP (`--spec-type draft-mtp`) with `--spec-draft-n-max 3` and `--spec-draft-p-min 0.75`
+**Speculative Decoding:** MTP (`--spec-type draft-mtp`) with `--spec-draft-n-max 2` and `--spec-draft-p-min 0.85`
 **Server Port:** `8081`
 
 ---
@@ -67,7 +67,7 @@ llamacpp/qwen-3.6-27b-mtp-dgx-spark/
 | **KV Cache** | `q8_0` (K & V) | High precision cache |
 | **Memory Lock** | `--mlock` | Pin memory to prevent paging on unified memory |
 | **Batch Size** | `512` | Optimized for LPDDR5X bandwidth (~273 GB/s) |
-| **Speculative** | `draft-mtp` with `draft-n-max 3`, `p-min 0.75` | Aggressive Multi-Token Prediction for throughput |
+| **Speculative** | `draft-mtp` with `draft-n-max 2`, `p-min 0.85` | Conservative MTP — shorter chains, higher confidence |
 | **Flash Attention** | `--flash-attn` | Native Blackwell acceleration |
 
 ### Unified Memory Architecture
@@ -108,10 +108,10 @@ The `-hf` flag in docker-compose.yml loads the GGUF model directly from the Hugg
 --batch-size 512
 --ubatch-size 512
 
-# MTP Speculative Decoding (aggressive mode)
+# MTP Speculative Decoding (conservative mode)
 --spec-type draft-mtp
---spec-draft-n-max 3
---spec-draft-p-min 0.75
+--spec-draft-n-max 2
+--spec-draft-p-min 0.85
 
 # Generation parameters
 --temp 1.0
@@ -119,6 +119,19 @@ The `-hf` flag in docker-compose.yml loads the GGUF model directly from the Hugg
 --top-k 20
 --presence-penalty 1.5
 ```
+
+---
+
+## Performance Benchmarks
+
+### MTP Speculative Decoding Tuning
+
+| Config | `--spec-draft-n-max` | `--spec-draft-p-min` | Gen Speed (1st req) | Gen Speed (2nd req) | Draft Acceptance |
+|--------|---------------------|---------------------|---------------------|---------------------|-----------------|
+| **Conservative** | 2 | 0.85 | ~18-22 tok/s | ~21-22 tok/s | 72-94% |
+| Aggressive (TESTED) | 3 | 0.75 | **16.83 tok/s** | **14.90 tok/s** | 53-64% |
+
+**Lesson learned:** Aggressive settings (n=3, p=0.75) actually **degraded** performance by 10-32%. The MTP heads on Qwen3.6-27B are already highly accurate (~80%+ per-token acceptance), so shorter chains with higher confidence avoid expensive verification overhead when longer speculative sequences fail. Current conservative settings (n=2, p=0.85) are the sweet spot.
 
 ---
 
@@ -213,12 +226,12 @@ free -h
 ```
 
 ### MTP Acceptance Rate
-With aggressive settings (`--spec-draft-n-max 3`, `--spec-draft-p-min 0.75`):
-- **>60%**: Excellent speedup (aggressive mode working well)
-- **40-60%**: Good speedup (some tokens corrected but net gain)
-- **<40%**: Consider reducing aggressiveness (lower `--spec-draft-n-max` or increase `--spec-draft-p-min`)
+With conservative settings (`--spec-draft-n-max 2`, `--spec-draft-p-min 0.85`):
+- **>70%**: Excellent — MTP heads are confident, good speedup expected
+- **50-70%**: Moderate speedup
+- **<50%**: Something is wrong; check context length and model compatibility
 
-**Note:** The lower confidence threshold (0.75 vs 0.8+) means more draft sequences are accepted faster, but some incorrect tokens may slip through and get corrected. This trade-off typically improves overall throughput on high-bandwidth hardware like the GB10.
+**Note:** Benchmarks showed that lowering `--spec-draft-p-min` to 0.75 and increasing `--spec-draft-n-max` to 3 actually made generation SLOWER (14-17 tok/s vs 18-22 tok/s). Stick with conservative settings for this model.
 
 ---
 
