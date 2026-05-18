@@ -39,6 +39,17 @@ services:
       - "${ATLAS_MODEL_NAME:-Qwen3.6-35B-A3B-NVFP4}"
 
       # --- API & NETWORKING ---
+      # --bind 0.0.0.0: Atlas listens on ALL interfaces inside the container.
+      #   This is REQUIRED because the model runs in a Docker container, so clients
+      #   do NOT reach it via 127.0.0.1 like they would on a local gaming GPU.
+      #   The nginx reverse proxy (nginx-proxy) forwards requests here over the
+      #   shared Docker network using the hostname "inference-server" set above.
+      # SECURITY NOTE: --bind only controls which NIC Atlas binds to inside the
+      #   container, NOT which hosts can reach it. To restrict external access,
+      #   remove the port mapping below so port 8000 is only reachable from other
+      #   containers on the Docker network (i.e., nginx-proxy). With port mapping
+      #   present, any host that can reach this machine's IP on port 8000 will
+      #   connect directly — rely on --require-auth / --auth-token as gate.
       - "--bind"
       - "0.0.0.0"
       - "--port"
