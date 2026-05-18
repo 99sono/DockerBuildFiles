@@ -95,14 +95,22 @@ services:
       - "131072"
 
       # --- SCHEDULING & TOOLS ---
-      # --mtp-quantization nvfp4: Quantizes MTP draft head weights to NVFP4 for fused
-      #   device-side expert dispatch. This is the recommended/fastest setting when
-      #   --speculative is enabled with NVFP4 models. Alternatives: fp8 (slower, D2H
-      #   sync in MoE), bf16 (highest accuracy, most memory).
-      #   Reference: atlas/crates/spark-server/src/cli.rs:150-153 — "nvfp4 (fastest,
-      #   recommended — uses fused device-side expert dispatch)"
+      # --mtp-quantization fp8: Quantizes MTP draft head weights to FP8. Trade-off:
+      #   slower per-step due to D2H sync in MoE vs NVFP4, but more accurate draft
+      #   predictions which may improve speculative acceptance rate. At ~96% rejection
+      #   with nvfp4, the full model was consistently overriding MTP proposals anyway.
+      #   bf16 is the highest accuracy option but uses most memory.
+      #   Reference: atlas/crates/spark-server/src/cli.rs:150-153
       - "--mtp-quantization"
-      - "nvfp4"
+      - "fp8"
+
+      # --num-drafts 1: Number of draft tokens per speculative step. 1 = K=2 verify
+      #   (verify 1 draft alongside the real token). Increase to 2 (K=3) or 3 (K=4)
+      #   to propose more drafts in parallel, but each rejection costs more compute.
+      #   Kept at 1 for minimal per-step overhead given low acceptance rate (~4%).
+      #   Reference: atlas/crates/spark-server/src/cli.rs:141-144
+      - "--num-drafts"
+      - "1"
 
       # --scheduling-policy slai: Shared-latency-aware inference scheduling.
       # --tool-call-parser qwen3_coder: Required for tool calling with Qwen3 models.
