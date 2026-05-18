@@ -34,9 +34,13 @@ services:
       # Serve the Qwen3.6-35B-A3B NVFP4 model via Atlas inference engine
       # Vanilla config from: https://x.com/AtlasInference/status/2055740933057007745?s=20
       - "serve"
-      - "RedHatAI/Qwen3.6-35B-A3B-NVFP4"
+      - "${ATLAS_MODEL_ID:-RedHatAI/Qwen3.6-35B-A3B-NVFP4}"
+      - "--model-name"
+      - "${ATLAS_MODEL_NAME:-Qwen3.6-35B-A3B-NVFP4}"
 
       # --- API & NETWORKING ---
+      - "--bind"
+      - "0.0.0.0"
       - "--port"
       - "8000"
 
