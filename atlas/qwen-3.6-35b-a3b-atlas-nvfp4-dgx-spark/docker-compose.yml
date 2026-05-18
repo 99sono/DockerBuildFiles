@@ -80,14 +80,19 @@ services:
       #   at long context." The small overhead of 4 BF16 layers is worth the quality gain.
       #   Reference: atlas/crates/spark-server/src/cli.rs:65-71 —
       #   "Accepts: number, 'auto' (=2, recommended), 'max'/'all' (all BF16)."
-      - "--kv-high-precision-layers"
-      - "auto"
+      # DISABLED 2026-05-18: Switching to pure NVFP4 across all layers to maximize
+      #   KV cache capacity. With --gpu-memory-utilization 0.70 and reduced prefill
+      #   arena, the freed memory goes to more KV blocks for better concurrency.
+      #   Watch for coherence degradation on very long outputs (>32K tokens). Re-enable
+      #   if hallucination or quality issues appear.
+      # - "--kv-high-precision-layers"
+      # - "auto"
 
       # --gpu-memory-utilization: Fraction of GPU VRAM for model + KV cache.
       #   0.65 = 65% of GB10 memory (~78GB), leaving headroom for system overhead.
       #   Tuned down from 0.88 (Atlas QUICKSTART default) for DGX Spark stability.
       - "--gpu-memory-utilization"
-      - "0.65"
+      - "0.70"
 
       # --max-seq-len: Maximum sequence length in tokens.
       #   Qwen3.6-35B-A3B has native context of 262,144 (~256K), extensible to ~1M.
@@ -97,13 +102,14 @@ services:
 
       # --- CHUNKED PREFILL ---
       # --max-prefill-tokens: Maximum tokens processed per prefill iteration.
-      #   65536 = GODZILLA MODE, matches vLLM's --max-num-batched-tokens on this model.
-      #   With 128GB UMA and --gpu-memory-utilization 0.65, we have the headroom for
-      #   massive prefill chunks. Dramatically faster TTFT on long prompts (~20K+ tokens).
-      #   Default is 8192; this 8x increase halves chunk count vs default with no
-      #   decode regression on DGX Spark.
+      #   16384 covers typical prompts (~14K tokens) in a single pass without wasting
+      #   buffer arena memory. At 65536, the buffer arena ballooned to ~12 GB (from
+      #   ~1.5 GB at default), starving decode and reducing tok/s from ~60 to ~50.
+      #   16384 keeps the arena around ~3 GB, freeing memory for more KV cache blocks.
+      #   Default is 8192; this 2x increase still improves TTFT on long prompts while
+      #   preserving decode speed.
       - "--max-prefill-tokens"
-      - "65536"
+      - "16384"
 
       # --- SPECULATIVE DECODING — DISABLED ---
       # MTP speculative decoding on this model+config is CATASTROPHIC: ~96% K2 rejection
