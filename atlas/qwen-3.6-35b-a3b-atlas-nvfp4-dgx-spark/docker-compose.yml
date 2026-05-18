@@ -90,9 +90,10 @@ services:
       - "0.65"
 
       # --max-seq-len: Maximum sequence length in tokens.
-      #   131072 = ~128K tokens for long context windows.
+      #   Qwen3.6-35B-A3B has native context of 262,144 (~256K), extensible to ~1M.
+      #   Set to 200K for comfortable headroom within the trained range.
       - "--max-seq-len"
-      - "131072"
+      - "200000"
 
       # --- SCHEDULING & TOOLS ---
       # --mtp-quantization fp8: Quantizes MTP draft head weights to FP8. Trade-off:
