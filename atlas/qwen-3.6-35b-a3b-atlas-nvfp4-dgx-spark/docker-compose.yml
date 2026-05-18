@@ -63,15 +63,13 @@ services:
       - "${ATLAS_API_KEY:-dummy-key}"
 
       # --- KV CACHE & QUANTIZATION ---
-      # --kv-cache-dtype nvfp4: Uses NVFP4 (E2M1 4-bit) for KV cache. This is the
-      #   best-performing setting on Blackwell GB10, as shown in the Atlas QUICKSTART.md
-      #   top model config (Sehyo/Qwen3.5-35B-A3B-NVFP4 at 133 tok/s). Our original
-      #   fp8 setting triggered warnings: "BF16 values are silently clipped to E4M3
-      #   range [-448, 448], destroying dynamic range". NVFP4 avoids this entirely.
-      #   Reference: atlas/crates/spark-server/src/cli.rs:60-63 — "NVFP4 uses less
-      #   memory but may lose coherence at long context without --kv-high-precision-layers"
+      # --kv-cache-dtype fp8: Switching to FP8 E4M3 for KV cache as a last attempt to
+      #   improve output quality. The NVFP4 setting was faster but appeared to contribute
+      #   to doom loops and incorrect tool calls observed on this model. FP8 is the safe
+      #   default per Atlas docs (cli.rs:60-63) and may produce more reliable outputs at
+      #   the cost of some throughput. If quality improves, this could be the right trade-off.
       - "--kv-cache-dtype"
-      - "nvfp4"
+      - "fp8"
 
       # --kv-high-precision-layers auto: Keeps first 2 + last 2 attention layers in
       #   BF16 KV cache precision, protecting attention sink tokens and output quality
