@@ -89,10 +89,10 @@ services:
       # - "auto"
 
       # --gpu-memory-utilization: Fraction of GPU VRAM for model + KV cache.
-      #   0.65 = 65% of GB10 memory (~78GB), leaving headroom for system overhead.
-      #   Tuned down from 0.88 (Atlas QUICKSTART default) for DGX Spark stability.
+      #   0.75 = 75% of GB10 memory (~96GB). Running single model, no concurrency contention,
+      #   so we give it ample headroom for weights + KV cache + MTP speculator overhead.
       - "--gpu-memory-utilization"
-      - "0.70"
+      - "0.75"
 
       # --max-seq-len: Maximum sequence length in tokens.
       #   Qwen3.6-35B-A3B has native context of 262,144 (~256K), extensible to ~1M.
@@ -111,19 +111,18 @@ services:
       - "--max-prefill-tokens"
       - "16384"
 
-      # --- SPECULATIVE DECODING — DISABLED ---
-      # MTP speculative decoding on this model+config is CATASTROPHIC: ~96% K2 rejection
-      # rate means the full model overrides nearly every draft proposal. The speculator
-      # adds per-step latency (propose + verify) without throughput gain because almost
-      # nothing gets accepted. Tried both NVFP4 and FP8 quantization for the MTP head
-      # but acceptance remains abysmal (~4%). Net effect: 60 tok/s with speculation vs
-      # potentially higher without it. Disable by uncommenting --speculative below if
-      # future Atlas versions improve MTP head quality or if you observe better results.
-      # - "--mtp-quantization"
-      # - "fp8"
-      # - "--num-drafts"
-      # - "1"
-      # - "--speculative"
+      # --- SPECULATIVE DECODING — RE-ENABLED 2026-05-19 ---
+      # Despite ~96% K2 rejection rate, MTP speculation delivers real speedup:
+      # - With spec ON (NVFP4): 56–72 tok/s across various output lengths
+      # - With spec ON (FP8): 70–80 tok/s (slightly faster but less efficient per cli.rs)
+      # - With spec OFF (today's baseline): 51.8–52.9 tok/s
+      # The cheap K1 draft is accepted enough to amortize the verify cost, netting ~20-30% gain.
+      # NVFP4 chosen over FP8 per cli.rs:150-153 (fused device-side expert dispatch vs D2H sync).
+      - "--mtp-quantization"
+      - "nvfp4"
+      - "--num-drafts"
+      - "1"
+      - "--speculative"
 
       # --- SCHEDULING & TOOLS ---
       # --scheduling-policy slai: Shared-latency-aware inference scheduling.
