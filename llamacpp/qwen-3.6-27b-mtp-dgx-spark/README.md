@@ -4,7 +4,7 @@
 
 **Target Hardware:** Acer Veriton GN100 / DGX Spark (NVIDIA GB10, 128GB Unified Memory LPDDR5X, ARM64/aarch64)
 **Model:** `unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL`
-**Speculative Decoding:** MTP (`--spec-type draft-mtp`) with `--spec-draft-n-max 2`
+**Speculative Decoding:** MTP (`--spec-type draft-mtp`) with `--spec-draft-n-max 3` and `--spec-draft-p-min 0.75`
 **Server Port:** `8081`
 
 ---
@@ -67,7 +67,7 @@ llamacpp/qwen-3.6-27b-mtp-dgx-spark/
 | **KV Cache** | `q8_0` (K & V) | High precision cache |
 | **Memory Lock** | `--mlock` | Pin memory to prevent paging on unified memory |
 | **Batch Size** | `512` | Optimized for LPDDR5X bandwidth (~273 GB/s) |
-| **Speculative** | `draft-mtp` with `draft-n-max 2` | Multi-Token Prediction (upstream syntax) |
+| **Speculative** | `draft-mtp` with `draft-n-max 3`, `p-min 0.75` | Aggressive Multi-Token Prediction for throughput |
 | **Flash Attention** | `--flash-attn` | Native Blackwell acceleration |
 
 ### Unified Memory Architecture
@@ -108,9 +108,10 @@ The `-hf` flag in docker-compose.yml loads the GGUF model directly from the Hugg
 --batch-size 512
 --ubatch-size 512
 
-# MTP Speculative Decoding
+# MTP Speculative Decoding (aggressive mode)
 --spec-type draft-mtp
---spec-draft-n-max 2
+--spec-draft-n-max 3
+--spec-draft-p-min 0.75
 
 # Generation parameters
 --temp 1.0
@@ -152,6 +153,32 @@ curl -s http://localhost:8081/v1/chat/completions \
 
 ---
 
+## Using with Cline
+
+### Model ID Configuration
+
+To use this model with Cline, configure the following model ID in your Cline settings:
+
+```
+unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL
+```
+
+### Connection Details
+
+| Setting | Value |
+|---------|-------|
+| **API Base URL** | `http://<host-ip>:8081/v1` |
+| **Model ID** | `unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL` |
+| **API Key** | Your `LLAMA_API_KEY` (from `.env`) |
+
+### Notes
+- Replace `<host-ip>` with your DGX Spark machine's IP address (or `localhost` if running Cline on the same machine)
+- The server listens on host port **8081** (mapped to container port 8080)
+- Ensure the `LLAMA_API_KEY` environment variable matches between your `.env` file and Cline configuration
+- **Reverse Proxy (optional):** Instead of connecting directly to the DGX Spark IP, you can route through a reverse proxy with SSL. For example: `https://spark-8ddc/v1` where the hostname points to a reverse proxy (e.g., nginx) that forwards traffic to the DGX Spark and terminates SSL. This is useful for secure remote access.
+
+---
+
 ## Monitoring
 
 ```bash
@@ -186,9 +213,12 @@ free -h
 ```
 
 ### MTP Acceptance Rate
-- **>50%**: Excellent speedup (140+ tokens/s target)
-- **20-50%**: Moderate speedup
-- **<20%**: Speculative decoding may slow down generation
+With aggressive settings (`--spec-draft-n-max 3`, `--spec-draft-p-min 0.75`):
+- **>60%**: Excellent speedup (aggressive mode working well)
+- **40-60%**: Good speedup (some tokens corrected but net gain)
+- **<40%**: Consider reducing aggressiveness (lower `--spec-draft-n-max` or increase `--spec-draft-p-min`)
+
+**Note:** The lower confidence threshold (0.75 vs 0.8+) means more draft sequences are accepted faster, but some incorrect tokens may slip through and get corrected. This trade-off typically improves overall throughput on high-bandwidth hardware like the GB10.
 
 ---
 

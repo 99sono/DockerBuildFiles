@@ -31,7 +31,6 @@ services:
       - CUDA_VISIBLE_DEVICES=0
       - NVIDIA_VISIBLE_DEVICES=0
       - HF_HOME=/root/.cache/huggingface
-      - LLAMA_API_KEY=${LLAMA_API_KEY:-dummy-key}
     command:
       # Loads directly from central cache via the -hf flag.
       - "-hf"
@@ -73,9 +72,15 @@ services:
       # Standardized upstream syntax for Multi-Token Prediction models.
       - "--spec-type"
       - "draft-mtp"
-      # 2 draft tokens matches Qwen 3.6 MTP parallel head design.
+      # 3 draft tokens: higher speculation depth for better throughput on GB10.
+      # With ~75% acceptance rate per token, 3-token chains still succeed ~42% of the time.
       - "--spec-draft-n-max"
-      - "2"
+      - "3"
+      # Lower confidence threshold (0.75) to accept more draft sequences faster.
+      # Trade-off: some incorrect tokens may slip through but get corrected,
+      # overall throughput improves due to fewer full regeneration cycles.
+      - "--spec-draft-p-min"
+      - "0.75"
       # --- SAMPLING ---
       - "--temp"
       - "1.0"
