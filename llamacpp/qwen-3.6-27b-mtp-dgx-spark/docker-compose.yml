@@ -15,8 +15,8 @@ services:
       # Shared memory for high-speed KV cache paging.
       - /dev/shm:/dev/shm
 
-    # 16GB shm_size sufficient for GB10 unified memory architecture.
-    shm_size: "16g"
+    # 70GB shm_size for GB10 unified memory architecture.
+    shm_size: "70g"
     ipc: host
 
     deploy:
