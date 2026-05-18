@@ -95,34 +95,39 @@ services:
       - "--max-seq-len"
       - "200000"
 
+      # --- CHUNKED PREFILL ---
+      # --max-prefill-tokens: Maximum tokens processed per prefill iteration.
+      #   65536 = GODZILLA MODE, matches vLLM's --max-num-batched-tokens on this model.
+      #   With 128GB UMA and --gpu-memory-utilization 0.65, we have the headroom for
+      #   massive prefill chunks. Dramatically faster TTFT on long prompts (~20K+ tokens).
+      #   Default is 8192; this 8x increase halves chunk count vs default with no
+      #   decode regression on DGX Spark.
+      - "--max-prefill-tokens"
+      - "65536"
+
+      # --- SPECULATIVE DECODING — DISABLED ---
+      # MTP speculative decoding on this model+config is CATASTROPHIC: ~96% K2 rejection
+      # rate means the full model overrides nearly every draft proposal. The speculator
+      # adds per-step latency (propose + verify) without throughput gain because almost
+      # nothing gets accepted. Tried both NVFP4 and FP8 quantization for the MTP head
+      # but acceptance remains abysmal (~4%). Net effect: 60 tok/s with speculation vs
+      # potentially higher without it. Disable by uncommenting --speculative below if
+      # future Atlas versions improve MTP head quality or if you observe better results.
+      # - "--mtp-quantization"
+      # - "fp8"
+      # - "--num-drafts"
+      # - "1"
+      # - "--speculative"
+
       # --- SCHEDULING & TOOLS ---
-      # --mtp-quantization fp8: Quantizes MTP draft head weights to FP8. Trade-off:
-      #   slower per-step due to D2H sync in MoE vs NVFP4, but more accurate draft
-      #   predictions which may improve speculative acceptance rate. At ~96% rejection
-      #   with nvfp4, the full model was consistently overriding MTP proposals anyway.
-      #   bf16 is the highest accuracy option but uses most memory.
-      #   Reference: atlas/crates/spark-server/src/cli.rs:150-153
-      - "--mtp-quantization"
-      - "fp8"
-
-      # --num-drafts 1: Number of draft tokens per speculative step. 1 = K=2 verify
-      #   (verify 1 draft alongside the real token). Increase to 2 (K=3) or 3 (K=4)
-      #   to propose more drafts in parallel, but each rejection costs more compute.
-      #   Kept at 1 for minimal per-step overhead given low acceptance rate (~4%).
-      #   Reference: atlas/crates/spark-server/src/cli.rs:141-144
-      - "--num-drafts"
-      - "1"
-
       # --scheduling-policy slai: Shared-latency-aware inference scheduling.
       # --tool-call-parser qwen3_coder: Required for tool calling with Qwen3 models.
       # --enable-prefix-caching: Reuse KV cache across requests with common prefixes.
-      # --speculative: Enable MTP speculative decoding for faster token generation.
       - "--scheduling-policy"
       - "slai"
       - "--tool-call-parser"
       - "qwen3_coder"
       - "--enable-prefix-caching"
-      - "--speculative"
 
     networks:
       - development-network
