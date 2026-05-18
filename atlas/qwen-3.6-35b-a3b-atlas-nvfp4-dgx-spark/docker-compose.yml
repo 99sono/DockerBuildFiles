@@ -62,21 +62,48 @@ services:
       - "--auth-token"
       - "${ATLAS_API_KEY:-dummy-key}"
 
-      # --- MEMORY & CONTEXT ---
-      # --max-seq-len: Maximum sequence length in tokens.
-      #   131072 = ~128K tokens for long context windows.
-      #
+      # --- KV CACHE & QUANTIZATION ---
+      # --kv-cache-dtype nvfp4: Uses NVFP4 (E2M1 4-bit) for KV cache. This is the
+      #   best-performing setting on Blackwell GB10, as shown in the Atlas QUICKSTART.md
+      #   top model config (Sehyo/Qwen3.5-35B-A3B-NVFP4 at 133 tok/s). Our original
+      #   fp8 setting triggered warnings: "BF16 values are silently clipped to E4M3
+      #   range [-448, 448], destroying dynamic range". NVFP4 avoids this entirely.
+      #   Reference: atlas/crates/spark-server/src/cli.rs:60-63 — "NVFP4 uses less
+      #   memory but may lose coherence at long context without --kv-high-precision-layers"
+      - "--kv-cache-dtype"
+      - "nvfp4"
+
+      # --kv-high-precision-layers auto: Keeps first 2 + last 2 attention layers in
+      #   BF16 KV cache precision, protecting attention sink tokens and output quality
+      #   from quantization error while saving memory on middle layers. Without this
+      #   (default=0), Atlas warns: "NVFP4 models may hallucinate or lose coherence
+      #   at long context." The small overhead of 4 BF16 layers is worth the quality gain.
+      #   Reference: atlas/crates/spark-server/src/cli.rs:65-71 —
+      #   "Accepts: number, 'auto' (=2, recommended), 'max'/'all' (all BF16)."
+      - "--kv-high-precision-layers"
+      - "auto"
+
       # --gpu-memory-utilization: Fraction of GPU VRAM for model + KV cache.
       #   0.65 = 65% of GB10 memory (~78GB), leaving headroom for system overhead.
-      #   Tuned down from 0.88 for DGX Spark stability per Atlas quickstart guidance.
-      - "--max-seq-len"
-      - "131072"
-      - "--kv-cache-dtype"
-      - "fp8"
+      #   Tuned down from 0.88 (Atlas QUICKSTART default) for DGX Spark stability.
       - "--gpu-memory-utilization"
       - "0.65"
 
+      # --max-seq-len: Maximum sequence length in tokens.
+      #   131072 = ~128K tokens for long context windows.
+      - "--max-seq-len"
+      - "131072"
+
       # --- SCHEDULING & TOOLS ---
+      # --mtp-quantization nvfp4: Quantizes MTP draft head weights to NVFP4 for fused
+      #   device-side expert dispatch. This is the recommended/fastest setting when
+      #   --speculative is enabled with NVFP4 models. Alternatives: fp8 (slower, D2H
+      #   sync in MoE), bf16 (highest accuracy, most memory).
+      #   Reference: atlas/crates/spark-server/src/cli.rs:150-153 — "nvfp4 (fastest,
+      #   recommended — uses fused device-side expert dispatch)"
+      - "--mtp-quantization"
+      - "nvfp4"
+
       # --scheduling-policy slai: Shared-latency-aware inference scheduling.
       # --tool-call-parser qwen3_coder: Required for tool calling with Qwen3 models.
       # --enable-prefix-caching: Reuse KV cache across requests with common prefixes.
