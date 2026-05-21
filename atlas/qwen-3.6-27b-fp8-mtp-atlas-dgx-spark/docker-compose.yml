@@ -96,6 +96,11 @@ services:
       - "--speculative"
 
       # --- SCHEDULING & CACHING ---
+      # --max-batch-size 4: Reduced from default 8 to fit within GB10 KV pool.
+      #   At --max-seq-len=60000, each sequence needs 3750 blocks. With 27654 blocks
+      #   available, this comfortably supports 4 sequences with headroom.
+      - "--max-batch-size"
+      - "4"
       # --scheduling-policy slai: Shared-latency-aware inference scheduling.
       # --enable-prefix-caching: Reuse KV cache across requests with common prefixes.
       - "--scheduling-policy"
