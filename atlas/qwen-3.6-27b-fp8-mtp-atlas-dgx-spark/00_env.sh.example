@@ -1,0 +1,22 @@
+#!/bin/bash
+# =============================================================================
+# 00_env.sh.example
+# =============================================================================
+# Copy this file to 00_env.sh and edit with your actual values.
+# Do NOT commit the real .env or 00_env.sh files — they contain secrets.
+#
+# Usage:
+#   cp 00_env.sh.example 00_env.sh
+#   # Edit 00_env.sh with your token
+#   source 00_env.sh
+# =============================================================================
+
+set -euo pipefail
+
+# Load from .env if it exists
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
+
+# Default values (can be overridden by .env)
+export ATLAS_API_KEY="${ATLAS_API_KEY:-dummy-key}"

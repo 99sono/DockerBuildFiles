@@ -1,0 +1,110 @@
+# Atlas inference setup for Qwen3.6-27B-FP8 (Dense) on DGX Spark (GB10)
+#
+# Source recipe: https://github.com/Avarok-Cybersecurity/atlas-recipes/blob/main/recipes/qwen3.6/qwen3.6-27b-dense-fp8-mtp-atlas.yaml
+# Atlas GitHub: https://github.com/Avarok-Cybersecurity/atlas
+
+services:
+  qwen27b-atlas-fp8-mtp:
+    image: avarok/atlas-gb10:latest
+    container_name: qwen-3-6-27b-fp8-mtp-atlas
+    hostname: inference-server
+    platform: linux/arm64
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - /dev/shm:/dev/shm
+
+    shm_size: "32g"
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+    environment:
+      HF_HUB_ENABLE_HF_TRANSFER: "1"
+
+    command:
+      # Serve the Qwen3.6-27B-FP8 (dense) model via Atlas inference engine
+      # Recipe from: atlas-recipes/qwen3.6/qwen3.6-27b-dense-fp8-mtp-atlas.yaml
+      - "serve"
+      - "${ATLAS_MODEL_ID:-Qwen/Qwen3.6-27B-FP8}"
+      - "--model-name"
+      - "${ATLAS_MODEL_NAME:-Qwen3.6-27B-FP8}"
+
+      # --- API & NETWORKING ---
+      # --bind 0.0.0.0: Atlas listens on ALL interfaces inside the container.
+      #   REQUIRED for Docker networking so nginx-proxy can forward requests over
+      #   the shared Docker network using hostname "inference-server".
+      # SECURITY NOTE: --bind only controls which NIC Atlas binds to inside the
+      #   container, NOT which hosts can reach it. To restrict external access,
+      #   remove the port mapping so port 8000 is only reachable from other
+      #   containers on the Docker network. With port mapping present, any host
+      #   that can reach this machine's IP on port 8000 will connect directly —
+      #   rely on --require-auth / --auth-token as gate.
+      - "--bind"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+
+      # Atlas uses --auth-token (single bearer token). Token leaks via ps but
+      # that's fine for dev — use --auth-tokens-file in production.
+      # Value comes from ATLAS_API_KEY in .env (gitignored, see .env.example).
+      - "--require-auth"
+      - "--auth-token"
+      - "${ATLAS_API_KEY:-dummy-key}"
+
+      # --- KV CACHE: BF16 (CRITICAL!) ---
+      # --kv-cache-dtype bf16: MANDATORY for dense attention models.
+      #   The Atlas recipe explicitly warns: "FP8/NVFP4 KV breaks dense attention —
+      #   request timeouts + CUDA graph thrash." Unlike the MoE model where FP8 KV
+      #   cache worked, dense models require BF16 precision in the KV cache for
+      #   stable inference. This is a hard requirement from the upstream recipe.
+      - "--kv-cache-dtype"
+      - "bf16"
+
+      # --gpu-memory-utilization: Fraction of GPU VRAM for model + KV cache.
+      #   0.88 = 88% of GB10 memory (~119GB). The dense FP8 weights are smaller than
+      #   NVFP4 MoE, leaving room for the BF16 KV cache and MTP speculator.
+      #   This is the recipe's recommended value — only reduce it if you see OOM errors.
+      - "--gpu-memory-utilization"
+      - "0.88"
+
+      # --max-seq-len: Maximum sequence length in tokens.
+      #   Capped at 60,000 per the upstream recipe so full spark-arena-v2 concurrency=10
+      #   fits in the KV pool on a single GB10. Cells at depth > max_model_len will be
+      #   skipped in benchmarking. For full long-context (1M+), use --tp 2 / EP=2 across
+      #   multiple nodes. Qwen3.6-27B has native context of 1M tokens.
+      - "--max-seq-len"
+      - "60000"
+
+      # --- SPECULATIVE DECODING — MTP K=2 ---
+      # --mtp-quantization fp8: The upstream-bundled MTP draft head (mtp.safetensors)
+      #   uses FP8 e4m3 linear + BF16 norms. Enables K=2 speculative decoding.
+      #   This model is large enough that without MTP, throughput will be terrible on
+      #   single-GPU setups. With 2 drafts and even partial acceptance rates, the verify
+      #   step amortizes to significant speedup.
+      - "--mtp-quantization"
+      - "fp8"
+      - "--num-drafts"
+      - "2"
+      - "--speculative"
+
+      # --- SCHEDULING & CACHING ---
+      # --scheduling-policy slai: Shared-latency-aware inference scheduling.
+      # --enable-prefix-caching: Reuse KV cache across requests with common prefixes.
+      - "--scheduling-policy"
+      - "slai"
+      - "--enable-prefix-caching"
+
+    networks:
+      - development-network
+
+networks:
+  development-network:
+    external: true
