@@ -88,14 +88,71 @@ If enabling `VLLM_USE_V2_MODEL_RUNNER` causes crashes, keep it commented out. Th
 http://localhost:8000/v1/chat/completions
 ```
 
+## docker-compose02.yml — PrismaQuant on DGX Spark
+
+This directory also contains an optimized configuration using **PrismaQuant 4.75-bit** quantization for the **DGX Spark** (Grace Blackwell ARM64) platform.
+
+### Quick Start (DGX Spark)
+
+```bash
+# 1. Pull the vLLM image (same image as above)
+./00_a_pull_vllm_image.sh
+
+# 2. Pre-download PrismaQuant model weights
+./00_d_pre_download_model_prisma.sh
+
+# 3. Start with docker-compose02.yml
+./01_up_prisma.sh
+
+# 4. Stop
+./02_down_prisma.sh
+```
+
+### Key Differences from docker-compose.yml
+
+| Parameter | docker-compose.yml (NVFP4) | docker-compose02.yml (PrismaQuant) |
+|---|---|---|
+| Model | `RedHatAI/Qwen3.6-35B-A3B-NVFP4` | `rdtand/Qwen3.6-35B-A3B-PrismaQuant-4.75bit-vllm` |
+| GPU Mem Util | 0.65 | **0.80** |
+| KV Cache Dtype | fp8_e4m3 | **fp8** |
+| Max Num Seqs | 8 | **10** |
+| Max Num Batched Tokens | 65536 | **32768** |
+| Speculative Tokens (MTP) | 2 | **3** |
+| Attention Backend | *(none)* | **flashinfer** |
+| Moe Backend | flashinfer_cutlass | *(none)* |
+| Hardware | RTX 5090 (32GB) | **DGX Spark (128GB UMA)** |
+
+### Performance Summary (DGX Spark)
+
+| Metric | Value |
+|---|---|
+| Prefill speed | ~400-1,500 tokens/s |
+| Decode speed | ~45-50 tokens/s avg |
+| Spec acceptance rate | ~63-93% |
+| Cold start | ~6 minutes |
+
+See `metadata/metadata_05_2026_05_21/03_qwen3.6_35b_analysis_of_log.md` for full benchmark analysis.
+
+### 🔗 Credits
+
+The `docker-compose02.yml` configuration was adapted from the **Spark Arena leaderboard**:
+- **Source**: https://spark-arena.com/leaderboard
+- **Submitted by**: [Sean Williams](https://forums.developer.nvidia.com/u/seanthomaswilliams)
+
+The PrismaQuant 4.75-bit quantization with MTP speculative decoding (n=3) and FlashInfer attention backend is an optimized configuration specifically tuned for the DGX Spark (Grace Blackwell ARM64) platform.
+
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `docker-compose.yml` | Main orchestration config |
+| `docker-compose.yml` | Main orchestration config (NVFP4, RTX 5090) |
+| `docker-compose02.yml` | PrismaQuant config (DGX Spark, ARM64) |
 | `00_a_pull_vllm_image.sh` | Pull vLLM Docker image |
-| `00_d_pre_download_model.sh` | Pre-download model weights |
-| `01_up.sh` / `02_down.sh` | Start/stop the server |
+| `00_d_pre_download_model.sh` | Pre-download NVFP4 model weights |
+| `00_d_pre_download_model_prisma.sh` | Pre-download PrismaQuant model weights |
+| `01_up.sh` / `02_down.sh` | Start/stop NVFP4 server |
+| `01_up_prisma.sh` / `02_down_prisma.sh` | Start/stop PrismaQuant server |
 | `03_enter_container.sh` | Enter container shell |
 | `04_test_vllm_curl.py` | Test API client |
-| `05_docker_logs.sh` | View container logs |View container logs |
+| `05_docker_logs.sh` | View NVFP4 container logs |
+| `05_docker_logs_prisma.sh` | View PrismaQuant container logs |
