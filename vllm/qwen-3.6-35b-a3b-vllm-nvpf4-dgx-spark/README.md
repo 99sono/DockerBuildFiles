@@ -141,6 +141,24 @@ The `docker-compose02.yml` configuration was adapted from the **Spark Arena lead
 
 The PrismaQuant 4.75-bit quantization with MTP speculative decoding (n=3) and FlashInfer attention backend is an optimized configuration specifically tuned for the DGX Spark (Grace Blackwell ARM64) platform.
 
+### Quality & Reliability
+
+> **Note on model quality comparison:**
+>
+> The Red Hat NVFP4 model (`RedHatAI/Qwen3.6-35B-A3B-NVFP4`) demonstrated significant hallucinations and doom loops during testing. In contrast, the **rdtand/Qwen3.6-35B-A3B-PrismaQuant-4.75bit-vllm** model has not exhibited any doom loops and appears to work solidly as a main model with "cline" coding agent.
+>
+> This PrismaQuant model is now the **primary model for the DGX Spark** due to its very good speed and reliability.
+>
+> **Comparison with other models tested on DGX Spark:**
+>
+> | Model | Quality | Speed | Verdict |
+> |---|---|---|---|
+> | **PrismaQuant 35B (MTP)** | Excellent, no doom loops | ~45-50 tok/s decode, ~850-900 tok/s prefill | ✅ **Best overall for DGX Spark** |
+> | LlamaCPP 27B | Excellent output quality | Slow tokens/second | ⚠️ Good quality but too slow |
+> | RedHat NVFP4 35B | Hallucinations, doom loops | Good speed | ❌ Unreliable |
+>
+> The MTP 35B model excels at both prefill and decode on the DGX Spark. Batched request testing should yield very high aggregate tokens/second throughput.
+
 ## Files
 
 | File | Purpose |
