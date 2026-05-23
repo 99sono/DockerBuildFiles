@@ -40,7 +40,7 @@ python 04_test_vllm_curl.py
 ## Project Structure
 
 ```
-vllm/qwen-3.6-27b-nvfp4-mtp-dgx-spark/
+vllm/qwen-3.6-27b-dgx-spark/
 ├── docker-compose.yml           # vLLM service config (GB10 optimized, MTP enabled)
 ├── .env.example                 # Environment variables template
 ├── 00_env.sh                    # Runtime environment loader (gitignored)
@@ -68,7 +68,7 @@ vllm/qwen-3.6-27b-nvfp4-mtp-dgx-spark/
 | **Quantization** | `modelopt` | Native fast path on Blackwell SM120 (not `compressed-tensors`) |
 | **Language Model Only** | `--language-model-only` | Required — vision tower stripped in this build |
 | **Platform** | `linux/arm64` | Native ARMv9 Grace CPU |
-| **GPU Memory** | `0.9` | 90% of 128GB UMA reserved for model + KV cache |
+| **GPU Memory** | `0.65` | 65% of 128GB UMA reserved for model + KV cache |
 | **Context Size** | `262144` (256K) | Full trained context window |
 | **Max Sequences** | `2` | Load-bearing — 4+ will OOM during cuda-graph capture with MTP + 256K + fp8 KV |
 | **KV Cache** | `fp8` | Halves KV memory; lifts concurrency at 256K from ~4× to ~7× |
@@ -105,7 +105,7 @@ The model is loaded directly from the HuggingFace hub. On first run, vLLM downlo
 ```bash
 # Model identity
 --model sakamakismile/Qwen3.6-27B-Text-NVFP4-MTP
---served-model-name Qwen3.6-27B-Text-NVFP4-MTP
+--served-model-name qwen3.6-27b
 
 # Quantization (critical for SM120 performance)
 --quantization modelopt
@@ -172,7 +172,7 @@ curl -s https://spark-8ddc/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   --cacert ../nginx/nginx-vllm-reverse-proxy-dgx-spark/nginx-proxy/ssl/nginx-selfsigned.crt \
   -d '{
-    "model": "Qwen3.6-27B-Text-NVFP4-MTP",
+    "model": "qwen3.6-27b",
     "messages": [
       {"role": "user", "content": "Hello!"}
     ],

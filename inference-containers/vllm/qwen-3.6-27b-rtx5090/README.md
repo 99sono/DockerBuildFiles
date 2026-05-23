@@ -15,6 +15,22 @@ This project provides orchestration for the `sakamakismile/Qwen3.6-27B-Text-NVFP
 3.  **Packages:** `./00_c_install_packages.sh`
 4.  **Download Model:** `./00_d_pre_download_model.sh` (Pulls from sakamakismile/Qwen3.6-27B-Text-NVFP4-MTP)
 
+## Key Parameters
+
+### Default compose.yml
+
+- `--max-model-len`: 32768 (32K context)
+- `--quantization`: `compressed-tensors`
+- `--moe-backend`: `triton`
+- `--enforce-eager`: enabled (WSL2 stability)
+
+### docker-compose-turboquant.yml
+
+- `--max-model-len`: 262144 (256K context)
+- `--quantization`: `modelopt`
+- `--moe-backend`: `cutlass`
+- `--speculative-config`: `{"method":"qwen3_5_mtp","num_speculative_tokens":3}`
+
 ## 🚦 Orchestration
 
 - **Normal Start (128K Context):** `./01_a_up_normal.sh`

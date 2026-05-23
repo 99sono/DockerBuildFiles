@@ -1,4 +1,4 @@
-# qwen3.6-35b on RTX 5090 (32GB)
+# qwen3.6-35b on RTX 5090 (32GB) & DGX Spark (128GB UMA)
 
 ## Status: ✅ Working - 65K Context Achieved
 

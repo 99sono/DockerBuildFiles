@@ -34,7 +34,7 @@ python 04_test_curl.py
 ## Project Structure
 
 ```
-llamacpp/qwen3.6-27b-mtp-5090/
+llamacpp/qwen-3.6-27b-5090/
 ├── 00_a_pull_image.sh          # Pull havenoammo/llama:cuda13-server
 ├── 00_b_create_conda_env.sh    # Create conda env for host tools
 ├── 00_c_install_packages.sh    # Install huggingface-hub, jq, curl

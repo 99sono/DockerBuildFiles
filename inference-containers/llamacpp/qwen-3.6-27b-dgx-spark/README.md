@@ -5,7 +5,7 @@
 **Target Hardware:** Acer Veriton GN100 / DGX Spark (NVIDIA GB10, 128GB Unified Memory LPDDR5X, ARM64/aarch64)
 **Model:** `unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL`
 **Speculative Decoding:** MTP (`--spec-type draft-mtp`) with `--spec-draft-n-max 2` and `--spec-draft-p-min 0.85`
-**Server Port:** `8081`
+**Server Port:** `8000`
 
 ---
 
@@ -34,7 +34,7 @@ python 04_test_curl.py
 ## Project Structure
 
 ```
-llamacpp/qwen-3.6-27b-mtp-dgx-spark/
+llamacpp/qwen-3.6-27b-dgx-spark/
 ├── 00_a_pull_image.sh          # Pull ghcr.io/ggml-org/llama.cpp:server-cuda13 (ARM64)
 ├── 00_b_create_conda_env.sh    # Create conda env for host tools
 ├── 00_c_install_packages.sh    # Install huggingface-hub, jq, curl
@@ -42,7 +42,7 @@ llamacpp/qwen-3.6-27b-mtp-dgx-spark/
 ├── 01_a_up_server.sh            # Start server (docker compose up -d)
 ├── 02_a_down_server.sh          # Stop server (docker compose down)
 ├── 03_enter_container.sh        # Enter container for debugging
-├── 04_test_curl.py              # Test API call on port 8081 (Python)
+├── 04_test_curl.py              # Test API call on port 8000 (Python)
 ├── 05_docker_logs.sh            # Follow server logs
 ├── 06_dump_help.sh              # Dump server version/help
 ├── .env.example                 # Environment variables template
@@ -60,7 +60,7 @@ llamacpp/qwen-3.6-27b-mtp-dgx-spark/
 |---------|-------|---------|
 | **Image** | `ghcr.io/ggml-org/llama.cpp:server-cuda13` | Official multi-arch CUDA 13 image (ARM64, built by ggml-org) |
 | **Model** | `-hf unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL` | Load from HuggingFace hub |
-| **Port** | `8081:8080` | Host 8081 → Container 8080 |
+| **Port** | `8000:8000` | Host 8000 → Container 8000 |
 | **Platform** | `linux/arm64` | Native ARMv9 Grace CPU |
 | **GPU Layers** | `999` | Full GPU offload (all layers to unified memory) |
 | **Context Size** | `131072` (128K) | Max context window |
@@ -90,7 +90,7 @@ The `-hf` flag in docker-compose.yml loads the GGUF model directly from the Hugg
 # Core model loading
 -hf unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL
 --host 0.0.0.0
---port 8080
+--port 8000
 
 # GPU offload (everything to unified memory pool)
 --n-gpu-layers 999
@@ -148,15 +148,15 @@ The test reads the prompt from `test/test_file_01_prompt.md`, sends it to the se
 
 **Check available models:**
 ```bash
-curl -s http://localhost:8081/v1/models | jq .
+curl -s http://localhost:8000/v1/models | jq .
 ```
 
 **Send a completion request:**
 ```bash
-curl -s http://localhost:8081/v1/chat/completions \
+curl -s http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL",
+    "model": "qwen3.6-27b",
     "messages": [
       {"role": "user", "content": "Hello!"}
     ],
@@ -180,13 +180,13 @@ unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL
 
 | Setting | Value |
 |---------|-------|
-| **API Base URL** | `http://<host-ip>:8081/v1` |
-| **Model ID** | `unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL` |
+| **API Base URL** | `http://<host-ip>:8000/v1` |
+| **Model ID** | `qwen3.6-27b` |
 | **API Key** | Your `LLAMA_API_KEY` (from `.env`) |
 
 ### Notes
 - Replace `<host-ip>` with your DGX Spark machine's IP address (or `localhost` if running Cline on the same machine)
-- The server listens on host port **8081** (mapped to container port 8080)
+- The server listens on host port **8000** (container port 8000)
 - Ensure the `LLAMA_API_KEY` environment variable matches between your `.env` file and Cline configuration
 - **Reverse Proxy (optional):** Instead of connecting directly to the DGX Spark IP, you can route through a reverse proxy with SSL. For example: `https://spark-8ddc/v1` where the hostname points to a reverse proxy (e.g., nginx) that forwards traffic to the DGX Spark and terminates SSL. This is useful for secure remote access.
 
@@ -244,9 +244,9 @@ With conservative settings (`--spec-draft-n-max 2`, `--spec-draft-p-min 0.85`):
 | **Docker Image** | `havenoammo/llama:cuda13-server` | `ghcr.io/ggml-org/llama.cpp:server-cuda13` |
 | **Platform** | `linux/amd64` | `linux/arm64` |
 | **Memory Lock** | Not set | `--mlock` (required) |
-| **Spec Flag** | `--spec-type mtp` | `--spec-type draft-mtp` |
+| **Spec Flag** | `--spec-type draft-mtp` | `--spec-type draft-mtp` |
 | **Batch Size** | Default | `512` / `512` (tuned for UM) |
-| **shm_size** | `32g` | `16g` |
+| **shm_size** | `32g` | `70g` |
 | **LD_LIBRARY_PATH** | Hardcoded x86 path | Removed (native ARM64 paths) |
 
 ---

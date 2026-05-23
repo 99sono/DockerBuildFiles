@@ -14,11 +14,13 @@ The main configuration is located in `docker-compose.yml`.
 
 - **NVFP4 Support**: Native support for the model's 4-bit weights.
 - **Hybrid SSM/Attention**: Nemotron-Cascade-2 uses a mix of Attention and Mamba layers. The SSM states are kept in `float32` for stability.
-- **Context Management**: `--max-model-len` is currently set to `131072` (128k) to balance deep context capacity with the RTX 5090's VRAM limits.
+- **Context Management**: `--max-model-len` is set to `256000` (256K) for deep context capacity.
 
 ### Current Implementation Status
 
 While advanced KV-cache compression techniques like **TurboQuant** and **TriAttention** were explored, they are currently disabled to maintain stability with the latest vLLM image and Blackwell/WSL2 environment. The current setup relies on the efficiency of the NVFP4 architecture.
+
+Additional notable settings: `--max-num-seqs: 128` enables high concurrency.
 
 ## Deployment
 

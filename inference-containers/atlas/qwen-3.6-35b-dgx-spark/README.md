@@ -30,7 +30,7 @@ Atlas uses `--auth-token` for single-token auth. The token comes from `ATLAS_API
 curl http://localhost:8000/v1/chat/completions \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"model":"atlas","messages":[{"role":"user","content":"Hello!"}]}'
+  -d '{"model":"qwen3.6-35b","messages":[{"role":"user","content":"Hello!"}]}'
 ```
 
 The `.env` file is gitignored. Use `.env.example` as template: `cp .env.example .env`.
