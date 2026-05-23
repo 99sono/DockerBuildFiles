@@ -72,13 +72,15 @@ services:
       # Standardized upstream syntax for Multi-Token Prediction models.
       - "--spec-type"
       - "draft-mtp"
-      # Aggressive: 3 draft tokens with moderate confidence threshold.
-      # Benchmarked at n_max=2 / p_min=0.85 with 90-93% acceptance — safe to push harder.
+      # Reverted from n_max=3: deeper speculation chains introduced asymmetric rejection penalties,
+      # dropping sustained throughput from 67-70 t/s to 62-64 t/s on long generations.
+      # n_max=2 with 90-93% acceptance is optimal for this model/hardware combination.
       - "--spec-draft-n-max"
-      - "3"
-      # Lowered from 0.85 to 0.75: the MTP heads are confident enough, and we want to accept more speculative tokens.
+      - "2"
+      # Kept at 0.85: lowering to 0.75 increased short-task acceptance but degraded sustained throughput.
+      # The MTP heads are already confident enough; going lower adds false positives without benefit.
       - "--spec-draft-p-min"
-      - "0.75"
+      - "0.85"
       # --- SAMPLING ---
       - "--temp"
       - "1.0"
