@@ -1,0 +1,26 @@
+#!/bin/bash
+# =============================================================================
+# 00_env.sh.example
+# =============================================================================
+# Copy this file to .env and edit with your actual values.
+# Do NOT commit the real .env or 00_env.sh files - they contain secrets.
+# All variables use INFERENCE_ prefix (framework-agnostic).
+#
+# Usage:
+#   cp 00_env.sh.example .env
+#   # Edit .env with your values
+#   source 00_env.sh
+# =============================================================================
+
+set -euo pipefail
+
+# Load from .env if it exists
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
+
+# Default values (can be overridden by .env)
+export INFERENCE_API_KEY="${INFERENCE_API_KEY:-dummy-key}"
+export INFERENCE_MODEL_ALIAS="${INFERENCE_MODEL_ALIAS:-qwen3.6-35b}"
+export INFERENCE_SERVER_PORT="${INFERENCE_SERVER_PORT:-8000}"
+export INFERENCE_SERVER_URL="${INFERENCE_SERVER_URL:-https://localhost/v1}"
