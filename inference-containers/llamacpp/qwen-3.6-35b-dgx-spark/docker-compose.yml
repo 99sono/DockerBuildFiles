@@ -59,12 +59,9 @@ services:
       - "q8_0"
       - "--cache-type-v"
       - "q8_0"
-      # 128k context window for high-performance coding tasks.
+      # 180k context window (model trained on 256k; 180k is a good balance for long-context tasks).
       - "--ctx-size"
-      - "131072"
-      # --- UNIFIED MEMORY LOCKING ---
-      # Forces the OS to lock/pin memory footprint, preventing paging on GB10.
-      - "--mlock"
+      - "184320"
       # --- BATCH OPTIMIZATION ---
       # Calibrated for high-bandwidth LPDDR5X unified controllers.
       - "--batch-size"

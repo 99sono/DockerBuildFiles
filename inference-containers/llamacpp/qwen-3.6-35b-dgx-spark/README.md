@@ -72,9 +72,8 @@ llamacpp/qwen-3.6-35b-dgx-spark/
 | **Port** | `8000:8000` | Host 8000 → Container 8000 |
 | **Platform** | `linux/arm64` | Native ARMv9 Grace CPU |
 | **GPU Layers** | `999` | Full GPU offload (all layers to unified memory) |
-| **Context Size** | `131072` (128K) | Max context window |
+| **Context Size** | `184320` (180K) | Max context window (model trained on 256K) |
 | **KV Cache** | `q8_0` (K & V) | High precision cache |
-| **Memory Lock** | `--mlock` | Pin memory to prevent paging on unified memory |
 | **Batch Size** | `512` | Optimized for LPDDR5X bandwidth (~273 GB/s) |
 | **Speculative** | `draft-mtp` with `n-max 2`, `p-min 0.85` | Conservative MTP settings |
 | **Flash Attention** | `--flash-attn on` | Native Blackwell acceleration |
@@ -86,10 +85,6 @@ The GB10 Grace Blackwell Superchip uses 128GB of unified LPDDR5X memory (~273 GB
 ### Why MoE Matters for DGX Spark
 
 With only **3B active parameters per token** (out of 35B total), this MoE model should decode much faster than the 27B dense model on the same hardware, despite having more total parameters. The bottleneck shifts from compute to memory bandwidth — and with 128GB unified memory at ~273 GB/s, there's plenty of headroom.
-
-### Memory Pinning (`--mlock`)
-
-Critical on unified memory setups: forces the Linux kernel to pin the model weights in physical RAM, preventing paging to disk which would severely degrade inference performance.
 
 ---
 
@@ -122,10 +117,7 @@ Critical on unified memory setups: forces the Linux kernel to pin the model weig
 --flash-attn on
 --cache-type-k q8_0
 --cache-type-v q8_0
---ctx-size 131072
-
-# Unified memory locking (critical for GB10)
---mlock
+--ctx-size 184320
 
 # Batch optimization (LPDDR5X bandwidth tuned)
 --batch-size 512
@@ -215,10 +207,6 @@ nvidia-smi
 
 On first start, the GGUF model will download to `~/.cache/huggingface/`. This is expected and may take several minutes depending on your connection.
 
-### Memory Pinning Verification
-
-Check logs for successful memory lock. If `--mlock` fails, the model may page to disk and performance will degrade significantly.
-
 ### Unified Memory
 
 If you see micro-stutters, verify memory availability:
@@ -242,10 +230,10 @@ With conservative settings (`--spec-draft-n-max 2`, `--spec-draft-p-min 0.85`):
 ### Context Capacity Warning
 
 ```
-n_ctx_seq (131072) < n_ctx_train (262144) -- the full capacity of the model will not be utilized
+n_ctx_seq (184320) < n_ctx_train (262144) -- the full capacity of the model will not be utilized
 ```
 
-This is expected. The model was trained on 256K context; we're using 128K. Fine for most workloads.
+This is expected. The model was trained on 256K context; we're using 180K — a good balance without maxing out memory.
 
 ---
 
