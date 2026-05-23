@@ -5,7 +5,7 @@ services:
     container_name: qwen-3.6-27b-mtp-dgx-spark
     hostname: inference-server
     platform: linux/arm64
-    # Port 8081 prevents collisions with vLLM (8000) or other llama-servers (8080).
+    # All models served on port 8000. Single-model capacity avoids client port mismatches.
     ports:
       - "8000:8000"
 

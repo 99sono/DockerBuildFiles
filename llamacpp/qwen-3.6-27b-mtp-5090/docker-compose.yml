@@ -19,7 +19,7 @@ services:
     container_name: qwen-3.6-27b-mtp-5090
     hostname: inference-server
     platform: linux/amd64
-    # Port 8081 prevents collisions with your vLLM (8000) or other llama-servers (8080).
+    # All models served on port 8000. Single-model capacity avoids client port mismatches.
     ports:
       - "8000:8000"
 
