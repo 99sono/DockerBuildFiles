@@ -59,12 +59,9 @@ services:
       - "q8_0"
       - "--cache-type-v"
       - "q8_0"
-      # 128k context window for high-performance coding tasks.
+      # 180k context window (model trained on 256k; 180k is a good balance for long-context tasks).
       - "--ctx-size"
-      - "131072"
-      # --- UNIFIED MEMORY LOCKING ---
-      # Forces the OS to lock/pin memory footprint, preventing paging on GB10.
-      - "--mlock"
+      - "184320"
       # --- BATCH OPTIMIZATION ---
       # Calibrated for high-bandwidth LPDDR5X unified controllers.
       - "--batch-size"
@@ -75,13 +72,13 @@ services:
       # Standardized upstream syntax for Multi-Token Prediction models.
       - "--spec-type"
       - "draft-mtp"
-      # Conservative: 2 draft tokens with high confidence threshold.
-      # Values carried from proven 27B DGX Spark benchmarks (starting point for 35B MoE).
+      # Aggressive: 3 draft tokens with moderate confidence threshold.
+      # Benchmarked at n_max=2 / p_min=0.85 with 90-93% acceptance — safe to push harder.
       - "--spec-draft-n-max"
-      - "2"
-      # High confidence threshold (0.85) to be very selective.
+      - "3"
+      # Lowered from 0.85 to 0.75: the MTP heads are confident enough, and we want to accept more speculative tokens.
       - "--spec-draft-p-min"
-      - "0.85"
+      - "0.75"
       # --- SAMPLING ---
       - "--temp"
       - "1.0"
