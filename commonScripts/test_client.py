@@ -30,14 +30,14 @@ def main():
     output_file = Path(os.environ.get("TEST_OUTPUT_FILE", "test/test_output_01.md"))
     temperature = float(os.environ.get("INFERENCE_TEMP", "1.0"))
     top_p = float(os.environ.get("INFERENCE_TOP_P", "0.95"))
-    max_tokens = int(os.environ.get("INFERENCE_MAX_TOKENS", "2048"))
+    max_tokens = int(os.environ.get("INFERENCE_MAX_TOKENS", "20000"))
 
     if not prompt_file.exists():
         prompt_file.parent.mkdir(parents=True, exist_ok=True)
-        prompt_file.write_text(os.environ.get(
-            "DEFAULT_PROMPT",
-            "Write a Python function that takes a string, reverses it, and removes all vowels."
-        ))
+  prompt_file.write_text(os.environ.get(
+             "DEFAULT_PROMPT",
+             "Write a heartfelt haiku about a father who deeply loves his wife and little daughter. Let it overflow with warmth, tenderness, and quiet devotion."
+         ))
 
     client = OpenAI(base_url=url, api_key=api_key)
 
