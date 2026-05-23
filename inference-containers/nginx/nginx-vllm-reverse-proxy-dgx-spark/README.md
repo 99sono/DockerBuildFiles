@@ -195,9 +195,47 @@ sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keyc
 3. Choose **Local Machine** → Place all certificates in the following store → **Trusted Root Certification Authorities**
 4. Click **Finish**
 
-### Python / requests
+### Python / requests / OpenAI SDK
 
-If you can't install system-wide, point to the cert file explicitly:
+Python's `certifi` bundle — used by both `requests` and the OpenAI SDK (via `httpx`) — does **not** read from Ubuntu's system CA store. Even after running `update-ca-certificates`, Python will still reject the self-signed cert with:
+
+```
+SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate
+```
+
+There are two ways to fix this.
+
+**Option A: Point to the system CA bundle (recommended)**
+
+For `requests`:
+
+```python
+import requests, os
+
+os.environ["REQUESTS_CA_BUNDLE"] = "/etc/ssl/certs/ca-certificates.crt"
+
+response = requests.post(
+    "https://spark-8ddc/v1/completions",
+    headers={"Authorization": "Bearer your-api-key"},
+    json={"prompt": "Hello", "max_tokens": 10},
+)
+```
+
+For the OpenAI SDK (which uses `httpx`, not `requests`):
+
+```python
+import httpx, os
+
+ca_bundle = "/etc/ssl/certs/ca-certificates.crt"
+
+client = openai.OpenAI(
+    base_url="https://spark-8ddc/v1",
+    api_key="your-api-key",
+    http_client=httpx.Client(trust_env=True, verify=ca_bundle),
+)
+```
+
+**Option B: Point directly to the cert file**
 
 ```python
 import requests
@@ -209,6 +247,8 @@ response = requests.post(
     verify="./nginx-proxy/ssl/nginx-selfsigned.crt"
 )
 ```
+
+**Note:** The `04_test_curl.sh` scripts in each inference container already handle this automatically via `test_client.py`. If HTTPS fails, check that: (1) the nginx proxy is running, and (2) the self-signed cert was installed with `./01_a_install_ca_cert.sh`.
 
 ## Directory Structure
 
