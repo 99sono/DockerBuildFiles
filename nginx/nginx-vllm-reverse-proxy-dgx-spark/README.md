@@ -63,10 +63,10 @@ Testing nginx reverse proxy with vLLM ...
 {"status":"ok"}
 
 === Test 2: GET /v1/models (HTTPS with -k) ===
-{"object":"list","data":[{"id":"Qwen3.6-35B-A3B-NVFP4","object":"model","created":1778346339,"owned_by":"vllm","root":"RedHatAI/Qwen3.6-35B-A3B-NVFP4","parent":null,"max_model_len":262144,"permission":[{"id":"modelperm-a13d647e6540f345","object":"model_permission","created":1778346339,"allow_create_engine":false,"allow_sampling":true,"allow_logprobs":true,"allow_search_indices":false,"allow_view":true,"allow_fine_tuning":false,"organization":"*","group":null,"is_blocking":false}]}]}
+{"object":"list","data":[{"id":"qwen3.6-35b","object":"model","created":1778346339,"owned_by":"vllm","root":"RedHatAI/Qwen3.6-35B-A3B-NVFP4","parent":null,"max_model_len":262144,"permission":[{"id":"modelperm-a13d647e6540f345","object":"model_permission","created":1778346339,"allow_create_engine":false,"allow_sampling":true,"allow_logprobs":true,"allow_search_indices":false,"allow_view":true,"allow_fine_tuning":false,"organization":"*","group":null,"is_blocking":false}]}]}
 
 === Test 3: POST /v1/chat/completions ===
-{"id":"chatcmpl-87d17189b9199620","object":"chat.completion","created":1778346339,"model":"Qwen3.6-35B-A3B-NVFP4","choices":[{"index":0,"message":{"role":"assistant","content":"Hello! I hope you're having a wonderful day.","refusal":null}}],"usage":{"prompt_tokens":16,"total_tokens":1050,"completion_tokens":1034}}
+{"id":"chatcmpl-87d17189b9199620","object":"chat.completion","created":1778346339,"model":"qwen3.6-35b","choices":[{"index":0,"message":{"role":"assistant","content":"Hello! I hope you're having a wonderful day.","refusal":null}}],"usage":{"prompt_tokens":16,"total_tokens":1050,"completion_tokens":1034}}
 
 === Test 4: GET /invocations (should return 403) ===
 HTTP Status: 403

@@ -12,14 +12,14 @@ You got a `404 Not Found` error when you tried to chat with it, but the fix take
 In your `docker-compose.yml`, you changed the served model name:
 ```yaml
       - "--served-model-name"
-      - "Qwen3.6-35B-A3B-NVFP4" # Notice you removed 'RedHatAI/'
+      - "qwen3.6-35b" # Notice you removed 'RedHatAI/'
 ```
 
 However, your chat client (or API script) is still asking the server for the old name:
 > `ErrorInfo(message='The model RedHatAI/Qwen3.6-35B-A3B-NVFP4 does not exist.'`
 
 **The Fix:** 
-Just go into your chat UI (Open WebUI, LibreChat, or your Python script) and change the model name you are requesting to exactly **`Qwen3.6-35B-A3B-NVFP4`**. 
+Just go into your chat UI (Open WebUI, LibreChat, or your Python script) and change the model name you are requesting to exactly **`qwen3.6-35b`**. 
 
 ### The Ultimate Takeaway
 This was a masterclass in AI hardware troubleshooting. 

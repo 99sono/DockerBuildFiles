@@ -15,7 +15,7 @@ load_dotenv()
 TEST_PROMPT_FILE = Path("test/test_file_01_prompt.md")
 OUTPUT_FILE = Path("test/test_output_01.md")
 URL = "http://localhost:8000/v1"
-MODEL = "Qwen3.6-35B-A3B-NVFP4"
+MODEL = "qwen3.6-35b"
 VLLM_API_KEY = "dummy-key"
 
 # ========================= VALIDATION =========================

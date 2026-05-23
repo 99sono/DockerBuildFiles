@@ -1,8 +1,8 @@
-# Qwen3.6-35B-A3B-NVFP4 on RTX 5090 (32GB)
+# qwen3.6-35b on RTX 5090 (32GB)
 
 ## Status: ✅ Working - 65K Context Achieved
 
-This folder contains the complete setup for running the **Qwen3.6-35B-A3B-NVFP4** quantized model via vLLM on an RTX 5090 (32GB VRAM). The configuration supports up to **65,536 tokens** of context (prompt + response).
+This folder contains the complete setup for running the **qwen3.6-35b** quantized model via vLLM on an RTX 5090 (32GB VRAM). The configuration supports up to **65,536 tokens** of context (prompt + response).
 
 ## Requirements
 

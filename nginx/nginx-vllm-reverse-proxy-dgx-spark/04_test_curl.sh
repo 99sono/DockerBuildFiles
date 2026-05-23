@@ -36,7 +36,7 @@ curl -s -k https://$DGX_HOSTNAME/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $VLLM_API_KEY" \
   -d '{
-    "model": "Qwen3.6-35B-A3B-NVFP4",
+    "model": "qwen3.6-35b",
     "messages": [{"role": "user", "content": "Say hello in one sentence."}]
   }' | head -20
 echo ""

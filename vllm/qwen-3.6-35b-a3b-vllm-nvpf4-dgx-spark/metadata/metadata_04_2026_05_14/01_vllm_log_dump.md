@@ -31,7 +31,7 @@ services:
       - "--model"
       - "RedHatAI/Qwen3.6-35B-A3B-NVFP4"
       - "--served-model-name"
-      - "Qwen3.6-35B-A3B-NVFP4"
+      - "qwen3.6-35b"
       - "--api-key"
       - "${VLLM_API_KEY:-dummy-key}"
       - "--trust-remote-code"
@@ -145,7 +145,7 @@ WARNING 05-14 08:20:13 [argparse_utils.py:257] With `vllm serve`, you should pro
 (APIServer pid=1) INFO 05-14 08:20:13 [utils.py:299]   █▄█▀ █     █     █     █  model   RedHatAI/Qwen3.6-35B-A3B-NVFP4
 (APIServer pid=1) INFO 05-14 08:20:13 [utils.py:299]    ▀▀  ▀▀▀▀▀ ▀▀▀▀▀ ▀     ▀
 (APIServer pid=1) INFO 05-14 08:20:13 [utils.py:299] 
-(APIServer pid=1) INFO 05-14 08:20:13 [utils.py:233] non-default args: {'model_tag': 'RedHatAI/Qwen3.6-35B-A3B-NVFP4', 'enable_auto_tool_choice': True, 'tool_call_parser': 'qwen3_coder', 'host': '0.0.0.0', 'api_key': ['dummy-key'], 'model': 'RedHatAI/Qwen3.6-35B-A3B-NVFP4', 'trust_remote_code': True, 'max_model_len': 262144, 'quantization': 'compressed-tensors', 'served_model_name': ['Qwen3.6-35B-A3B-NVFP4'], 'safetensors_load_strategy': 'prefetch', 'reasoning_parser': 'qwen3', 'gpu_memory_utilization': 0.85, 'kv_cache_dtype': 'fp8_e4m3', 'enable_prefix_caching': True, 'max_num_batched_tokens': 65536, 'max_num_seqs': 8, 'enable_chunked_prefill': True, 'max_cudagraph_capture_size': 1, 'moe_backend': 'flashinfer_cutlass', 'speculative_config': {'method': 'qwen3_next_mtp', 'num_speculative_tokens': 2}}
+(APIServer pid=1) INFO 05-14 08:20:13 [utils.py:233] non-default args: {'model_tag': 'RedHatAI/Qwen3.6-35B-A3B-NVFP4', 'enable_auto_tool_choice': True, 'tool_call_parser': 'qwen3_coder', 'host': '0.0.0.0', 'api_key': ['dummy-key'], 'model': 'RedHatAI/Qwen3.6-35B-A3B-NVFP4', 'trust_remote_code': True, 'max_model_len': 262144, 'quantization': 'compressed-tensors', 'served_model_name': ['qwen3.6-35b'], 'safetensors_load_strategy': 'prefetch', 'reasoning_parser': 'qwen3', 'gpu_memory_utilization': 0.85, 'kv_cache_dtype': 'fp8_e4m3', 'enable_prefix_caching': True, 'max_num_batched_tokens': 65536, 'max_num_seqs': 8, 'enable_chunked_prefill': True, 'max_cudagraph_capture_size': 1, 'moe_backend': 'flashinfer_cutlass', 'speculative_config': {'method': 'qwen3_next_mtp', 'num_speculative_tokens': 2}}
 (APIServer pid=1) Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
 (APIServer pid=1) INFO 05-14 08:20:20 [nixl_utils.py:20] Setting UCX_RCACHE_MAX_UNRELEASED to '1024' to avoid a rare memory leak in UCX when using NIXL.
 (APIServer pid=1) INFO 05-14 08:20:20 [nixl_utils.py:32] NIXL is available
@@ -165,7 +165,7 @@ WARNING 05-14 08:20:13 [argparse_utils.py:257] With `vllm serve`, you should pro
 (APIServer pid=1) [transformers] `Qwen2VLImageProcessorFast` is deprecated. The `Fast` suffix for image processors has been removed; use `Qwen2VLImageProcessor` instead.
 (APIServer pid=1) [transformers] The `use_fast` parameter is deprecated and will be removed in a future version. Use `backend="torchvision"` instead of `use_fast=True`, or `backend="pil"` instead of `use_fast=False`.
 INFO 05-14 08:20:42 [nixl_utils.py:32] NIXL is available
-(EngineCore pid=168) INFO 05-14 08:20:42 [core.py:109] Initializing a V1 LLM engine (v0.20.2) with config: model='RedHatAI/Qwen3.6-35B-A3B-NVFP4', speculative_config=SpeculativeConfig(method='mtp', model='RedHatAI/Qwen3.6-35B-A3B-NVFP4', num_spec_tokens=2), tokenizer='RedHatAI/Qwen3.6-35B-A3B-NVFP4', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=True, dtype=torch.bfloat16, max_seq_len=262144, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=compressed-tensors, quantization_config=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=fp8_e4m3, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='qwen3', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False), seed=0, served_model_name=Qwen3.6-35B-A3B-NVFP4, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'ir_enable_torch_wrap': True, 'splitting_ops': ['vllm::unified_attention_with_output', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::gdn_attention_core', 'vllm::gdn_attention_core_xpu', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::deepseek_v4_attention', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [65536], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': True, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False}, 'max_cudagraph_capture_size': 1, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['native']), enable_flashinfer_autotune=True, moe_backend='flashinfer_cutlass')
+(EngineCore pid=168) INFO 05-14 08:20:42 [core.py:109] Initializing a V1 LLM engine (v0.20.2) with config: model='RedHatAI/Qwen3.6-35B-A3B-NVFP4', speculative_config=SpeculativeConfig(method='mtp', model='RedHatAI/Qwen3.6-35B-A3B-NVFP4', num_spec_tokens=2), tokenizer='RedHatAI/Qwen3.6-35B-A3B-NVFP4', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=True, dtype=torch.bfloat16, max_seq_len=262144, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=compressed-tensors, quantization_config=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=fp8_e4m3, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='qwen3', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False), seed=0, served_model_name=qwen3.6-35b, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'ir_enable_torch_wrap': True, 'splitting_ops': ['vllm::unified_attention_with_output', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::gdn_attention_core', 'vllm::gdn_attention_core_xpu', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::deepseek_v4_attention', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [65536], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': True, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False}, 'max_cudagraph_capture_size': 1, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['native']), enable_flashinfer_autotune=True, moe_backend='flashinfer_cutlass')
 (EngineCore pid=168) [transformers] `Qwen2VLImageProcessorFast` is deprecated. The `Fast` suffix for image processors has been removed; use `Qwen2VLImageProcessor` instead.
 (EngineCore pid=168) Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
 (EngineCore pid=168) INFO 05-14 08:20:45 [parallel_state.py:1402] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://172.18.0.2:53535 backend=nccl
@@ -181,14 +181,18 @@ INFO 05-14 08:20:42 [nixl_utils.py:32] NIXL is available
 (EngineCore pid=168) INFO 05-14 08:20:57 [cuda.py:368] Using FLASHINFER attention backend out of potential backends: ['FLASHINFER', 'TRITON_ATTN'].
 (EngineCore pid=168) INFO 05-14 08:20:58 [weight_utils.py:904] Filesystem type for checkpoints: EXT4. Checkpoint size: 23.32 GiB. Available RAM: 89.13 GiB.
 (EngineCore pid=168) INFO 05-14 08:20:58 [weight_utils.py:874] Prefetching checkpoint files into page cache started (in background)
-(EngineCore pid=168) Loading safetensors checkpoint shards:   0% Completed | 0/3 [00:00<?, ?it/s]
+(EngineCore pid=168) 
+Loading safetensors checkpoint shards:   0% Completed | 0/3 [00:00<?, ?it/s]
 (EngineCore pid=168) INFO 05-14 08:21:00 [weight_utils.py:851] Prefetching checkpoint files: 10% (1/3)
 (EngineCore pid=168) INFO 05-14 08:21:01 [weight_utils.py:851] Prefetching checkpoint files: 20% (2/3)
 (EngineCore pid=168) INFO 05-14 08:21:22 [weight_utils.py:851] Prefetching checkpoint files: 30% (3/3)
 (EngineCore pid=168) INFO 05-14 08:21:22 [weight_utils.py:869] Prefetching checkpoint files into page cache finished in 23.58s
-(EngineCore pid=168) Loading safetensors checkpoint shards:  33% Completed | 1/3 [01:57<03:55, 117.74s/it]
-(EngineCore pid=168) Loading safetensors checkpoint shards: 100% Completed | 3/3 [02:06<00:00, 33.63s/it]
-(EngineCore pid=168)  Loading safetensors checkpoint shards: 100% Completed | 3/3 [02:06<00:00, 42.04s/it]
+(EngineCore pid=168) 
+Loading safetensors checkpoint shards:  33% Completed | 1/3 [01:57<03:55, 117.74s/it]
+(EngineCore pid=168) 
+Loading safetensors checkpoint shards: 100% Completed | 3/3 [02:06<00:00, 33.63s/it]
+(EngineCore pid=168)  
+Loading safetensors checkpoint shards: 100% Completed | 3/3 [02:06<00:00, 42.04s/it]
 (EngineCore pid=168) 
 (EngineCore pid=168) INFO 05-14 08:23:05 [default_loader.py:384] Loading weights took 126.18 seconds
 (EngineCore pid=168) INFO 05-14 08:23:05 [nvfp4.py:485] Using MoEPrepareAndFinalizeNoDPEPModular
@@ -196,14 +200,18 @@ INFO 05-14 08:20:42 [nixl_utils.py:32] NIXL is available
 (EngineCore pid=168) INFO 05-14 08:23:05 [unquantized.py:213] Using FlashInfer CUTLASS Unquantized MoE backend out of potential backends: ['FlashInfer TRTLLM', 'FlashInfer CUTLASS', 'TRITON', 'BATCHED_TRITON'].
 (EngineCore pid=168) INFO 05-14 08:23:06 [weight_utils.py:904] Filesystem type for checkpoints: EXT4. Checkpoint size: 23.32 GiB. Available RAM: 84.99 GiB.
 (EngineCore pid=168) INFO 05-14 08:23:06 [weight_utils.py:874] Prefetching checkpoint files into page cache started (in background)
-(EngineCore pid=168) Loading safetensors checkpoint shards:   0% Completed | 0/3 [00:00<?, ?it/s]
+(EngineCore pid=168) 
+Loading safetensors checkpoint shards:   0% Completed | 0/3 [00:00<?, ?it/s]
 (EngineCore pid=168) INFO 05-14 08:23:06 [weight_utils.py:851] Prefetching checkpoint files: 10% (1/3)
 (EngineCore pid=168) INFO 05-14 08:23:06 [weight_utils.py:851] Prefetching checkpoint files: 20% (2/3)
 (EngineCore pid=168) INFO 05-14 08:23:07 [weight_utils.py:851] Prefetching checkpoint files: 30% (3/3)
 (EngineCore pid=168) INFO 05-14 08:23:07 [weight_utils.py:869] Prefetching checkpoint files into page cache finished in 1.82s
-(EngineCore pid=168) Loading safetensors checkpoint shards:  33% Completed | 1/3 [00:16<00:32, 16.12s/it]
-(EngineCore pid=168) Loading safetensors checkpoint shards:  67% Completed | 2/3 [00:17<00:07,  7.32s/it]
-(EngineCore pid=168) Loading safetensors checkpoint shards: 100% Completed | 3/3 [00:17<00:00,  5.76s/it]
+(EngineCore pid=168) 
+Loading safetensors checkpoint shards:  33% Completed | 1/3 [00:16<00:32, 16.12s/it]
+(EngineCore pid=168) 
+Loading safetensors checkpoint shards:  67% Completed | 2/3 [00:17<00:07,  7.32s/it]
+(EngineCore pid=168) 
+Loading safetensors checkpoint shards: 100% Completed | 3/3 [00:17<00:00,  5.76s/it]
 (EngineCore pid=168) 
 (EngineCore pid=168) INFO 05-14 08:23:23 [default_loader.py:384] Loading weights took 17.33 seconds
 (EngineCore pid=168) INFO 05-14 08:23:23 [unquantized.py:343] Using MoEPrepareAndFinalizeNoDPEPModular
@@ -235,20 +243,46 @@ INFO 05-14 08:20:42 [nixl_utils.py:32] NIXL is available
 (EngineCore pid=168) INFO 05-14 08:25:41 [kv_cache_utils.py:1708] GPU KV cache size: 5,747,892 tokens
 (EngineCore pid=168) INFO 05-14 08:25:41 [kv_cache_utils.py:1709] Maximum concurrency for 262,144 tokens per request: 21.93x
 (EngineCore pid=168) 2026-05-14 08:25:45,631 - INFO - autotuner.py:457 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
-(EngineCore pid=168) [AutoTuner]: Tuning fp4_gemm:   0%|          | 0/17 [00:00<?, ?profile/s][AutoTuner]: Tuning fp4_gemm:  76%|███████▋  | 13/17 [00:00<00:00, 120.10profile/s][AutoTuner]: Tuning fp4_gemm: 100%|██████████| 17/17 [00:00<00:00, 35.55profile/s] 
-(EngineCore pid=168) [AutoTuner]: Tuning fp4_gemm:   0%|          | 0/17 [00:00<?, ?profile/s][AutoTuner]: Tuning fp4_gemm:  76%|███████▋  | 13/17 [00:00<00:00, 128.48profile/s][AutoTuner]: Tuning fp4_gemm: 100%|██████████| 17/17 [00:00<00:00, 35.75profile/s] 
-(EngineCore pid=168) [AutoTuner]: Tuning trtllm::fused_moe::gemm1:   0%|          | 0/1 [00:00<?, ?profile/s]2026-05-14 08:25:47,099 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 4 unsupported tactic(s) for trtllm::fused_moe::gemm1 (enable debug logs to see details)
-(EngineCore pid=168) [AutoTuner]: Tuning trtllm::fused_moe::gemm1: 100%|██████████| 1/1 [00:00<00:00, 35.99profile/s]
-(EngineCore pid=168) [AutoTuner]: Tuning trtllm::fused_moe::gemm2:   0%|          | 0/1 [00:00<?, ?profile/s]2026-05-14 08:25:47,142 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 10 unsupported tactic(s) for trtllm::fused_moe::gemm2 (enable debug logs to see details)
-(EngineCore pid=168) [AutoTuner]: Tuning trtllm::fused_moe::gemm2: 100%|██████████| 1/1 [00:00<00:00, 23.63profile/s]
-(EngineCore pid=168) [AutoTuner]: Tuning fp4_gemm:   0%|          | 0/17 [00:00<?, ?profile/s][AutoTuner]: Tuning fp4_gemm:   6%|▌         | 1/17 [00:00<00:04,  3.67profile/s][AutoTuner]: Tuning fp4_gemm:  65%|██████▍   | 11/17 [00:00<00:00, 34.83profile/s][AutoTuner]: Tuning fp4_gemm: 100%|██████████| 17/17 [00:03<00:00,  3.93profile/s][AutoTuner]: Tuning fp4_gemm: 100%|██████████| 17/17 [00:03<00:00,  4.72profile/s]
-(EngineCore pid=168) [AutoTuner]: Tuning fp4_gemm:   0%|          | 0/17 [00:00<?, ?profile/s][AutoTuner]: Tuning fp4_gemm:  47%|████▋     | 8/17 [00:00<00:00, 78.11profile/s][AutoTuner]: Tuning fp4_gemm:  94%|█████████▍| 16/17 [00:00<00:00, 23.52profile/s][AutoTuner]: Tuning fp4_gemm: 100%|██████████| 17/17 [00:01<00:00, 14.74profile/s]
-(EngineCore pid=168) [AutoTuner]: Tuning trtllm::fused_moe::gemm1:   0%|          | 0/1 [00:00<?, ?profile/s]2026-05-14 08:26:02,341 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 3 unsupported tactic(s) for trtllm::fused_moe::gemm1 (enable debug logs to see details)
-(EngineCore pid=168) [AutoTuner]: Tuning trtllm::fused_moe::gemm1: 100%|██████████| 1/1 [00:00<00:00,  1.56profile/s][AutoTuner]: Tuning trtllm::fused_moe::gemm1: 100%|██████████| 1/1 [00:00<00:00,  1.56profile/s]
-(EngineCore pid=168) [AutoTuner]: Tuning trtllm::fused_moe::gemm2:   0%|          | 0/1 [00:00<?, ?profile/s]2026-05-14 08:26:02,362 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 1 unsupported tactic(s) for trtllm::fused_moe::gemm2 (enable debug logs to see details)
-(EngineCore pid=168) [AutoTuner]: Tuning trtllm::fused_moe::gemm2: 100%|██████████| 1/1 [00:00<00:00, 47.82profile/s]
+(EngineCore pid=168) 
+[AutoTuner]: Tuning fp4_gemm:   0%|          | 0/17 [00:00<?, ?profile/s]
+[AutoTuner]: Tuning fp4_gemm:  76%|███████▋  | 13/17 [00:00<00:00, 120.10profile/s]
+[AutoTuner]: Tuning fp4_gemm: 100%|██████████| 17/17 [00:00<00:00, 35.55profile/s] 
+(EngineCore pid=168) 
+[AutoTuner]: Tuning fp4_gemm:   0%|          | 0/17 [00:00<?, ?profile/s]
+[AutoTuner]: Tuning fp4_gemm:  76%|███████▋  | 13/17 [00:00<00:00, 128.48profile/s]
+[AutoTuner]: Tuning fp4_gemm: 100%|██████████| 17/17 [00:00<00:00, 35.75profile/s] 
+(EngineCore pid=168) 
+[AutoTuner]: Tuning trtllm::fused_moe::gemm1:   0%|          | 0/1 [00:00<?, ?profile/s]2026-05-14 08:25:47,099 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 4 unsupported tactic(s) for trtllm::fused_moe::gemm1 (enable debug logs to see details)
+(EngineCore pid=168) 
+[AutoTuner]: Tuning trtllm::fused_moe::gemm1: 100%|██████████| 1/1 [00:00<00:00, 35.99profile/s]
+(EngineCore pid=168) 
+[AutoTuner]: Tuning trtllm::fused_moe::gemm2:   0%|          | 0/1 [00:00<?, ?profile/s]2026-05-14 08:25:47,142 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 10 unsupported tactic(s) for trtllm::fused_moe::gemm2 (enable debug logs to see details)
+(EngineCore pid=168) 
+[AutoTuner]: Tuning trtllm::fused_moe::gemm2: 100%|██████████| 1/1 [00:00<00:00, 23.63profile/s]
+(EngineCore pid=168) 
+[AutoTuner]: Tuning fp4_gemm:   0%|          | 0/17 [00:00<?, ?profile/s]
+[AutoTuner]: Tuning fp4_gemm:   6%|▌         | 1/17 [00:00<00:04,  3.67profile/s]
+[AutoTuner]: Tuning fp4_gemm:  65%|██████▍   | 11/17 [00:00<00:00, 34.83profile/s]
+[AutoTuner]: Tuning fp4_gemm: 100%|██████████| 17/17 [00:03<00:00,  3.93profile/s]
+[AutoTuner]: Tuning fp4_gemm: 100%|██████████| 17/17 [00:03<00:00,  4.72profile/s]
+(EngineCore pid=168) 
+[AutoTuner]: Tuning fp4_gemm:   0%|          | 0/17 [00:00<?, ?profile/s]
+[AutoTuner]: Tuning fp4_gemm:  47%|████▋     | 8/17 [00:00<00:00, 78.11profile/s]
+[AutoTuner]: Tuning fp4_gemm:  94%|█████████▍| 16/17 [00:00<00:00, 23.52profile/s]
+[AutoTuner]: Tuning fp4_gemm: 100%|██████████| 17/17 [00:01<00:00, 14.74profile/s]
+(EngineCore pid=168) 
+[AutoTuner]: Tuning trtllm::fused_moe::gemm1:   0%|          | 0/1 [00:00<?, ?profile/s]2026-05-14 08:26:02,341 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 3 unsupported tactic(s) for trtllm::fused_moe::gemm1 (enable debug logs to see details)
+(EngineCore pid=168) 
+[AutoTuner]: Tuning trtllm::fused_moe::gemm1: 100%|██████████| 1/1 [00:00<00:00,  1.56profile/s]
+[AutoTuner]: Tuning trtllm::fused_moe::gemm1: 100%|██████████| 1/1 [00:00<00:00,  1.56profile/s]
+(EngineCore pid=168) 
+[AutoTuner]: Tuning trtllm::fused_moe::gemm2:   0%|          | 0/1 [00:00<?, ?profile/s]2026-05-14 08:26:02,362 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 1 unsupported tactic(s) for trtllm::fused_moe::gemm2 (enable debug logs to see details)
+(EngineCore pid=168) 
+[AutoTuner]: Tuning trtllm::fused_moe::gemm2: 100%|██████████| 1/1 [00:00<00:00, 47.82profile/s]
 (EngineCore pid=168) 2026-05-14 08:26:02,367 - INFO - autotuner.py:466 - flashinfer.jit: [Autotuner]: Autotuning process ends
-(EngineCore pid=168) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/1 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 1/1 [00:00<00:00, 13.39it/s]
+(EngineCore pid=168) 
+Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/1 [00:00<?, ?it/s]
+Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 1/1 [00:00<00:00, 13.39it/s]
 (EngineCore pid=168) INFO 05-14 08:26:03 [gpu_model_runner.py:6133] Graph capturing finished in 1 secs, took 0.05 GiB
 (EngineCore pid=168) INFO 05-14 08:26:03 [core.py:299] init engine (profile, create kv cache, warmup model) took 159.54 s (compilation: 71.12 s)
 (EngineCore pid=168) INFO 05-14 08:26:03 [vllm.py:840] Asynchronous scheduling is enabled.

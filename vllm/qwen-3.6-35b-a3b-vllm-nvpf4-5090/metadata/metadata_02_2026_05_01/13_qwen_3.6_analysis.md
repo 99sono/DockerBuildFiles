@@ -1,4 +1,4 @@
-# Qwen3.6-35B-A3B-NVFP4 vLLM Configuration Tuning Analysis
+# qwen3.6-35b vLLM Configuration Tuning Analysis
 
 **Date:** 2026-05-01
 **Hardware:** NVIDIA RTX 5090 (32GB VRAM)
@@ -237,4 +237,4 @@ After applying changes, monitor these log metrics:
 
 **Key Insight:** The RTX 5090 is significantly underutilized at the current configuration. The GPU memory utilization sits at ~28.6% during generation, meaning ~70% of the GPU's compute capacity is idle. Proper CUDA Graph configuration and batch token optimization should bring both memory utilization and throughput to their expected levels.
 
-**Note on Model Choice:** The Qwen3.6-35B-A3B-NVFP4 is a valid model for experimentation, but its ~18GB weight footprint consumes most of the available 32GB VRAM budget, leaving limited room for KV cache growth. Models with smaller weight footprints (e.g., Gemma-4 MoE variants) would provide more KV cache headroom for equivalent or better quality.
+**Note on Model Choice:** The qwen3.6-35b is a valid model for experimentation, but its ~18GB weight footprint consumes most of the available 32GB VRAM budget, leaving limited room for KV cache growth. Models with smaller weight footprints (e.g., Gemma-4 MoE variants) would provide more KV cache headroom for equivalent or better quality.

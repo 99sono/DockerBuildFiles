@@ -11,7 +11,7 @@ if [ -f "$SCRIPT_DIR/.env" ]; then
 fi
 
 ATLAS_API_KEY="${ATLAS_API_KEY:-dummy-key}"
-MODEL="${ATLAS_MODEL_NAME:-Qwen3.6-35B-A3B-NVFP4}"
+MODEL="${ATLAS_MODEL_NAME:-qwen3.6-35b}"
 PROMPT="${1:-What is the meaning of life? Answer in one sentence.}"
 
 echo "💬 Sending chat completion request to Atlas server..."

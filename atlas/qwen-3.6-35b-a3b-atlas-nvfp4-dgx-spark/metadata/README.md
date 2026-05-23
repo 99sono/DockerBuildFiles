@@ -36,7 +36,7 @@ The model gets stuck in a loop apologizing and retrying the same tool call, neve
 - Speculation ON with `--mtp-quantization nvfp4`, K=2, ~96% rejection — real speedup (+20-30%) but zero quality improvement
 - Reduced prefill window (16K vs 65K) — memory optimization only, no quality impact
 
-**Bottom line:** For Qwen3.6-35B-A3B-NVFP4 on this hardware, vLLM delivers better output quality despite being slower. The speed advantage of Atlas is not worth the quality degradation for agentic coding workflows.
+**Bottom line:** For qwen3.6-35b on this hardware, vLLM delivers better output quality despite being slower. The speed advantage of Atlas is not worth the quality degradation for agentic coding workflows.
 
 ---
 

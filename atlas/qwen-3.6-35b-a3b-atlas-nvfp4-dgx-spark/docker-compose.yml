@@ -36,7 +36,7 @@ services:
       - "serve"
       - "${ATLAS_MODEL_ID:-RedHatAI/Qwen3.6-35B-A3B-NVFP4}"
       - "--model-name"
-      - "${ATLAS_MODEL_NAME:-Qwen3.6-35B-A3B-NVFP4}"
+      - "${ATLAS_MODEL_NAME:-qwen3.6-35b}"
 
       # --- API & NETWORKING ---
       # --bind 0.0.0.0: Atlas listens on ALL interfaces inside the container.

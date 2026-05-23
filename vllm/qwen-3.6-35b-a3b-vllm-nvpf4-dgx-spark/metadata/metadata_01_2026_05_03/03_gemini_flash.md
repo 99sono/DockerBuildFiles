@@ -33,7 +33,7 @@ services:
       - "--model"
       - "RedHatAI/Qwen3.6-35B-A3B-NVFP4"
       - "--served-model-name"
-      - "Qwen3.6-35B-A3B-NVFP4"
+      - "qwen3.6-35b"
       - "--trust-remote-code"
       - "--host"
       - "0.0.0.0"
