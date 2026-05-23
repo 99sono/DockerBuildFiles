@@ -51,9 +51,8 @@ llamacpp/qwen-3.6-35b-dgx-spark/
 ├── 02_down.sh                     # Stop and remove containers
 ├── 03_enter_container.sh          # Enter container for debugging
 ├── 04_test_curl.sh                # Test API call on port 8000
-├── 05_docker_logs.sh              # Follow unsloth server logs
-├── 05_docker_logs_qwopus.sh       # Follow qwopus server logs
-├── 06_dump_help.sh                # Dump server version/help
+├── 05_docker_logs.sh              # Follow logs of active container (auto-detect)
+├── 06_dump_help.sh                # Show help + dump server version/info
 ├── README.md                      # This file
 ├── test/                          # Test prompt files
 └── metadata/                      # Benchmark logs, VRAM traces
@@ -198,11 +197,8 @@ curl -s https://localhost/v1/chat/completions \
 ## Monitoring
 
 ```bash
-# Follow logs (unsloth)
+# Follow logs (auto-detects active container)
 ./05_docker_logs.sh
-
-# Follow logs (qwopus)
-./05_docker_logs_qwopus.sh
 
 # View MTP acceptance rate in logs
 docker logs qwen-3.6-35b-mtp-dgx-spark | grep -i "mtp\|accept"
