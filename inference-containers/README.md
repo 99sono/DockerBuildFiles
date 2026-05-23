@@ -32,7 +32,7 @@ Each inference engine supports presenting a **clean, alias model name** that dif
 |--------|-----------|---------|
 | vLLM | `--served-model-name` | `--served-model-name qwen3.6-27b` |
 | llama.cpp | `--alias` | `--alias qwen3.6-27b` |
-| Atlas | `ATLAS_MODEL_NAME` | `ATLAS_MODEL_NAME=qwen3.6-27b` |
+| Atlas | `--model-name` (from env `INFERENCE_MODEL_ALIAS`) | `INFERENCE_MODEL_ALIAS=qwen3.6-27b` |
 
 **Naming Convention:**
 - Only the **model family** in the exposed name
@@ -107,9 +107,9 @@ inference-containers/
 ├── atlas/             ← Atlas FP8 inference servers
 │   ├── qwen-3.6-35b-dgx-spark/
 │   └── qwen-3.6-27b-dgx-spark/
+├── ollama/            ← Ollama inference server
 └── nginx/             ← Reverse proxy configs
     └── nginx-vllm-reverse-proxy-dgx-spark/
-```
 
 ## Script Convention
 

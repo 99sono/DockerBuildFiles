@@ -38,6 +38,7 @@ llamacpp/qwen-3.6-27b-5090/
 ├── 00_a_pull_image.sh          # Pull havenoammo/llama:cuda13-server
 ├── 00_b_create_conda_env.sh    # Create conda env for host tools
 ├── 00_c_install_packages.sh    # Install huggingface-hub, jq, curl
+├── 00_d_pre_download_model.sh  # Pre-download GGUF weights from HuggingFace
 ├── docker-compose.yml           # llama-server MTP spec config
 ├── 01_a_up_server.sh            # Start server (docker compose up -d)
 ├── 02_a_down_server.sh          # Stop server (docker compose down)
@@ -235,7 +236,7 @@ curl -s http://localhost:8000/v1/models | jq .
 curl -s http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL",
+    "model": "qwen3.6-27b",
     "messages": [
       {"role": "user", "content": "Hello!"}
     ],

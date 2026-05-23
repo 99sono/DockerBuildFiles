@@ -104,7 +104,7 @@ The model takes ~60-120 seconds to load. Monitor progress with:
 ## API Endpoint
 
 ```
-http://localhost:8000/v1/chat/completions
+https://localhost/v1/chat/completions
 ```
 
 ## Files

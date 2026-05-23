@@ -38,6 +38,7 @@ llamacpp/qwen-3.6-27b-dgx-spark/
 ├── 00_a_pull_image.sh          # Pull ghcr.io/ggml-org/llama.cpp:server-cuda13 (ARM64)
 ├── 00_b_create_conda_env.sh    # Create conda env for host tools
 ├── 00_c_install_packages.sh    # Install huggingface-hub, jq, curl
+├── 00_d_pre_download_model.sh  # Pre-download GGUF weights from HuggingFace
 ├── docker-compose.yml           # llama-server MTP spec config (GB10 optimized)
 ├── 01_a_up_server.sh            # Start server (docker compose up -d)
 ├── 02_a_down_server.sh          # Stop server (docker compose down)
@@ -148,12 +149,12 @@ The test reads the prompt from `test/test_file_01_prompt.md`, sends it to the se
 
 **Check available models:**
 ```bash
-curl -s http://localhost:8000/v1/models | jq .
+curl -s https://localhost/v1/models | jq .
 ```
 
 **Send a completion request:**
 ```bash
-curl -s http://localhost:8000/v1/chat/completions \
+curl -s https://localhost/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "qwen3.6-27b",
@@ -182,12 +183,12 @@ unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL
 |---------|-------|
 | **API Base URL** | `http://<host-ip>:8000/v1` |
 | **Model ID** | `qwen3.6-27b` |
-| **API Key** | Your `LLAMA_API_KEY` (from `.env`) |
+| **API Key** | Your `INFERENCE_API_KEY` (from `.env`) |
 
 ### Notes
 - Replace `<host-ip>` with your DGX Spark machine's IP address (or `localhost` if running Cline on the same machine)
 - The server listens on host port **8000** (container port 8000)
-- Ensure the `LLAMA_API_KEY` environment variable matches between your `.env` file and Cline configuration
+- Ensure the `INFERENCE_API_KEY` value in `.env` matches what you configure in Cline
 - **Reverse Proxy (optional):** Instead of connecting directly to the DGX Spark IP, you can route through a reverse proxy with SSL. For example: `https://spark-8ddc/v1` where the hostname points to a reverse proxy (e.g., nginx) that forwards traffic to the DGX Spark and terminates SSL. This is useful for secure remote access.
 
 ---

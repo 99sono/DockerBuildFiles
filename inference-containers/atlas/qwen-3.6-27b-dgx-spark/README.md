@@ -24,13 +24,13 @@ cp .env.example .env
 
 ## Authentication
 
-Atlas uses `--auth-token` for single-token auth. The token comes from `ATLAS_API_KEY` in `.env`:
+Atlas uses `--auth-token` for single-token auth. The token comes from `INFERENCE_API_KEY` in `.env`:
 
 ```bash
-curl http://localhost:8000/v1/chat/completions \
+curl https://localhost/v1/chat/completions \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"model":"Qwen3.6-27B-FP8","messages":[{"role":"user","content":"Hello!"}]}'
+  -d '{"model":"qwen3.6-27b","messages":[{"role":"user","content":"Hello!"}]}'
 ```
 
 The `.env` file is gitignored. Use `.env.example` as template: `cp .env.example .env`.
@@ -124,6 +124,6 @@ This model is large enough that without MTP, throughput will be terrible on sing
 
 - **Image:** `avarok/atlas-gb10:latest` — GB10/SM121 only (not compatible with RTX 5090)
 - **Network:** Uses `development-network` external network, port `8000`
-- **Auth token:** `ATLAS_API_KEY` in `.env` (gitignored)
+- **Auth token:** `INFERENCE_API_KEY` in `.env` (gitignored)
 - **Cache:** HuggingFace weights persisted at `~/.cache/huggingface`
 - **shm_size / ipc:** Set to `32g` / `host` for GPU memory sharing

@@ -25,14 +25,18 @@ This folder contains the complete setup for running the **Gemma-4-26B-A4B-NVFP4*
 # 4. Pre-download model weights
 ./00_d_pre_download_model.sh
 
-# 5. Start the server
-./01_up.sh
+# 5. Start the server (normal mode)
+./01_a_up_normal.sh
+# Or turboquant mode: ./01_b_up_turboquant.sh
+# Or eagle3 speculative mode: ./01_c_up_eagle3.sh
 
 # 6. Test the API
 python 04_test_vllm_curl.py
 
-# 7. Stop the server
-./02_down.sh
+# 7. Stop the server (matching mode)
+./02_a_down_normal.sh
+# Or turboquant: ./02_b_down_turboquant.sh
+# Or eagle3: ./02_c_down_eagle3.sh
 ```
 
 ## Key Configuration (docker-compose.yml)
@@ -97,8 +101,16 @@ http://localhost:8000/v1/chat/completions
 |------|---------|
 | `docker-compose.yml` | Main orchestration config (amd64) |
 | `00_a_pull_vllm_image.sh` | Pull vLLM Docker image |
-| `00_d_pre_download_model.sh` | Pre-download model weights |
-| `01_up.sh` / `02_down.sh` | Start/stop the server |
+| `00_b_create_conda_env.sh` | Create conda environment |
+| `00_c_install_packages.sh` | Install required Python packages |
+| `00_d_pre_download_model.sh` | Pre-download model weights from HuggingFace |
+| `00_e_vllm_entrypoint.sh` | Custom vLLM entrypoint wrapper |
+| `01_a_up_normal.sh` | Start server in normal mode |
+| `01_b_up_turboquant.sh` | Start server with TurboQuant acceleration |
+| `01_c_up_eagle3.sh` | Start server with Eagle-3 speculative decoding |
+| `02_a_down_normal.sh` | Stop normal mode server |
+| `02_b_down_turboquant.sh` | Stop turboquant mode server |
+| `02_c_down_eagle3.sh` | Stop eagle3 mode server |
 | `03_enter_container.sh` | Enter container shell |
 | `04_test_vllm_curl.py` | Test API client (temperature=1.0, top_p=0.95) |
 | `05_docker_logs.sh` | View container logs |

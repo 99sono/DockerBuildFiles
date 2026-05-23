@@ -112,7 +112,7 @@ The model is loaded directly from the HuggingFace hub. On first run, vLLM downlo
 --language-model-only
 
 # Memory & scaling
---gpu-memory-utilization 0.9
+--gpu-memory-utilization 0.65
 --max-model-len 262144
 --max-num-seqs 2
 --kv-cache-dtype fp8
@@ -123,7 +123,7 @@ The model is loaded directly from the HuggingFace hub. On first run, vLLM downlo
 --enable-prefix-caching
 
 # Native MTP speculative decoding
---speculative-config '{"method":"qwen3_5_mtp","num_speculative_tokens":3}'
+--speculative-config '{"method":"mtp","num_speculative_tokens":3}'
 
 # Parsers & tool support
 --reasoning-parser qwen3
@@ -135,7 +135,7 @@ The model is loaded directly from the HuggingFace hub. On first run, vLLM downlo
 --max-cudagraph-capture-size 1
 
 # Authentication & networking
---api-key ${VLLM_API_KEY:-dummy-key}
+--api-key ${INFERENCE_API_KEY:-dummy-key}
 --host 0.0.0.0
 --port 8000
 ```

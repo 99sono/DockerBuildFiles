@@ -19,15 +19,15 @@ cp .env.example .env
 ./01_up.sh
 
 # 4. Monitor startup (first load: 2-5 min + model download)
-./05_docker_logs.sh
+./05_a_docker_logs.sh
 ```
 
 ## Authentication
 
-Atlas uses `--auth-token` for single-token auth. The token comes from `ATLAS_API_KEY` in `.env`:
+Atlas uses `--auth-token` for single-token auth. The token comes from `INFERENCE_API_KEY` in `.env`:
 
 ```bash
-curl http://localhost:8000/v1/chat/completions \
+curl https://localhost/v1/chat/completions \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"model":"qwen3.6-35b","messages":[{"role":"user","content":"Hello!"}]}'
@@ -46,7 +46,7 @@ The `.env` file is gitignored. Use `.env.example` as template: `cp .env.example 
 
 # Run test
 conda activate testAtlasQwen
-python 04_test_atlas_curl.py
+python 04_c_test_python_client.py
 ```
 
 ## GPU Memory Tuning
@@ -86,26 +86,29 @@ To warm up at startup, add `--warmup-prompt /path/to/prompt.txt` to the command.
 ## File Structure
 
 ```
-├── docker-compose.yml      # Atlas service with auth + GPU tuning
-├── .env.example            # Token template (committed, copy to .env)
-├── 00_env.sh.example       # Shell env loader template
-├── 00_a_pull_image.sh      # Pull latest image
-├── 00_b_create_conda_env.sh    # Create test conda environment
-├── 00_c_install_packages.sh    # Install Python dependencies
-├── 00_d_pre_download_model.sh  # Pre-download model weights
-├── 01_up.sh                # Start container
-├── 02_down.sh              # Stop container
-├── 03_enter_container.sh   # Bash into container
-├── 04_test_atlas_curl.py   # OpenAI client test script
-├── 05_docker_logs.sh       # Stream container logs
+├── docker-compose.yml           # Atlas service with auth + GPU tuning
+├── .env.example                 # Token template (committed, copy to .env)
+├── 00_env.sh.example            # Shell env loader template
+├── 00_a_pull_image.sh           # Pull latest image
+├── 00_b_create_conda_env.sh     # Create test conda environment
+├── 00_c_install_packages.sh     # Install Python dependencies
+├── 00_d_pre_download_model.sh   # Pre-download model weights
+├── 01_up.sh                     # Start container
+├── 02_down.sh                   # Stop container
+├── 03_enter_container.sh        # Bash into container
+├── 04_a_list_models.sh          # List available models via curl
+├── 04_b_chat_completion.sh      # Chat completion test via curl
+├── 04_c_test_python_client.py   # OpenAI client test script
+├── 05_a_docker_logs.sh          # Stream container logs
+├── 05_b_log_to_metadata_folder.sh # Dump logs to metadata/ directory
 └── test/
-    └── test_file_01_prompt.md  # Default prompt
+    └── test_file_01_prompt.md   # Default prompt
 ```
 
 ## Notes
 
 - **Image:** `avarok/atlas-gb10:latest` — GB10/SM121 only (not compatible with RTX 5090)
 - **Network:** Uses `development-network` external network, port `8000`
-- **Auth token:** `ATLAS_API_KEY` in `.env` (gitignored)
+- **Auth token:** `INFERENCE_API_KEY` in `.env` (gitignored)
 - **Cache:** HuggingFace weights persisted at `~/.cache/huggingface`
 - **shm_size / ipc:** Set to `32g` / `host` for GPU memory sharing
