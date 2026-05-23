@@ -1,0 +1,104 @@
+services:
+  qwen-35b-mtp-server:
+    # Official multi-arch image with CUDA 13 support for ARM64 / aarch64.
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda13
+    container_name: qwen-3.6-35b-mtp-dgx-spark
+    hostname: inference-server
+    platform: linux/arm64
+    # All models served on port 8000. Single-model capacity avoids client port mismatches.
+    ports:
+      - "${INFERENCE_SERVER_PORT:-8000}:8000"
+
+    volumes:
+      # Central workstation cache to avoid redundant downloads.
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      # Shared memory for high-speed KV cache paging.
+      - /dev/shm:/dev/shm
+
+    # 70GB shm_size for GB10 unified memory architecture.
+    shm_size: "70g"
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=0
+      - HF_HOME=/root/.cache/huggingface
+    command:
+      # Loads directly from central cache via the -hf flag.
+      - "-hf"
+      # Model: Qwen3.6-35B-A3B MTP quantization (UD-Q4_K_XL) by Unsloth.
+      - "unsloth/Qwen3.6-35B-A3B-MTP-GGUF:UD-Q4_K_XL"
+      # Aliased name presented in /v1/models API response.
+      - "--alias"
+      - "${INFERENCE_MODEL_ALIAS:-qwen3.6-35b}"
+      # API key authentication (Bearer token on all routes).
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
+      # Bind to all interfaces for network access.
+      - "--host"
+      - "0.0.0.0"
+      # Internal container port.
+      - "--port"
+      - "${INFERENCE_SERVER_PORT:-8000}"
+      # Load the full graph into the unified memory pool.
+      - "--n-gpu-layers"
+      - "999"
+      # Native FlashAttention-2 acceleration for deep context layers.
+      - "--flash-attn"
+      - "on"
+      # Q8_0 KV-cache: High precision (8-bit) to avoid "doom loop" logic errors.
+      - "--cache-type-k"
+      - "q8_0"
+      - "--cache-type-v"
+      - "q8_0"
+      # 128k context window for high-performance coding tasks.
+      - "--ctx-size"
+      - "131072"
+      # --- UNIFIED MEMORY LOCKING ---
+      # Forces the OS to lock/pin memory footprint, preventing paging on GB10.
+      - "--mlock"
+      # --- BATCH OPTIMIZATION ---
+      # Calibrated for high-bandwidth LPDDR5X unified controllers.
+      - "--batch-size"
+      - "512"
+      - "--ubatch-size"
+      - "512"
+      # --- SPECULATIVE DECODING (MTP) ---
+      # Standardized upstream syntax for Multi-Token Prediction models.
+      - "--spec-type"
+      - "draft-mtp"
+      # Conservative: 2 draft tokens with high confidence threshold.
+      # Values carried from proven 27B DGX Spark benchmarks.
+      - "--spec-draft-n-max"
+      - "2"
+      # High confidence threshold (0.85) to be very selective.
+      # Only accept draft tokens the model is very confident about,
+      # reducing wasted compute on rejected speculative paths.
+      - "--spec-draft-p-min"
+      - "0.85"
+      # --- SAMPLING ---
+      - "--temp"
+      - "1.0"
+      - "--top-p"
+      - "0.95"
+      - "--top-k"
+      - "20"
+      # Slightly higher penalty to keep the model focused during long code generations.
+      - "--presence-penalty"
+      - "1.5"
+
+    networks:
+      - development-network
+
+networks:
+  # Allows this server to communicate with other internal tools/proxies.
+  development-network:
+    external: true
