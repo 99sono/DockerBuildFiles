@@ -1,26 +1,3 @@
 #!/bin/bash
-# =============================================================================
-# 00_d_pre_download_model.sh
-# =============================================================================
-# Pre-download the NVIDIA Gemma 4 model weights to the local HuggingFace cache.
-
-set -euo pipefail
-
-ENV_NAME="testVllmGemmaSpark"
-MODEL_ID="nvidia/Gemma-4-26B-A4B-NVFP4"
-CACHE_DIR="$HOME/.cache/huggingface"
-
-echo "📥 Preparing to pre-download model to cache:"
-echo "   - Model: $MODEL_ID"
-echo "   - Cache: $CACHE_DIR"
-
-if ! conda env list | grep -q "^$ENV_NAME "; then
-    echo "❌ Conda environment '$ENV_NAME' not found. Run 00_b and 00_c first."
-    exit 1
-fi
-
-echo "🚀 Starting download of model..."
-hf download "$MODEL_ID"
-
-echo ""
-echo "✅ Download complete!"
+source ../../../commonScripts/lib.sh
+hf_download_with_check "testVllmGemmaSpark" "nvidia/Gemma-4-26B-A4B-NVFP4" ""

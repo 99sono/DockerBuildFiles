@@ -1,12 +1,3 @@
 #!/bin/bash
-
-# Find the most recently started Qwen container
-CONTAINER=$(docker ps -a --filter "name=qwen-3-6-27b-nvfp4" --format "{{.Names}}" | head -n 1)
-
-if [ -n "$CONTAINER" ]; then
-    echo "📺 Tailing logs for: $CONTAINER"
-    docker logs -f "$CONTAINER"
-else
-    echo "❌ No Qwen-3.6 container found."
-    exit 1
-fi
+source ../../../commonScripts/lib.sh
+docker_logs_follow_container "qwen-3-6-27b-nvfp4-mtp-stable"

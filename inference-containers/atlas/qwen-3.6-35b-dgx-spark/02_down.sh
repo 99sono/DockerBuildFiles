@@ -1,4 +1,3 @@
 #!/bin/bash
-echo "Gracefully stopping Atlas Qwen3.6 server..."
-docker compose down
-echo "Container stopped."
+source ../../../commonScripts/lib.sh
+docker_compose_down
