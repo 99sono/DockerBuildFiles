@@ -35,16 +35,16 @@ services:
       - "nvidia/Gemma-4-26B-A4B-NVFP4"
       # --- API KEY AUTHENTICATION ---
       - "--api-key"
-      - "${VLLM_API_KEY:-dummy-key}"
+      - "${INFERENCE_API_KEY:-dummy-key}"
       - "--served-model-name"
-      - "gemma-4-26b"
+      - "${INFERENCE_MODEL_ALIAS:-gemma-4-26b}"
       - "--trust-remote-code"
 
       # --- NETWORKING ---
       - "--host"
       - "0.0.0.0"
       - "--port"
-      - "8000"
+      - "${INFERENCE_SERVER_PORT:-8000}"
 
       # --- MEMORY & CONTEXT ---
       # 0.85 is the sweet spot for Spark's 128GB UMA

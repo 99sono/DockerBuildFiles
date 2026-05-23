@@ -31,14 +31,14 @@ services:
       - "--model"
       - "RedHatAI/Qwen3.6-35B-A3B-NVFP4"
       - "--served-model-name"
-      - "qwen3.6-35b"
+      - "${INFERENCE_MODEL_ALIAS:-qwen3.6-35b}"
       - "--api-key"
-      - "${VLLM_API_KEY:-dummy-key}"
+      - "${INFERENCE_API_KEY:-dummy-key}"
       - "--trust-remote-code"
       - "--host"
       - "0.0.0.0"
       - "--port"
-      - "8000"
+      - "${INFERENCE_SERVER_PORT:-8000}"
 
       # --- MEMORY & CONTEXT ---
       # --gpu-memory-utilization: Fraction of GPU VRAM reserved for the model.

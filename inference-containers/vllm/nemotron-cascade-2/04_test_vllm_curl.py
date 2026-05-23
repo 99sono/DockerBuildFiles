@@ -3,15 +3,21 @@
 04_test_vllm.py - Clean test script for Nemotron-Cascade-2 using OpenAI client
 """
 
+import os
 import sys
 from pathlib import Path
 from openai import OpenAI
 
+# Load config from .env
+from dotenv import load_dotenv
+load_dotenv()
+
 # ========================= CONFIGURATION =========================
 TEST_PROMPT_FILE = Path("test/test_file_01_prompt.md")
 OUTPUT_FILE = Path("test/test_output_01.md")
-URL = "http://localhost:8000/v1"
-MODEL = "chankhavu/Nemotron-Cascade-2-30B-A3B-NVFP4"
+URL = os.environ.get("INFERENCE_SERVER_URL", "http://localhost:8000/v1")
+MODEL = os.environ.get("INFERENCE_MODEL_ALIAS", "nemotron-cascade-2")
+API_KEY = os.environ.get("INFERENCE_API_KEY", "dummy-key")
 
 # ========================= VALIDATION =========================
 if not TEST_PROMPT_FILE.exists():
@@ -29,7 +35,7 @@ print("-" * 60)
 # ========================= CLIENT SETUP =========================
 client = OpenAI(
     base_url=URL,
-    api_key="dummy-key",   # vLLM doesn't require a real key
+    api_key=API_KEY,
 )
 
 # ========================= SEND REQUEST =========================

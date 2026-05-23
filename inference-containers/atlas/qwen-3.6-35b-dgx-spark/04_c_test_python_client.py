@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 04_c_test_python_client.py - Full chat test via OpenAI Python client
-Reads ATLAS_API_KEY and ATLAS_MODEL from .env in script directory.
+Reads INFERENCE_API_KEY, INFERENCE_MODEL_ALIAS, INFERENCE_SERVER_URL from .env in script directory.
 """
 
 import os
@@ -24,15 +24,15 @@ if ENV_FILE.exists():
                 key, _, value = line.partition("=")
                 os.environ.setdefault(key.strip(), value.strip())
 
-ATLAS_API_KEY = os.environ.get("ATLAS_API_KEY", "dummy-key")
-MODEL = os.environ.get("ATLAS_MODEL_NAME", "qwen3.6-35b")
+INFERENCE_API_KEY = os.environ.get("INFERENCE_API_KEY", "dummy-key")
+MODEL = os.environ.get("INFERENCE_MODEL_ALIAS", "qwen3.6-35b")
 
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
 TEST_PROMPT_FILE = SCRIPT_DIR / "test" / "test_file_01_prompt.md"
 OUTPUT_FILE = SCRIPT_DIR / "test" / "test_output_01.md"
-URL = "http://localhost:8000/v1"
+URL = os.environ.get("INFERENCE_SERVER_URL", "https://localhost/v1")
 
 # =============================================================================
 # VALIDATION
@@ -51,7 +51,7 @@ prompt = TEST_PROMPT_FILE.read_text(encoding="utf-8")
 print(f"Sending request to Atlas server via OpenAI Python client")
 print(f"   URL         : {URL}")
 print(f"   Model       : {MODEL}")
-print(f"   API Key     : {ATLAS_API_KEY[:4]}...{ATLAS_API_KEY[-4:]}")
+print(f"   API Key     : {INFERENCE_API_KEY[:4]}...{INFERENCE_API_KEY[-4:]}")
 print(f"   Prompt file : {TEST_PROMPT_FILE}")
 print(f"   Output file : {OUTPUT_FILE}")
 print("-" * 60)
@@ -61,7 +61,7 @@ print("-" * 60)
 # =============================================================================
 client = OpenAI(
     base_url=URL,
-    api_key=ATLAS_API_KEY,
+    api_key=INFERENCE_API_KEY,
 )
 
 # =============================================================================

@@ -126,6 +126,8 @@ Each model directory follows a numbered script convention for consistency:
 
 ## Environment Files
 
+All inference containers use a **unified, framework-agnostic** set of environment variables prefixed with `INFERENCE_`. This means the same variable names work across vLLM, llama.cpp, and Atlas — no need to remember different prefixes per engine.
+
 Each directory contains an `.env.example` template. Copy to `.env` and set credentials:
 
 ```bash
@@ -133,7 +135,20 @@ cp .env.example .env
 # Edit .env with your actual values
 ```
 
-Engine-specific env vars vary — see each engine's directory for details.
+### Unified Variables
+
+| Variable | Purpose | docker-compose usage | Test script usage |
+|---|---|---|---|
+| `INFERENCE_API_KEY` | Server authentication token | `${INFERENCE_API_KEY:-dummy-key}` | Client API key |
+| `INFERENCE_MODEL_ALIAS` | Name exposed in `/v1/models` API | Parametrizes `--alias` / `--served-model-name` | Model name for requests |
+| `INFERENCE_SERVER_PORT` | Host↔container port mapping | `"${INFERENCE_SERVER_PORT:-8000}:8000"` | — |
+| `INFERENCE_SERVER_URL` | Client-facing URL | Not used in compose | Test script base URL |
+
+**Pattern:** All docker-compose.yml files use `${VAR:-default}` syntax, meaning a `.env` file is **optional** — defaults are built into the compose file. The `.env` file is only needed when you want to override a default (e.g., change API key, or point test scripts through nginx proxy).
+
+**DGX Spark note:** `INFERENCE_SERVER_URL=https://localhost/v1` because traffic goes through the nginx reverse proxy. The container still listens on internal HTTP 8000, but clients connect via HTTPS through the proxy.
+
+**Engine-specific vars:** Atlas uses `ATLAS_MODEL_ID` only as an inline default in `docker-compose.yml` — it is NOT in `.env` files since it's a non-controllable HuggingFace path, not a user-configurable parameter. Container names are hardcoded in compose files and shell scripts — no env variable for them.
 
 ## Inference Engines
 
@@ -151,12 +166,13 @@ Engine-specific env vars vary — see each engine's directory for details.
 
 ### Atlas (`atlas/`)
 - RedHat/QuantaBay FP8 inference on DGX Spark
-- Uses `ATLAS_MODEL_NAME` env var for aliasing
+- Uses `INFERENCE_MODEL_ALIAS` env var for model aliasing (unified across engines)
+- Retains `ATLAS_MODEL_ID` for engine-specific HuggingFace model path
 - Designed for DGX Spark hardware
 
 ## Client Scripts
 
-Test scripts in each directory use the simplified model name:
-- Python clients read from `.env` files via `os.environ.get("MODEL_NAME", "default")`
-- Shell scripts use `MODEL="${ENV_VAR:-default_value}"`
-- Hardcoded model names in test scripts always use the simplified form (never HuggingFace IDs)
+Test scripts read configuration from `.env` using the unified `INFERENCE_*` variables:
+- Python clients use `load_dotenv()` then `os.environ.get("INFERENCE_SERVER_URL", "default")` for URL, `INFERENCE_MODEL_ALIAS` for model name, and `INFERENCE_API_KEY` for auth
+- Shell scripts use hardcoded container names (matching docker-compose.yml `container_name`) for `docker exec`, `docker logs`, etc.
+- All test scripts use the simplified model alias (never HuggingFace IDs)

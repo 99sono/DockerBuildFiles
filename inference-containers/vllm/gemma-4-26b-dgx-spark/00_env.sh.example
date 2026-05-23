@@ -19,5 +19,8 @@ if [ -f .env ]; then
 fi
 
 # Default values (can be overridden by .env)
-# Replace with your actual vLLM API key
-export VLLM_API_KEY="${VLLM_API_KEY:-dummy-key}"
+# All variables use INFERENCE_ prefix (framework-agnostic).
+export INFERENCE_API_KEY="${INFERENCE_API_KEY:-dummy-key}"
+export INFERENCE_MODEL_ALIAS="${INFERENCE_MODEL_ALIAS:-gemma-4-26b}"
+export INFERENCE_SERVER_PORT="${INFERENCE_SERVER_PORT:-8000}"
+export INFERENCE_SERVER_URL="${INFERENCE_SERVER_URL:-https://localhost/v1}"

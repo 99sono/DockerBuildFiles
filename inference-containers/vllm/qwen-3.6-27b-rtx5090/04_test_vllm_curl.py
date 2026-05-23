@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
 import sys
+import os
 from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from openai import OpenAI
 
 TEST_PROMPT_FILE = Path("test/test_file_01_prompt.md")
 OUTPUT_FILE = Path("test/test_output_01.md")
-URL = "http://localhost:8000/v1"
-MODEL = "qwen3.6-27b-text"
+URL = os.environ.get("INFERENCE_SERVER_URL", "http://localhost:8000/v1")
+MODEL = os.environ.get("INFERENCE_MODEL_ALIAS", "qwen3.6-27b-text")
+API_KEY = os.environ.get("INFERENCE_API_KEY", "dummy-key")
 
 if not TEST_PROMPT_FILE.exists():
     print(f"❌ Prompt file not found. Creating default...")
@@ -15,7 +24,7 @@ if not TEST_PROMPT_FILE.exists():
 
 prompt = TEST_PROMPT_FILE.read_text()
 
-client = OpenAI(base_url=URL, api_key="dummy")
+client = OpenAI(base_url=URL, api_key=API_KEY)
 
 try:
     response = client.chat.completions.create(

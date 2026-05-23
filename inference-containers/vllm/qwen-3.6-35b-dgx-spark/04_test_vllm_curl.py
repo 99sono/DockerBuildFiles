@@ -3,20 +3,19 @@
 04_test_vllm_curl.py - Clean test script for Qwen 3.6 MoE using OpenAI client
 """
 
+import os
 import sys
 from pathlib import Path
 from openai import OpenAI
-
-# Load API key from .env
 from dotenv import load_dotenv
 load_dotenv()
 
 # ========================= CONFIGURATION =========================
 TEST_PROMPT_FILE = Path("test/test_file_01_prompt.md")
 OUTPUT_FILE = Path("test/test_output_01.md")
-URL = "http://localhost:8000/v1"
-MODEL = "qwen3.6-35b"
-VLLM_API_KEY = "dummy-key"
+URL = os.environ.get("INFERENCE_SERVER_URL", "https://localhost/v1")
+MODEL = os.environ.get("INFERENCE_MODEL_ALIAS", "qwen3.6-35b")
+API_KEY = os.environ.get("INFERENCE_API_KEY", "dummy-key")
 
 # ========================= VALIDATION =========================
 if not TEST_PROMPT_FILE.exists():
@@ -36,7 +35,7 @@ print("-" * 60)
 # ========================= CLIENT SETUP =========================
 client = OpenAI(
     base_url=URL,
-    api_key=VLLM_API_KEY,
+    api_key=API_KEY,
 )
 
 # ========================= SEND REQUEST =========================

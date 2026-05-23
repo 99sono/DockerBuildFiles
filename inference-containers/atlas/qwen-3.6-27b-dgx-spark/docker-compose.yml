@@ -35,7 +35,7 @@ services:
       - "serve"
       - "${ATLAS_MODEL_ID:-Qwen/Qwen3.6-27B-FP8}"
       - "--model-name"
-      - "${ATLAS_MODEL_NAME:-qwen3.6-27b}"
+      - "${INFERENCE_MODEL_ALIAS:-qwen3.6-27b}"
 
       # --- API & NETWORKING ---
       # --bind 0.0.0.0: Atlas listens on ALL interfaces inside the container.
@@ -50,14 +50,14 @@ services:
       - "--bind"
       - "0.0.0.0"
       - "--port"
-      - "8000"
+      - "${INFERENCE_SERVER_PORT:-8000}"
 
       # Atlas uses --auth-token (single bearer token). Token leaks via ps but
       # that's fine for dev — use --auth-tokens-file in production.
-      # Value comes from ATLAS_API_KEY in .env (gitignored, see .env.example).
+      # Value comes from INFERENCE_API_KEY in .env (gitignored, see .env.example).
       - "--require-auth"
       - "--auth-token"
-      - "${ATLAS_API_KEY:-dummy-key}"
+      - "${INFERENCE_API_KEY:-dummy-key}"
 
       # --- KV CACHE: BF16 (CRITICAL!) ---
       # --kv-cache-dtype bf16: MANDATORY for dense attention models.

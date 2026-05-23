@@ -6,7 +6,7 @@ services:
     platform: linux/amd64
 
     ports:
-      - "8000:8000"
+      - "${INFERENCE_SERVER_PORT:-8000}:8000"
 
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface
@@ -34,17 +34,21 @@ services:
     command:
       # Model (NVIDIA official NVFP4 checkpoint)
       - "nvidia/Gemma-4-26B-A4B-NVFP4"
-      - "--served-model-name"
-      - "gemma-4-26b"
+    - "--served-model-name"
+      - "${INFERENCE_MODEL_ALIAS:-gemma-4-26b}"
 
-      # Required
+       # Required
       - "--trust-remote-code"
+
+       # API key authentication
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
 
       # Networking
       - "--host"
       - "0.0.0.0"
       - "--port"
-      - "8000"
+      - "${INFERENCE_SERVER_PORT:-8000}"
 
       # Memory budget
       - "--gpu-memory-utilization"

@@ -7,7 +7,7 @@ services:
     platform: linux/arm64
     # All models served on port 8000. Single-model capacity avoids client port mismatches.
     ports:
-      - "8000:8000"
+      - "${INFERENCE_SERVER_PORT:-8000}:8000"
 
     volumes:
       # Central workstation cache to avoid redundant 20GB downloads.
@@ -38,16 +38,16 @@ services:
       - "unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL"
       # Aliased name presented in /v1/models API response.
       - "--alias"
-      - "qwen3.6-27b"
+      - "${INFERENCE_MODEL_ALIAS:-qwen3.6-27b}"
       # API key authentication (Bearer token on all routes).
       - "--api-key"
-      - "${LLAMA_API_KEY:-dummy-key}"
+      - "${INFERENCE_API_KEY:-dummy-key}"
       # Bind to all interfaces for network access.
       - "--host"
       - "0.0.0.0"
       # Internal container port.
       - "--port"
-      - "8000"
+      - "${INFERENCE_SERVER_PORT:-8000}"
       # Load the full graph into the unified memory pool.
       - "--n-gpu-layers"
       - "999"

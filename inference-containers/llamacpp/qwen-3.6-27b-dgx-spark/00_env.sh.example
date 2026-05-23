@@ -4,6 +4,7 @@
 # =============================================================================
 # Copy this file to .env and edit with your actual values.
 # Do NOT commit the real .env or 00_env.sh files - they contain secrets.
+# All variables use INFERENCE_ prefix (framework-agnostic).
 #
 # Usage:
 #   cp 00_env.sh.example .env
@@ -19,5 +20,7 @@ if [ -f .env ]; then
 fi
 
 # Default values (can be overridden by .env)
-# Replace with your actual llama.cpp server API key
-export LLAMA_API_KEY="${LLAMA_API_KEY:-dummy-key}"
+export INFERENCE_API_KEY="${INFERENCE_API_KEY:-dummy-key}"
+export INFERENCE_MODEL_ALIAS="${INFERENCE_MODEL_ALIAS:-qwen3.6-27b}"
+export INFERENCE_SERVER_PORT="${INFERENCE_SERVER_PORT:-8000}"
+export INFERENCE_SERVER_URL="${INFERENCE_SERVER_URL:-https://localhost/v1}"

@@ -1,4 +1,6 @@
 #!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+[ -f "$SCRIPT_DIR/.env" ] && export $(grep -v '^#' "$SCRIPT_DIR/.env" | xargs)
 echo "Starting Qwen3.6-27B MTP on RTX 5090 (llama.cpp)..."
 docker compose up -d
 echo "------------------------------------------------"

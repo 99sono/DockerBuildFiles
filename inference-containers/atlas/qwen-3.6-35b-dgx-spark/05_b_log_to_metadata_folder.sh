@@ -3,7 +3,10 @@
 # Non-following snapshot for debugging sessions.
 # Use 05_docker_logs.sh for live tail instead.
 
+# Load .env from script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+[ -f "$SCRIPT_DIR/.env" ] && export $(grep -v '^#' "$SCRIPT_DIR/.env" | xargs)
+
 METADATA_DIR="${SCRIPT_DIR}/metadata"
 CONTAINER="qwen-3-6-35b-a3b-nvfp4-atlas"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")

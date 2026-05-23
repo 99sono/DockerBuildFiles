@@ -14,7 +14,7 @@ echo "📦 Installing packages into conda environment: $ENV_NAME"
 conda activate "$ENV_NAME"
 
 # Install main dependencies
-conda install -y -c conda-forge openai rich
+conda install -y -c conda-forge openai rich python-dotenv
 
 echo ""
 echo "✅ Packages installed successfully!"

@@ -14,20 +14,20 @@ import sys
 import os
 
 try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+try:
     import requests
 except ImportError:
     print("❌ 'requests' package not found. Install with: pip install requests")
     sys.exit(1)
 
-# Load API key from environment or .env
-if os.path.isfile(".env"):
-    for line in open(".env"):
-        line = line.strip()
-        if line.startswith("VLLM_API_KEY="):
-            os.environ["VLLM_API_KEY"] = line.split("=", 1)[1]
-
-API_KEY = os.environ.get("VLLM_API_KEY", "dummy-key")
-BASE_URL = "https://spark-8ddc"
+URL = os.environ.get("INFERENCE_SERVER_URL", "https://localhost/v1")
+MODEL = os.environ.get("INFERENCE_MODEL_ALIAS", "qwen3.6-27b")
+API_KEY = os.environ.get("INFERENCE_API_KEY", "dummy-key")
 
 headers = {
     "Content-Type": "application/json",
@@ -37,14 +37,14 @@ headers = {
 
 def test_health():
     print("=== Test 1: GET /health ===")
-    resp = requests.get(f"{BASE_URL}/health", verify=False)
+    resp = requests.get(f"{URL}/health", verify=False)
     print(f"Status: {resp.status_code}")
     print(f"Response: {resp.text}\n")
 
 
 def test_models():
     print("=== Test 2: GET /v1/models ===")
-    resp = requests.get(f"{BASE_URL}/v1/models", headers=headers, verify=False)
+    resp = requests.get(f"{URL}/v1/models", headers=headers, verify=False)
     print(f"Status: {resp.status_code}")
     data = resp.json()
     for m in data.get("data", []):
@@ -55,14 +55,14 @@ def test_models():
 def test_chat():
     print("=== Test 3: POST /v1/chat/completions ===")
     payload = {
-        "model": "qwen3.6-27b",
+        "model": MODEL,
         "messages": [
             {"role": "user", "content": "What is 2+2? Answer in one sentence."}
         ],
         "max_tokens": 64,
     }
     resp = requests.post(
-        f"{BASE_URL}/v1/chat/completions",
+        f"{URL}/v1/chat/completions",
         headers=headers,
         json=payload,
         verify=False,
@@ -99,7 +99,7 @@ def test_tool_choice():
         }
     ]
     payload = {
-        "model": "qwen3.6-27b",
+        "model": MODEL,
         "messages": [
             {"role": "user", "content": "What's the weather in Paris?"}
         ],
@@ -108,7 +108,7 @@ def test_tool_choice():
         "max_tokens": 128,
     }
     resp = requests.post(
-        f"{BASE_URL}/v1/chat/completions",
+        f"{URL}/v1/chat/completions",
         headers=headers,
         json=payload,
         verify=False,
@@ -131,7 +131,7 @@ def test_tool_choice():
 if __name__ == "__main__":
     requests.packages.urllib3.disable_warnings()
 
-    print(f"Testing vLLM server at {BASE_URL} ...")
+    print(f"Testing vLLM server at {URL} ...")
     print()
 
     test_health()

@@ -17,9 +17,10 @@ load_dotenv()
 
 TEST_PROMPT_FILE = Path("test/test_file_01_prompt.md")
 OUTPUT_FILE = Path("test/test_output_01.md")
-URL = "http://localhost:8081/v1"
-MODEL = "unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL"
-API_KEY = "dummy-key"
+import os
+URL = os.environ.get("INFERENCE_SERVER_URL", "https://localhost/v1")
+MODEL = os.environ.get("INFERENCE_MODEL_ALIAS", "qwen3.6-27b")
+API_KEY = os.environ.get("INFERENCE_API_KEY", "dummy-key")
 
 # Parameters matching docker-compose.yml
 TEMPERATURE = 1.0
