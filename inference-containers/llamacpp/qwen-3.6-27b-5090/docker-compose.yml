@@ -54,7 +54,7 @@ services:
       - "unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL"
       # Aliased name presented in /v1/models API response.
       - "--alias"
-      - "qwen3.6-27b-mtp"
+      - "qwen3.6-27b"
       # Bind to all interfaces for network access.
       - "--host"
       - "0.0.0.0"
