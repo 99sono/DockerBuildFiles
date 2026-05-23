@@ -25,7 +25,7 @@ if ENV_FILE.exists():
                 os.environ.setdefault(key.strip(), value.strip())
 
 ATLAS_API_KEY = os.environ.get("ATLAS_API_KEY", "dummy-key")
-MODEL = os.environ.get("ATLAS_MODEL_NAME", "Qwen3.6-27B-FP8")
+MODEL = os.environ.get("ATLAS_MODEL_NAME", "qwen3.6-27b")
 
 # =============================================================================
 # CONFIGURATION

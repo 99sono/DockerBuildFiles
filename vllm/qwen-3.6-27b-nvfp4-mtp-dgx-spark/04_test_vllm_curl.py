@@ -55,7 +55,7 @@ def test_models():
 def test_chat():
     print("=== Test 3: POST /v1/chat/completions ===")
     payload = {
-        "model": "Qwen3.6-27B-Text-NVFP4-MTP",
+        "model": "qwen3.6-27b",
         "messages": [
             {"role": "user", "content": "What is 2+2? Answer in one sentence."}
         ],
@@ -99,7 +99,7 @@ def test_tool_choice():
         }
     ]
     payload = {
-        "model": "Qwen3.6-27B-Text-NVFP4-MTP",
+        "model": "qwen3.6-27b",
         "messages": [
             {"role": "user", "content": "What's the weather in Paris?"}
         ],

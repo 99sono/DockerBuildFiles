@@ -6,7 +6,7 @@ from openai import OpenAI
 TEST_PROMPT_FILE = Path("test/test_file_01_prompt.md")
 OUTPUT_FILE = Path("test/test_output_01.md")
 URL = "http://localhost:8000/v1"
-MODEL = "qwen3.6-27b-text-nvfp4-mtp"
+MODEL = "qwen3.6-27b-text"
 
 if not TEST_PROMPT_FILE.exists():
     print(f"❌ Prompt file not found. Creating default...")
