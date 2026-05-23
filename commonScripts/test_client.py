@@ -20,6 +20,14 @@ def load_env(env_path):
 def main():
     from openai import OpenAI
 
+    # If the URL is HTTPS but no explicit CA bundle is set, try the system
+    # CA store (Ubuntu/Debian). This picks up self-signed certs installed via
+    # update-ca-certificates — which certifi doesn't do by default.
+    if "REQUESTS_CA_BUNDLE" not in os.environ and "SSL_CERT_FILE" not in os.environ:
+        sys_ca = "/etc/ssl/certs/ca-certificates.crt"
+        if Path(sys_ca).exists():
+            os.environ["REQUESTS_CA_BUNDLE"] = sys_ca
+
     script_dir = Path.cwd()
     load_env(script_dir / ".env")
 
@@ -73,9 +81,18 @@ def main():
         print(f"  Total tokens: {usage.total_tokens}")
 
     except Exception as e:
+        import traceback
         print(f"❌ Error: {e}")
         if hasattr(e, "response") and e.response is not None:
             print("Raw error response:", e.response.text)
+        else:
+            # Connection-level failures don't have a .response — show diagnostics
+            print(f"\n── Diagnostics ──")
+            print(f"  URL:     {url}")
+            print(f"  Model:   {model}")
+            print(f"  API key: {'***' + api_key[-4:] if len(api_key) > 4 else '***'}")
+            print()
+            traceback.print_exc()
 
 
 if __name__ == "__main__":
