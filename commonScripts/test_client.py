@@ -34,10 +34,10 @@ def main():
 
     if not prompt_file.exists():
         prompt_file.parent.mkdir(parents=True, exist_ok=True)
-  prompt_file.write_text(os.environ.get(
-             "DEFAULT_PROMPT",
-             "Write a heartfelt haiku about a father who deeply loves his wife and little daughter. Let it overflow with warmth, tenderness, and quiet devotion."
-         ))
+        prompt_file.write_text(os.environ.get(
+            "DEFAULT_PROMPT",
+            "Write a heartfelt haiku about a father who deeply loves his wife and little daughter. Let it overflow with warmth, tenderness, and quiet devotion."
+        ))
 
     client = OpenAI(base_url=url, api_key=api_key)
 
