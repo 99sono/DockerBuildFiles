@@ -23,10 +23,8 @@ def main():
     # If the URL is HTTPS but no explicit CA bundle is set, try the system
     # CA store (Ubuntu/Debian). This picks up self-signed certs installed via
     # update-ca-certificates — which certifi doesn't do by default.
-    if "REQUESTS_CA_BUNDLE" not in os.environ and "SSL_CERT_FILE" not in os.environ:
-        sys_ca = "/etc/ssl/certs/ca-certificates.crt"
-        if Path(sys_ca).exists():
-            os.environ["REQUESTS_CA_BUNDLE"] = sys_ca
+    sys_ca = "/etc/ssl/certs/ca-certificates.crt"
+    ca_bundle = os.environ.get("SSL_CERT_FILE", str(Path(sys_ca)) if Path(sys_ca).exists() else None)
 
     script_dir = Path.cwd()
     load_env(script_dir / ".env")
@@ -47,7 +45,16 @@ def main():
             "Write a heartfelt haiku about a father who deeply loves his wife and little daughter. Let it overflow with warmth, tenderness, and quiet devotion."
         ))
 
-    client = OpenAI(base_url=url, api_key=api_key)
+    # Pass CA bundle to httpx so the OpenAI SDK trusts self-signed system certs
+    if ca_bundle:
+        import httpx
+        client = OpenAI(
+            base_url=url,
+            api_key=api_key,
+            http_client=httpx.Client(trust_env=True, verify=ca_bundle),
+        )
+    else:
+        client = OpenAI(base_url=url, api_key=api_key)
 
     try:
         response = client.chat.completions.create(
