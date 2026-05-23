@@ -22,5 +22,10 @@ vllm/*/hf-cache/
 
 *.diff
 
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
 deleteMe*
 cliCurllToolDump/deleteMe_*.html
