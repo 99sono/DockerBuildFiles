@@ -32,7 +32,7 @@ services:
       - "--model"
       - "sakamakismile/Qwen3.6-27B-Text-NVFP4-MTP"
       - "--served-model-name"
-      - "Qwen3.6-27B-Text-NVFP4-MTP"
+      - "qwen3.6-27b"
       - "--api-key"
       - "${VLLM_API_KEY:-dummy-key}"
       - "--trust-remote-code"

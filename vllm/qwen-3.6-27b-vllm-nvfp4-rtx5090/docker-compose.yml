@@ -26,7 +26,7 @@ services:
       - "--model"
       - "sakamakismile/Qwen3.6-27B-Text-NVFP4-MTP"
       - "--served-model-name"
-      - "qwen3.6-27b-text-nvfp4-mtp"
+      - "qwen3.6-27b-text"
       - "--trust-remote-code"
       - "--host"
       - "0.0.0.0"

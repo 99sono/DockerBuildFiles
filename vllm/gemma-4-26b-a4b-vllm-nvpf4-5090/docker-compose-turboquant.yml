@@ -32,7 +32,7 @@ services:
     command:
       - "RedHatAI/gemma-4-26B-A4B-it-NVFP4"
       - "--served-model-name"
-      - "gemma-4-26b-it-nvfp4"
+      - "gemma-4-26b"
       - "--host"
       - "0.0.0.0"
       - "--port"

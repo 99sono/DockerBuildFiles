@@ -30,7 +30,7 @@ services:
       # Model
       - "chankhavu/Nemotron-Cascade-2-30B-A3B-NVFP4"
       - "--served-model-name"
-      - "nemotron-cascade-2-nvfp4"
+      - "nemotron-cascade-2"
 
       # Required for Nemotron models
       - "--trust-remote-code"

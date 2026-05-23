@@ -37,7 +37,7 @@ services:
       - "--api-key"
       - "${VLLM_API_KEY:-dummy-key}"
       - "--served-model-name"
-      - "gemma-4-26b-it-nvfp4"
+      - "gemma-4-26b"
       - "--trust-remote-code"
 
       # --- NETWORKING ---

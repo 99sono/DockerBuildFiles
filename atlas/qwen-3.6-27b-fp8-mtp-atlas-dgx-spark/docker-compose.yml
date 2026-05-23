@@ -35,7 +35,7 @@ services:
       - "serve"
       - "${ATLAS_MODEL_ID:-Qwen/Qwen3.6-27B-FP8}"
       - "--model-name"
-      - "${ATLAS_MODEL_NAME:-Qwen3.6-27B-FP8}"
+      - "${ATLAS_MODEL_NAME:-qwen3.6-27b}"
 
       # --- API & NETWORKING ---
       # --bind 0.0.0.0: Atlas listens on ALL interfaces inside the container.

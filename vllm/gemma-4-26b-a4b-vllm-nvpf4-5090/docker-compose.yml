@@ -35,7 +35,7 @@ services:
       # Model (NVIDIA official NVFP4 checkpoint)
       - "nvidia/Gemma-4-26B-A4B-NVFP4"
       - "--served-model-name"
-      - "gemma-4-26b-it-nvfp4"
+      - "gemma-4-26b"
 
       # Required
       - "--trust-remote-code"
