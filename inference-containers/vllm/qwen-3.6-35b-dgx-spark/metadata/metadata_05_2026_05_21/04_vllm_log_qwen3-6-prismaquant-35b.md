@@ -1,3 +1,91 @@
+# docker compose
+```yml
+services:
+  prismaquant-35b:
+    image: vllm/vllm-openai:v0.20.2-ubuntu2404
+    container_name: qwen3-6-prismaquant-35b
+    hostname: inference-server
+    platform: linux/arm64
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - /dev/shm:/dev/shm
+    shm_size: "32g"
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+    environment:
+      VLLM_WORKER_MULTIPROC_METHOD: spawn
+      PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+      HF_HUB_ENABLE_HF_TRANSFER: "1"
+      VLLM_MARLIN_USE_ATOMIC_ADD: "1"
+      VLLM_HTTP_TIMEOUT_KEEP_ALIVE: "600"
+      FLASHINFER_DISABLE_VERSION_CHECK: "1"
+
+    command:
+      - "--model"
+      - "rdtand/Qwen3.6-35B-A3B-PrismaQuant-4.75bit-vllm"
+      - "--served-model-name"
+      - "${INFERENCE_MODEL_ALIAS:-qwen3.6-35b}"
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
+      - "--trust-remote-code"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "${INFERENCE_SERVER_PORT:-8000}"
+
+      # --- MEMORY & CONTEXT ---
+      - "--gpu-memory-utilization"
+      - "0.80"
+      - "--max-model-len"
+      - "262144"
+      - "--max-num-seqs"
+      - "10"
+
+      # --- BATCHING / PREFILL ---
+      - "--max-num-batched-tokens"
+      - "32768"
+
+      # --- QUANTIZATION & ATTN ---
+      - "--kv-cache-dtype"
+      - "fp8"
+      - "--quantization"
+      - "compressed-tensors"
+      - "--attention-backend"
+      - "flashinfer"
+      - "--dtype"
+      - "auto"
+
+      # --- PARSERS & TOOLS ---
+      - "--reasoning-parser"
+      - "qwen3"
+      - "--enable-auto-tool-choice"
+      - "--tool-call-parser"
+      - "qwen3_coder"
+
+      # --- CACHING & PREFILL ---
+      - "--enable-prefix-caching"
+      - "--enable-chunked-prefill"
+
+      # --- MTP SPECULATIVE DECODING (n=3 — measured optimum) ---
+      - "--speculative-config"
+      - '{"method":"mtp","num_speculative_tokens":3}'
+
+    networks:
+      - development-network
+
+networks:
+  development-network:
+    external: true
+```
+
+# vllm log
+```log
 WARNING 05-21 21:02:50 [argparse_utils.py:257] With `vllm serve`, you should provide the model as a positional argument or in a config file instead of via the `--model` option. The `--model` option will be removed in a future version.
 (APIServer pid=1) INFO 05-21 21:02:50 [utils.py:299] 
 (APIServer pid=1) INFO 05-21 21:02:50 [utils.py:299]        █     █     █▄   ▄█
@@ -41,26 +129,40 @@ INFO 05-21 21:03:19 [nixl_utils.py:32] NIXL is available
 (EngineCore pid=199) INFO 05-21 21:04:54 [weight_utils.py:615] Time spent downloading weights for rdtand/Qwen3.6-35B-A3B-PrismaQuant-4.75bit-vllm: 78.967547 seconds
 (EngineCore pid=199) INFO 05-21 21:04:54 [weight_utils.py:904] Filesystem type for checkpoints: EXT4. Checkpoint size: 21.31 GiB. Available RAM: 87.59 GiB.
 (EngineCore pid=199) INFO 05-21 21:04:54 [weight_utils.py:927] Auto-prefetch is disabled because the filesystem (EXT4) is not a recognized network FS (NFS/Lustre). If you want to force prefetching, start vLLM with --safetensors-load-strategy=prefetch.
-(EngineCore pid=199) Loading safetensors checkpoint shards:   0% Completed | 0/6 [00:00<?, ?it/s]
-(EngineCore pid=199) Loading safetensors checkpoint shards:  17% Completed | 1/6 [00:34<02:54, 34.81s/it]
-(EngineCore pid=199) Loading safetensors checkpoint shards:  33% Completed | 2/6 [01:10<02:21, 35.34s/it]
-(EngineCore pid=199) Loading safetensors checkpoint shards:  50% Completed | 3/6 [01:46<01:46, 35.41s/it]
-(EngineCore pid=199) Loading safetensors checkpoint shards:  67% Completed | 4/6 [02:20<01:10, 35.09s/it]
-(EngineCore pid=199) Loading safetensors checkpoint shards:  83% Completed | 5/6 [02:50<00:33, 33.31s/it]
-(EngineCore pid=199) Loading safetensors checkpoint shards: 100% Completed | 6/6 [02:50<00:00, 28.46s/it]
+(EngineCore pid=199) 
+Loading safetensors checkpoint shards:   0% Completed | 0/6 [00:00<?, ?it/s]
+(EngineCore pid=199) 
+Loading safetensors checkpoint shards:  17% Completed | 1/6 [00:34<02:54, 34.81s/it]
+(EngineCore pid=199) 
+Loading safetensors checkpoint shards:  33% Completed | 2/6 [01:10<02:21, 35.34s/it]
+(EngineCore pid=199) 
+Loading safetensors checkpoint shards:  50% Completed | 3/6 [01:46<01:46, 35.41s/it]
+(EngineCore pid=199) 
+Loading safetensors checkpoint shards:  67% Completed | 4/6 [02:20<01:10, 35.09s/it]
+(EngineCore pid=199) 
+Loading safetensors checkpoint shards:  83% Completed | 5/6 [02:50<00:33, 33.31s/it]
+(EngineCore pid=199) 
+Loading safetensors checkpoint shards: 100% Completed | 6/6 [02:50<00:00, 28.46s/it]
 (EngineCore pid=199) 
 (EngineCore pid=199) INFO 05-21 21:07:45 [default_loader.py:384] Loading weights took 170.92 seconds
 (EngineCore pid=199) INFO 05-21 21:07:45 [nvfp4.py:485] Using MoEPrepareAndFinalizeNoDPEPModular
 (EngineCore pid=199) WARNING 05-21 21:07:45 [compressed_tensors_w4a4_nvfp4.py:97] In NVFP4 linear, the global scale for input or weight are different for parallel layers (e.g. q_proj, k_proj, v_proj). This  will likely result in reduced accuracy. Please verify the model accuracy. Consider using a checkpoint with a shared global NVFP4 scale for fused layers.
 (EngineCore pid=199) INFO 05-21 21:07:45 [gpu_model_runner.py:4801] Loading drafter model...
 (EngineCore pid=199) INFO 05-21 21:07:46 [weight_utils.py:904] Filesystem type for checkpoints: EXT4. Checkpoint size: 21.31 GiB. Available RAM: 86.27 GiB.
-(EngineCore pid=199) Loading safetensors checkpoint shards:   0% Completed | 0/6 [00:00<?, ?it/s]
-(EngineCore pid=199) Loading safetensors checkpoint shards:  17% Completed | 1/6 [00:16<01:24, 16.82s/it]
-(EngineCore pid=199) Loading safetensors checkpoint shards:  33% Completed | 2/6 [00:17<00:28,  7.04s/it]
-(EngineCore pid=199) Loading safetensors checkpoint shards:  50% Completed | 3/6 [00:17<00:11,  3.92s/it]
-(EngineCore pid=199) Loading safetensors checkpoint shards:  67% Completed | 4/6 [00:17<00:04,  2.44s/it]
-(EngineCore pid=199) Loading safetensors checkpoint shards:  83% Completed | 5/6 [00:21<00:03,  3.08s/it]
-(EngineCore pid=199) Loading safetensors checkpoint shards: 100% Completed | 6/6 [00:21<00:00,  3.61s/it]
+(EngineCore pid=199) 
+Loading safetensors checkpoint shards:   0% Completed | 0/6 [00:00<?, ?it/s]
+(EngineCore pid=199) 
+Loading safetensors checkpoint shards:  17% Completed | 1/6 [00:16<01:24, 16.82s/it]
+(EngineCore pid=199) 
+Loading safetensors checkpoint shards:  33% Completed | 2/6 [00:17<00:28,  7.04s/it]
+(EngineCore pid=199) 
+Loading safetensors checkpoint shards:  50% Completed | 3/6 [00:17<00:11,  3.92s/it]
+(EngineCore pid=199) 
+Loading safetensors checkpoint shards:  67% Completed | 4/6 [00:17<00:04,  2.44s/it]
+(EngineCore pid=199) 
+Loading safetensors checkpoint shards:  83% Completed | 5/6 [00:21<00:03,  3.08s/it]
+(EngineCore pid=199) 
+Loading safetensors checkpoint shards: 100% Completed | 6/6 [00:21<00:00,  3.61s/it]
 (EngineCore pid=199) 
 (EngineCore pid=199) INFO 05-21 21:08:08 [default_loader.py:384] Loading weights took 21.64 seconds
 (EngineCore pid=199) INFO 05-21 21:08:08 [llm_base_proposer.py:1445] Detected MTP model. Sharing target model embedding weights with the draft model.
@@ -91,26 +193,44 @@ INFO 05-21 21:03:19 [nixl_utils.py:32] NIXL is available
 (EngineCore pid=199) INFO 05-21 21:10:12 [kv_cache_utils.py:1708] GPU KV cache size: 5,463,232 tokens
 (EngineCore pid=199) INFO 05-21 21:10:12 [kv_cache_utils.py:1709] Maximum concurrency for 262,144 tokens per request: 20.84x
 (EngineCore pid=199) 2026-05-21 21:10:15,615 - INFO - autotuner.py:457 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
-(EngineCore pid=199) [AutoTuner]: Tuning fp4_gemm:   0%|          | 0/16 [00:00<?, ?profile/s][AutoTuner]: Tuning fp4_gemm:  50%|█████     | 8/16 [00:00<00:00, 78.46profile/s][AutoTuner]: Tuning fp4_gemm: 100%|██████████| 16/16 [00:02<00:00,  4.67profile/s][AutoTuner]: Tuning fp4_gemm: 100%|██████████| 16/16 [00:02<00:00,  5.44profile/s]
-(EngineCore pid=199) [AutoTuner]: Tuning trtllm::fused_moe::gemm1:   0%|          | 0/7 [00:00<?, ?profile/s]2026-05-21 21:10:18,688 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 4 unsupported tactic(s) for trtllm::fused_moe::gemm1 (enable debug logs to see details)
+(EngineCore pid=199) 
+[AutoTuner]: Tuning fp4_gemm:   0%|          | 0/16 [00:00<?, ?profile/s]
+[AutoTuner]: Tuning fp4_gemm:  50%|█████     | 8/16 [00:00<00:00, 78.46profile/s]
+[AutoTuner]: Tuning fp4_gemm: 100%|██████████| 16/16 [00:02<00:00,  4.67profile/s]
+[AutoTuner]: Tuning fp4_gemm: 100%|██████████| 16/16 [00:02<00:00,  5.44profile/s]
+(EngineCore pid=199) 
+[AutoTuner]: Tuning trtllm::fused_moe::gemm1:   0%|          | 0/7 [00:00<?, ?profile/s]2026-05-21 21:10:18,688 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 4 unsupported tactic(s) for trtllm::fused_moe::gemm1 (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:18,715 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 4 unsupported tactic(s) for trtllm::fused_moe::gemm1 (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:18,752 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 4 unsupported tactic(s) for trtllm::fused_moe::gemm1 (enable debug logs to see details)
-(EngineCore pid=199) [AutoTuner]: Tuning trtllm::fused_moe::gemm1:  43%|████▎     | 3/7 [00:00<00:00, 25.19profile/s]2026-05-21 21:10:18,804 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 4 unsupported tactic(s) for trtllm::fused_moe::gemm1 (enable debug logs to see details)
+(EngineCore pid=199) 
+[AutoTuner]: Tuning trtllm::fused_moe::gemm1:  43%|████▎     | 3/7 [00:00<00:00, 25.19profile/s]2026-05-21 21:10:18,804 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 4 unsupported tactic(s) for trtllm::fused_moe::gemm1 (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:18,881 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 4 unsupported tactic(s) for trtllm::fused_moe::gemm1 (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:18,993 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 4 unsupported tactic(s) for trtllm::fused_moe::gemm1 (enable debug logs to see details)
-(EngineCore pid=199) [AutoTuner]: Tuning trtllm::fused_moe::gemm1:  86%|████████▌ | 6/7 [00:00<00:00, 15.72profile/s]2026-05-21 21:10:19,139 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 4 unsupported tactic(s) for trtllm::fused_moe::gemm1 (enable debug logs to see details)
-(EngineCore pid=199) [AutoTuner]: Tuning trtllm::fused_moe::gemm1: 100%|██████████| 7/7 [00:00<00:00, 13.82profile/s]
-(EngineCore pid=199) [AutoTuner]: Tuning trtllm::fused_moe::gemm2:   0%|          | 0/7 [00:00<?, ?profile/s]2026-05-21 21:10:19,187 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 10 unsupported tactic(s) for trtllm::fused_moe::gemm2 (enable debug logs to see details)
+(EngineCore pid=199) 
+[AutoTuner]: Tuning trtllm::fused_moe::gemm1:  86%|████████▌ | 6/7 [00:00<00:00, 15.72profile/s]2026-05-21 21:10:19,139 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 4 unsupported tactic(s) for trtllm::fused_moe::gemm1 (enable debug logs to see details)
+(EngineCore pid=199) 
+[AutoTuner]: Tuning trtllm::fused_moe::gemm1: 100%|██████████| 7/7 [00:00<00:00, 13.82profile/s]
+(EngineCore pid=199) 
+[AutoTuner]: Tuning trtllm::fused_moe::gemm2:   0%|          | 0/7 [00:00<?, ?profile/s]2026-05-21 21:10:19,187 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 10 unsupported tactic(s) for trtllm::fused_moe::gemm2 (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:19,232 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 10 unsupported tactic(s) for trtllm::fused_moe::gemm2 (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:19,286 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 10 unsupported tactic(s) for trtllm::fused_moe::gemm2 (enable debug logs to see details)
-(EngineCore pid=199) [AutoTuner]: Tuning trtllm::fused_moe::gemm2:  43%|████▎     | 3/7 [00:00<00:00, 20.72profile/s]2026-05-21 21:10:19,355 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 10 unsupported tactic(s) for trtllm::fused_moe::gemm2 (enable debug logs to see details)
+(EngineCore pid=199) 
+[AutoTuner]: Tuning trtllm::fused_moe::gemm2:  43%|████▎     | 3/7 [00:00<00:00, 20.72profile/s]2026-05-21 21:10:19,355 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 10 unsupported tactic(s) for trtllm::fused_moe::gemm2 (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:19,448 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 10 unsupported tactic(s) for trtllm::fused_moe::gemm2 (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:19,573 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 10 unsupported tactic(s) for trtllm::fused_moe::gemm2 (enable debug logs to see details)
-(EngineCore pid=199) [AutoTuner]: Tuning trtllm::fused_moe::gemm2:  86%|████████▌ | 6/7 [00:00<00:00, 13.13profile/s]2026-05-21 21:10:19,728 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 10 unsupported tactic(s) for trtllm::fused_moe::gemm2 (enable debug logs to see details)
-(EngineCore pid=199) [AutoTuner]: Tuning trtllm::fused_moe::gemm2: 100%|██████████| 7/7 [00:00<00:00, 11.92profile/s]
-(EngineCore pid=199) [AutoTuner]: Tuning fp4_gemm:   0%|          | 0/16 [00:00<?, ?profile/s][AutoTuner]: Tuning fp4_gemm:  38%|███▊      | 6/16 [00:00<00:00, 58.92profile/s][AutoTuner]: Tuning fp4_gemm:  88%|████████▊ | 14/16 [00:00<00:00, 57.59profile/s][AutoTuner]: Tuning fp4_gemm: 100%|██████████| 16/16 [00:00<00:00, 26.02profile/s]
-(EngineCore pid=199) [AutoTuner]: Tuning mxfp8_gemm:   0%|          | 0/16 [00:00<?, ?profile/s]2026-05-21 21:10:21,484 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
-(EngineCore pid=199) [AutoTuner]: Tuning mxfp8_gemm:   6%|▋         | 1/16 [00:00<00:06,  2.24profile/s]2026-05-21 21:10:21,487 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
+(EngineCore pid=199) 
+[AutoTuner]: Tuning trtllm::fused_moe::gemm2:  86%|████████▌ | 6/7 [00:00<00:00, 13.13profile/s]2026-05-21 21:10:19,728 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 10 unsupported tactic(s) for trtllm::fused_moe::gemm2 (enable debug logs to see details)
+(EngineCore pid=199) 
+[AutoTuner]: Tuning trtllm::fused_moe::gemm2: 100%|██████████| 7/7 [00:00<00:00, 11.92profile/s]
+(EngineCore pid=199) 
+[AutoTuner]: Tuning fp4_gemm:   0%|          | 0/16 [00:00<?, ?profile/s]
+[AutoTuner]: Tuning fp4_gemm:  38%|███▊      | 6/16 [00:00<00:00, 58.92profile/s]
+[AutoTuner]: Tuning fp4_gemm:  88%|████████▊ | 14/16 [00:00<00:00, 57.59profile/s]
+[AutoTuner]: Tuning fp4_gemm: 100%|██████████| 16/16 [00:00<00:00, 26.02profile/s]
+(EngineCore pid=199) 
+[AutoTuner]: Tuning mxfp8_gemm:   0%|          | 0/16 [00:00<?, ?profile/s]2026-05-21 21:10:21,484 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
+(EngineCore pid=199) 
+[AutoTuner]: Tuning mxfp8_gemm:   6%|▋         | 1/16 [00:00<00:06,  2.24profile/s]2026-05-21 21:10:21,487 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:21,489 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:21,492 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:21,495 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
@@ -123,11 +243,15 @@ INFO 05-21 21:03:19 [nixl_utils.py:32] NIXL is available
 (EngineCore pid=199) 2026-05-21 21:10:21,533 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:21,559 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:21,610 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
-(EngineCore pid=199) [AutoTuner]: Tuning mxfp8_gemm:  88%|████████▊ | 14/16 [00:00<00:00, 31.20profile/s]2026-05-21 21:10:21,852 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
+(EngineCore pid=199) 
+[AutoTuner]: Tuning mxfp8_gemm:  88%|████████▊ | 14/16 [00:00<00:00, 31.20profile/s]2026-05-21 21:10:21,852 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:22,337 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
-(EngineCore pid=199) [AutoTuner]: Tuning mxfp8_gemm: 100%|██████████| 16/16 [00:01<00:00, 12.30profile/s]
-(EngineCore pid=199) [AutoTuner]: Tuning mxfp8_gemm:   0%|          | 0/16 [00:00<?, ?profile/s]2026-05-21 21:10:22,954 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
-(EngineCore pid=199) [AutoTuner]: Tuning mxfp8_gemm:   6%|▋         | 1/16 [00:00<00:08,  1.76profile/s]2026-05-21 21:10:22,956 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
+(EngineCore pid=199) 
+[AutoTuner]: Tuning mxfp8_gemm: 100%|██████████| 16/16 [00:01<00:00, 12.30profile/s]
+(EngineCore pid=199) 
+[AutoTuner]: Tuning mxfp8_gemm:   0%|          | 0/16 [00:00<?, ?profile/s]2026-05-21 21:10:22,954 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
+(EngineCore pid=199) 
+[AutoTuner]: Tuning mxfp8_gemm:   6%|▋         | 1/16 [00:00<00:08,  1.76profile/s]2026-05-21 21:10:22,956 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:22,958 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:22,959 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:22,961 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
@@ -142,9 +266,20 @@ INFO 05-21 21:03:19 [nixl_utils.py:32] NIXL is available
 (EngineCore pid=199) 2026-05-21 21:10:23,007 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:23,041 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
 (EngineCore pid=199) 2026-05-21 21:10:23,108 - INFO - autotuner.py:833 - flashinfer.jit: [Autotuner]: Skipped 2 unsupported tactic(s) for mxfp8_gemm (enable debug logs to see details)
-(EngineCore pid=199) [AutoTuner]: Tuning mxfp8_gemm: 100%|██████████| 16/16 [00:00<00:00, 28.48profile/s][AutoTuner]: Tuning mxfp8_gemm: 100%|██████████| 16/16 [00:00<00:00, 22.18profile/s]
+(EngineCore pid=199) 
+[AutoTuner]: Tuning mxfp8_gemm: 100%|██████████| 16/16 [00:00<00:00, 28.48profile/s]
+[AutoTuner]: Tuning mxfp8_gemm: 100%|██████████| 16/16 [00:00<00:00, 22.18profile/s]
 (EngineCore pid=199) 2026-05-21 21:10:26,853 - INFO - autotuner.py:466 - flashinfer.jit: [Autotuner]: Autotuning process ends
-(EngineCore pid=199) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/13 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   8%|▊         | 1/13 [00:00<00:01,  8.21it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  23%|██▎       | 3/13 [00:00<00:00, 12.69it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  38%|███▊      | 5/13 [00:00<00:00, 14.18it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  54%|█████▍    | 7/13 [00:00<00:00, 14.76it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  69%|██████▉   | 9/13 [00:00<00:00, 15.30it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  85%|████████▍ | 11/13 [00:00<00:00, 15.93it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 13/13 [00:01<00:00,  9.29it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 13/13 [00:01<00:00, 11.44it/s]
+(EngineCore pid=199) 
+Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/13 [00:00<?, ?it/s]
+Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   8%|▊         | 1/13 [00:00<00:01,  8.21it/s]
+Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  23%|██▎       | 3/13 [00:00<00:00, 12.69it/s]
+Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  38%|███▊      | 5/13 [00:00<00:00, 14.18it/s]
+Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  54%|█████▍    | 7/13 [00:00<00:00, 14.76it/s]
+Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  69%|██████▉   | 9/13 [00:00<00:00, 15.30it/s]
+Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  85%|████████▍ | 11/13 [00:00<00:00, 15.93it/s]
+Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 13/13 [00:01<00:00,  9.29it/s]
+Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 13/13 [00:01<00:00, 11.44it/s]
 (EngineCore pid=199) INFO 05-21 21:10:29 [gpu_model_runner.py:6133] Graph capturing finished in 2 secs, took 0.37 GiB
 (EngineCore pid=199) INFO 05-21 21:10:29 [core.py:299] init engine (profile, create kv cache, warmup model) took 140.49 s (compilation: 64.01 s)
 (EngineCore pid=199) INFO 05-21 21:10:29 [vllm.py:840] Asynchronous scheduling is enabled.
@@ -371,3 +506,4 @@ INFO 05-21 21:03:19 [nixl_utils.py:32] NIXL is available
 (APIServer pid=1) INFO 05-21 21:57:56 [loggers.py:271] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 36.9 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 84.8%
 (APIServer pid=1) INFO 05-21 21:57:56 [metrics.py:101] SpecDecoding metrics: Mean acceptance length: 3.31, Accepted throughput: 25.90 tokens/s, Drafted throughput: 33.60 tokens/s, Accepted: 259 tokens, Drafted: 336 tokens, Per-position acceptance rate: 0.884, 0.768, 0.661, Avg Draft acceptance rate: 77.1%
 (APIServer pid=1) INFO 05-21 21:58:06 [loggers.py:271] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 84.8%
+```

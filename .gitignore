@@ -29,3 +29,5 @@ __pycache__/
 
 deleteMe*
 cliCurllToolDump/deleteMe_*.html
+
+package-lock.json
