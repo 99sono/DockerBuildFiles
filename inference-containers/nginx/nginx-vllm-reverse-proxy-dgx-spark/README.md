@@ -321,6 +321,45 @@ cd ~/dev/DockerBuildFiles/nginx/nginx-vllm-reverse-proxy-dgx-spark
 ./01_up.sh
 ```
 
+## Timeout Configuration
+
+> **Important: this is the most common cause of "subagent died" or "connection reset by peer" errors during multi-agent orchestration.**
+
+Nginx defaults to a 60-second `proxy_read_timeout`. Most LLM generation requests for multi-agent tasks take **several minutes**. If the timeout is not increased, nginx will silently kill active streams with:
+
+```
+upstream timed out (110: Connection timed out) while reading response header from upstream
+```
+
+You will see no 502 in the access log — just a sudden disconnect while vLLM is still generating. The agent will receive a `connection reset` and abort mid-stream.
+
+### Symptoms
+
+- vLLM logs show `Running: 4 reqs` → `3 reqs` → `2 reqs` dropping mid-generation
+- nginx `error.log` shows `upstream timed out (110: Connection timed out)`
+- Agent output files are empty or truncated
+- Multi-agent tasks fail — one agent completes, others die
+
+### Required `proxy_read_timeout`
+
+Add these settings to `nginx.conf` (server or location block) for long generation tasks:
+
+```nginx
+proxy_read_timeout 600s;   # 10 minutes — default 60s is too short for multi-agent
+proxy_send_timeout 600s;
+proxy_connect_timeout 60s;
+```
+
+### Debugging
+
+```bash
+# Check nginx error log for timed-out connections
+tail -f logs/error.log | grep "upstream timed out"
+
+# Check if vLLM was still generating when connection dropped
+# Compare timestamps: nginx error log vs vLLM Engine request count
+```
+
 ## Troubleshooting
 
 | Symptom | Likely Cause | Solution |

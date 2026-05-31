@@ -1,8 +1,12 @@
 # Experiment 02 — Task Prompts
 
-Use four sub-agents with the model `dgx-spark/qwen3.6-35b`. Each sub-agent should explain a different topic.
-Before you lunch the execution of the sub-agents you must ask in which diretory the sub-agents should write their output.
-Let files be called:
+**Model:** `dgx-spark/qwen3.6-35b`
+**Orchestration:** All 4 sub-agents run **in parallel**.
+**Orchestrator role:** Before launching, ask where the output files should be written. After all agents finish, the orchestrator must review each agent's output and confirm that the task was completed successfully.
+
+Each sub-agent should explain a different topic.
+Before you launch the execution of the sub-agents you must ask in which directory the sub-agents should write their output.
+Each agent writes its output to a file named:
 - agent_01_linear_transformations.md
 - agent_02_eigenvalues.md
 - agent_03_oauth2.md
