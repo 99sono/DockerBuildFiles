@@ -59,7 +59,12 @@ services:
       - "q8_0"
       - "--cache-type-v"
       - "q8_0"
+      # 4 concurrent slots for parallel sub-agent workloads.
+      # Each slot gets ctx_size / np tokens (184320 / 4 = ~46k per slot).
+      - "--parallel"
+      - "4"
       # 180k context window (model trained on 256k; 180k is a good balance for long-context tasks).
+      # With --parallel 4, each slot gets ~46k tokens which is enough for sub-agent tasks.
       - "--ctx-size"
       - "184320"
       # --- BATCH OPTIMIZATION ---
