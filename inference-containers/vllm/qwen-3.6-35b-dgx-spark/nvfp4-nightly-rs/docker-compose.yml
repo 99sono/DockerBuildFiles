@@ -36,7 +36,7 @@ services:
       - "--model"
       - "nvidia/Qwen3.6-35B-A3B-NVFP4"
       - "--served-model-name"
-      - "${INFERENCE_MODEL_ALIAS:-qwen3.6-35b-nvfp4}"
+      - "${INFERENCE_MODEL_ALIAS:-qwen3.6-35b}"
       - "--api-key"
       - "${INFERENCE_API_KEY:-dummy-key}"
       - "--trust-remote-code"
