@@ -1,0 +1,100 @@
+services:
+  qwen36-35b-nvfp4:
+    image: vllm/vllm-openai:nightly
+    container_name: qwen36-35b-nvfp4-nightly
+    hostname: inference-server
+    platform: linux/arm64
+    # ports are not exposed.
+    # use the nginx/nginx-vllm-reverse-proxy-dgx-spark/nginx.conf to speak with the model
+    # ports:
+      # - "8000:8000"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - /dev/shm:/dev/shm
+    shm_size: "32g"
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+    environment:
+      VLLM_WORKER_MULTIPROC_METHOD: spawn
+      PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+      HF_HUB_ENABLE_HF_TRANSFER: "1"
+      # NVIDIA DGX Spark specific env vars
+      VLLM_USE_FLASHINFER_MOE_FP4: "0"
+      VLLM_FP8_MOE_BACKEND: flashinfer_cutlass
+      FLASHINFER_DISABLE_VERSION_CHECK: "1"
+      CUTE_DSL_ARCH: sm_121a
+      # Rust frontend (experimental)
+      VLLM_USE_RUST_FRONTEND: "1"
+
+    command:
+      - "--model"
+      - "nvidia/Qwen3.6-35B-A3B-NVFP4"
+      - "--served-model-name"
+      - "${INFERENCE_MODEL_ALIAS:-qwen3.6-35b-nvfp4}"
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
+      - "--trust-remote-code"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "${INFERENCE_SERVER_PORT:-8000}"
+
+      # --- MEMORY & CONTEXT ---
+      # NVFP4 is ~3x smaller than BF16, MoE only 3B active params.
+      # Model weights ~7-9 GB. KV cache per session at 262K with fp8 ~2-4 GB.
+      # 5 sessions × 4 GB + 9 GB model = ~29 GB. Spark has 128GB UMA.
+      - "--gpu-memory-utilization"
+      - "0.85"
+      - "--max-model-len"
+      - "262144"
+      - "--max-num-seqs"
+      - "5"
+
+      # --- BATCHING / PREFILL OPTIMIZATION ---
+      - "--max-num-batched-tokens"
+      - "8192"
+
+      # --- ARCHITECTURE & QUANTIZATION ---
+      - "--kv-cache-dtype"
+      - "fp8"
+      - "--dtype"
+      - "auto"
+      - "--quantization"
+      - "modelopt"
+      - "--reasoning-parser"
+      - "qwen3"
+      - "--tool-call-parser"
+      - "qwen3_coder"
+      - "--enable-auto-tool-choice"
+
+      # --- BACKENDS (NVIDIA Spark recommendations) ---
+      - "--attention-backend"
+      - "flashinfer"
+      - "--moe-backend"
+      - "marlin"
+      - "--enable-prefix-caching"
+      - "--enable-chunked-prefill"
+      - "--async-scheduling"
+
+      # --- STARTUP OPTIMIZATIONS ---
+      - "--safetensors-load-strategy"
+      - "prefetch"
+
+      # --- SPECULATIVE DECODING (MTP) ---
+      # MTP on a 3B active / 35B total MoE is hit-or-miss in vLLM.
+      # 1-2 tokens max — 3+ wastes compute on low-quality predictions.
+      - "--speculative-config"
+      - '{"method":"mtp","num_speculative_tokens":2,"moe_backend":"triton"}'
+
+    networks:
+      - development-network
+
+networks:
+  development-network:
+    external: true
