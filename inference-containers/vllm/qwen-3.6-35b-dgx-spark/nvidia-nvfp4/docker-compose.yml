@@ -29,8 +29,8 @@ services:
       VLLM_FP8_MOE_BACKEND: flashinfer_cutlass
       FLASHINFER_DISABLE_VERSION_CHECK: "1"
       CUTE_DSL_ARCH: sm_121a
-      # Rust frontend (experimental)
-      VLLM_USE_RUST_FRONTEND: "1"
+      # Rust frontend disabled — doesn't support api_key yet
+      VLLM_USE_RUST_FRONTEND: "0"
 
     command:
       - "--model"
