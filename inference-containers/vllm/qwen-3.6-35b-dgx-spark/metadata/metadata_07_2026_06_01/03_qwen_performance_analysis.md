@@ -134,8 +134,8 @@ This is worth stating explicitly: **the RTX 5090 and DGX Spark are not competito
 
 | | RTX 5090 | DGX Spark (GB10) |
 |---|---|---|
-| **Memory** | GDDR7, ~4 TB/s | UMA DDR5, ~58 GB/s |
-| **Bandwidth ratio** | **~70x faster** | bottleneck for dense models |
+| **Memory** | 32 GB GDDR7, 1792 GB/s | 128 GB UMA DDR5, 273 GB/s |
+| **Bandwidth ratio** | **~6.6x faster** | bandwidth-constrained for dense models |
 
 A 27B **dense** model moves all 27B parameters every forward pass. On the 5090's GDDR7 that's fine — plenty of bandwidth. On the Spark's UMA, it's a death sentence: each token waits while gigabytes shuffle through slow memory. A 27B dense model on the Spark would have **terrible** latency.
 
