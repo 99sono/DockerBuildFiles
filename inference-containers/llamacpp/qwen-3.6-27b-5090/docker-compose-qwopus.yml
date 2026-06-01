@@ -1,6 +1,6 @@
 services:
   qwopus-27b-mtp-server:
-    image: havenoammo/llama:cuda13-server
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda13
     container_name: qwopus36-27b-mtp-5090
     hostname: inference-server
     platform: linux/amd64
@@ -64,6 +64,8 @@ services:
       - "20"
       - "--presence-penalty"
       - "1.5"
+      # force system to keep model in RAM rather than swapping or compressing
+      - "--mlock"
     networks:
       - development-network
 networks:

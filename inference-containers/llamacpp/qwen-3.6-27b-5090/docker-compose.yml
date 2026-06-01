@@ -1,7 +1,7 @@
 services:
   qwen-27b-mtp-server:
     # CUDA 12.8+ base ensures Blackwell SM120 support is native.
-    image: havenoammo/llama:cuda13-server
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda13
     # Necessary to use the havenammo image. the llama cpp still lacks MTP. They will build it soon.
     #     2026-05-17 10:32:17.831 | warn: LLAMA_ARG_HOST environment variable is set, but will be overwritten by command line argument --host
     # 2026-05-17 10:32:17.832 | error while handling argument "--spec-type": unknown speculative type: mtp
@@ -109,6 +109,8 @@ services:
       # Keeps the model focused during long code generations.
       - "--presence-penalty"
       - "1.5"
+      # force system to keep model in RAM rather than swapping or compressing
+      - "--mlock"
 
     networks:
       - development-network
