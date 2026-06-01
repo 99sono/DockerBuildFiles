@@ -135,7 +135,7 @@ The draft model generates tokens faster than the main model accepts them — the
 
 ## 🔗 Credits
 
-This docker-compose02.yml configuration was adapted from the **Spark Arena leaderboard**:
+This docker-compose-prisma.yml configuration was adapted from the **Spark Arena leaderboard**:
 - **Source**: https://spark-arena.com/leaderboard
 - **Submitted by**: Sean Williams — https://forums.developer.nvidia.com/u/seanthomaswilliams
 

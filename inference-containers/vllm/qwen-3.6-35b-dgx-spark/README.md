@@ -88,7 +88,7 @@ If enabling `VLLM_USE_V2_MODEL_RUNNER` causes crashes, keep it commented out. Th
 https://localhost/v1/chat/completions
 ```
 
-## docker-compose02.yml — PrismaQuant on DGX Spark
+## docker-compose-prisma.yml — PrismaQuant on DGX Spark
 
 This directory also contains an optimized configuration using **PrismaQuant 4.75-bit** quantization for the **DGX Spark** (Grace Blackwell ARM64) platform.
 
@@ -101,7 +101,7 @@ This directory also contains an optimized configuration using **PrismaQuant 4.75
 # 2. Pre-download PrismaQuant model weights
 ./00_d_pre_download_model_prisma.sh
 
-# 3. Start with docker-compose02.yml
+# 3. Start with docker-compose-prisma.yml
 ./01_up_prisma.sh
 
 # 4. Stop
@@ -110,7 +110,7 @@ This directory also contains an optimized configuration using **PrismaQuant 4.75
 
 ### Key Differences from docker-compose.yml
 
-| Parameter | docker-compose.yml (NVFP4) | docker-compose02.yml (PrismaQuant) |
+| Parameter | docker-compose.yml (NVFP4) | docker-compose-prisma.yml (PrismaQuant) |
 |---|---|---|
 | Model | `RedHatAI/Qwen3.6-35B-A3B-NVFP4` | `rdtand/Qwen3.6-35B-A3B-PrismaQuant-4.75bit-vllm` |
 | GPU Mem Util | 0.65 | **0.80** |
@@ -135,7 +135,7 @@ See `metadata/metadata_05_2026_05_21/03_qwen3.6_35b_analysis_of_log.md` for full
 
 ### 🔗 Credits
 
-The `docker-compose02.yml` configuration was adapted from the **Spark Arena leaderboard**:
+The `docker-compose-prisma.yml` configuration was adapted from the **Spark Arena leaderboard**:
 - **Source**: https://spark-arena.com/leaderboard
 - **Submitted by**: [Sean Williams](https://forums.developer.nvidia.com/u/seanthomaswilliams)
 
@@ -164,7 +164,7 @@ The PrismaQuant 4.75-bit quantization with MTP speculative decoding (n=3) and Fl
 | File | Purpose |
 |------|---------|
 | `docker-compose.yml` | Main orchestration config (NVFP4, RTX 5090) |
-| `docker-compose02.yml` | PrismaQuant config (DGX Spark, ARM64) |
+| `docker-compose-prisma.yml` | PrismaQuant config (DGX Spark, ARM64) |
 | `00_a_pull_vllm_image.sh` | Pull vLLM Docker image |
 | `00_d_pre_download_model.sh` | Pre-download NVFP4 model weights |
 | `00_d_pre_download_model_prisma.sh` | Pre-download PrismaQuant model weights |
