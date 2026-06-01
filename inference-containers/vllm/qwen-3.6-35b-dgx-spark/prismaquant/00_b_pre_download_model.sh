@@ -1,13 +1,14 @@
 #!/bin/bash
 # =============================================================================
-# 00_d_pre_download_model.sh
-# Downloads the Qwen model weights into the local cache directory
+# 00_d_pre_download_model_prisma.sh
+# Downloads the Qwen3.6-35B-A3B PrismaQuant 4.75-bit model weights into local cache
+# MUST be run on DGX Spark (GPU machine), NOT on local CPU machine
 # =============================================================================
 
 set -euo pipefail
 
 ENV_NAME="testVllmQwen"
-MODEL_ID="RedHatAI/Qwen3.6-35B-A3B-NVFP4"
+MODEL_ID="rdtand/Qwen3.6-35B-A3B-PrismaQuant-4.75bit"
 CACHE_DIR="$HOME/.cache/huggingface"
 
 echo "📥 Preparing to pre-download model: $MODEL_ID to global cache"
