@@ -167,6 +167,35 @@ docker_logs_follow_compose() {
   docker compose -f "$cf" logs -f --tail=100
 }
 
+## docker_logs_dump_container <container_name> [output_file]
+# Dumps all logs from a container to a file, masking sensitive values
+# (e.g., api_key) before writing. Exits with error if not running.
+# Args:  container_name — exact Docker container name (required)
+#        output_file    — optional output path, default "<container>_log_dump.txt"
+docker_logs_dump_container() {
+  local container="${1:?Usage: docker_logs_dump_container <name> [output_file]}"
+  local outfile="${2:-${container}_log_dump.txt}"
+
+  if ! docker ps --format '{{.Names}}' | grep -q "^${container}$"; then
+    echo "❌ Container '$container' is not running." >&2; exit 1
+  fi
+
+  # Mask sensitive values: replace api_key content with dummy-key
+  docker logs "$container" 2>&1 | sed -E \
+    -e "s/api_key': \['[^']+'\]/api_key': ['dummy-key']/g" \
+    > "$outfile"
+
+  local line_count file_size
+  line_count=$(wc -l < "$outfile")
+  file_size=$(du -h "$outfile" | cut -f1)
+
+  echo "📋 Log dump complete (sensitive values masked)."
+  echo "   Container : $container"
+  echo "   File      : $outfile"
+  echo "   Lines     : $line_count"
+  echo "   Size      : $file_size"
+}
+
 # --- DOCKER EXEC ---
 
 ## docker_exec_enter <container_name>
