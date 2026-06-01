@@ -41,8 +41,11 @@ services:
       - "q8_0"
       - "--cache-type-v"
       - "q8_0"
+    # Single slot — Ferrari, not school bus
+      - "--parallel"
+      - "1"
       - "--ctx-size"
-      - "131072"
+      - "262144"
       # --- THREADING OPTIMIZATION ---
       - "--threads"
       - "12"
