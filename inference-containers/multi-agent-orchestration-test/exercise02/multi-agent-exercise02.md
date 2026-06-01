@@ -3,13 +3,13 @@
 **Orchestrator Model:** `local/qwen3.6-27b` (running on RTX 5090)
 **Sub-Agent Type:** `dgx-spark` → resolves to model `dgx-spark/qwen3.6-35b` (running on DGX Spark cluster via llama.cpp)
 **Orchestration:** All 4 sub-agents run **in parallel** via the OpenCode Task tool with `subagent_type: "dgx-spark"`.
-**Orchestrator role:** Before launching, ask where the output files should be written. After all agents finish, the orchestrator must review each agent's output and confirm that the task was completed successfully.
+**Orchestrator role:** Before launching, create a timestamped results folder. After all agents finish, the orchestrator must review each agent's output and confirm that the task was completed successfully.
 
 > **Important:** Every sub-agent spawned in this exercise must use `subagent_type: "dgx-spark"`. Do NOT spawn sub-agents using the default built-in types (`general`, `explore`, etc.) — those would hit your local RTX 5090 and overwhelm it, since it can only handle one session at a time.
 
 Each sub-agent should explain a different topic.
-Before you launch the execution of the sub-agents you must ask in which directory the sub-agents should write their output.
-Each agent writes its output to a file named:
+Before you launch the execution of the sub-agents you must create a timestamped results folder under `inference-containers/multi-agent-orchestration-test/exercise02/results/` with today's date and an incrementing number (e.g. `2026_06_02_results_01`). **This folder MUST exist before any agent is launched.**
+Each agent writes its output to a file inside that results folder named:
 - agent_01_linear_transformations.md
 - agent_02_eigenvalues.md
 - agent_03_oauth2.md

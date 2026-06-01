@@ -216,6 +216,54 @@ Hidden agents still appear in the Task tool's available types — they're just r
 
 ---
 
+## Actual Execution Workflow (What Works in Practice)
+
+The following workflow has been validated across multiple exercise runs:
+
+### Step 1 — Create Timestamped Results Folder
+
+Before launching any agents, create a timestamped directory under the exercise's `results/` folder. For example:
+
+```bash
+mkdir -p inference-containers/multi-agent-orchestration-test/exercise02/results/2026_06_02_results_01
+```
+
+**The folder must exist before any agent is launched.** This ensures agents can write their output files immediately upon completion.
+
+### Step 2 — Launch All Sub-Agents in Parallel
+
+Fire all 4 Task tool calls at once, each with `subagent_type: "dgx-spark"` and a prompt that tells the agent which file to write its response to inside the results folder. The calls are independent and concurrent — the orchestrator waits for all responses before continuing.
+
+Example pattern (from exercise02):
+
+```
+task(description="Linear transformations explanation", prompt="...explain linear transformations...", subagent_type="dgx-spark")
+task(description="Eigenvalues explanation", prompt="...explain eigenvalues...", subagent_type="dgx-spark")
+task(description="OAuth2 SSO explanation", prompt="...explain OAuth2...", subagent_type="dgx-spark")
+task(description="Web security explanation", prompt="...explain web security...", subagent_type="dgx-spark")
+```
+
+### Step 3 — Collect Results
+
+Each agent writes its output to the designated file in the results folder:
+
+- `agent_01_linear_transformations.md`
+- `agent_02_eigenvalues.md`
+- `agent_03_oauth2.md`
+- `agent_04_web_security_jargon.md`
+
+The orchestrator reviews each file and confirms success.
+
+### Step 4 — Verify vLLM Health
+
+Monitor the vLLM logs during execution. Successful parallel execution shows all requests completing with 200 OK and no CUDA assertion errors. Key indicators:
+
+- `Running: N reqs` counting down to 0 (no dropped requests)
+- No `CUDA assertion` or `engine died` messages
+- All `POST /v1/chat/completions HTTP/1.1" 200 OK` responses matching the number of agents launched
+
+---
+
 ## Summary Checklist
 
 1. **Add the sub-agent config** to `opencode.json` under `"agent"` with `mode: "subagent"` and its own `model` field
