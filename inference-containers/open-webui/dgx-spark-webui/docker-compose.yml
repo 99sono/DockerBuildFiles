@@ -1,0 +1,26 @@
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:latest
+    platform: linux/arm64
+    container_name: open-webui
+    hostname: web-ui-server
+    ports:
+      - "11435:8080"
+    volumes:
+      - open-webui:/app/backend/data
+    environment:
+      - OPENAI_API_BASE_URL=http://inference-server:8000/v1
+      - OPENAI_API_KEY=${INFERENCE_API_KEY:-dummy-key}
+      - WEBUI_AUTH=${WEBUI_AUTH:-false}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: no
+    networks:
+      - development-network
+
+volumes:
+  open-webui:
+
+networks:
+  development-network:
+    external: true
