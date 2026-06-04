@@ -84,11 +84,7 @@ services:
       - "0.95"
       - "--top-k"
       - "64"
-      # --- MTP: Disable speculative decoding ---
-      # MoE models sometimes support MTP (Mixture of Token Paths) speculative decoding,
-      # but Gemma 4 26B A4B does NOT have MTP heads, so we explicitly disable it.
-      - "--mtp-speculative"
-      - "0"
+ 
 
     networks:
       - development-network
