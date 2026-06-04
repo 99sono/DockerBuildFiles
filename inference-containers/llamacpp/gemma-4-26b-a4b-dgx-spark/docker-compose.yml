@@ -58,6 +58,8 @@ services:
       # Load the full graph into the unified memory pool.
       - "--n-gpu-layers"
       - "999"
+      # Forces the OS to lock/pin memory footprint, preventing paging on GB10.
+      - "--mlock"
       # Native FlashAttention-2 acceleration for deep context layers.
       - "--flash-attn"
       - "on"
