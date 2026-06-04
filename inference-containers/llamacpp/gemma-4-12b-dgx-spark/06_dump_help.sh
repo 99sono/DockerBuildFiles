@@ -26,7 +26,7 @@ echo "  04_test_curl.sh               — Test API connectivity"
 echo "  06_dump_help.sh               — Show this help + llama-server info"
 echo ""
 
-CONTAINER=$(docker ps --format '{{.Names}}' | grep -E '^gemma-4\.12b-dgx-spark$' | head -1)
+CONTAINER=$(docker ps --format '{{.Names}}' | grep -E '^gemma-4-12b-dgx-spark$' | head -1)
 if [ -n "$CONTAINER" ]; then
   echo "Active container detected: $CONTAINER"
   echo "Dumping llama.cpp server version/help info..."
