@@ -1,3 +1,3 @@
 #!/bin/bash
 source ../../../commonScripts/lib.sh
-hf_download_with_check "testLlamaCppGemma" "unsloth/gemma-4-12b-it-GGUF-it" "UD-Q4_K_XL/gemma-4-12b-it-UD-Q4_K_XL.gguf"
+hf_download_with_check "testLlamaCppGemma" "unsloth/gemma-4-12b-it-GGUF-it" "gemma-4-12b-it-UD-Q4_K_XL.gguf"
