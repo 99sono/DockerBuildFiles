@@ -1,4 +1,3 @@
 #!/bin/bash
-set -e
-cd "$(dirname "$0")"
-docker compose logs -f open-webui
+source ../../../commonScripts/lib.sh
+docker_logs_follow_container "open-webui"

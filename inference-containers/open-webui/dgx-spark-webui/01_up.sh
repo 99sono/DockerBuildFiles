@@ -1,5 +1,3 @@
 #!/bin/bash
-set -e
-cd "$(dirname "$0")"
-docker compose pull
-docker compose up -d
+source ../../../commonScripts/lib.sh
+docker_compose_up "docker-compose.yml"

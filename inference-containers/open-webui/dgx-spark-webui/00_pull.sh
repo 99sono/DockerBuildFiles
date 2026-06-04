@@ -1,4 +1,3 @@
 #!/bin/bash
-set -e
-cd "$(dirname "$0")"
-docker compose pull open-webui
+source ../../../commonScripts/lib.sh
+docker_compose_pull "docker-compose.yml"
