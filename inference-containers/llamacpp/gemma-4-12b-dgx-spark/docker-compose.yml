@@ -36,7 +36,7 @@ services:
       - "-hf"
       # Model: Gemma 4 12B Unified quantization (UD-Q4_K_XL) by Unsloth.
       # Encoder-free architecture — vision and audio baked into the model itself.
-      - "unsloth/gemma-4-12B-it-GGUF:UD-Q4_K_XL"
+      - "unsloth/gemma-4-12b-it-GGUF-it:UD-Q4_K_XL"
       # Aliased name presented in /v1/models API response.
       - "--alias"
       - "${INFERENCE_MODEL_ALIAS:-gemma-4-12b}"

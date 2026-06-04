@@ -3,7 +3,7 @@
 > Encoder-free "Unified" multimodal architecture • Text, Image, Audio • NVIDIA Grace Blackwell Superchip • ARM64 Optimized
 
 **Target Hardware:** Acer Veriton GN100 / DGX Spark (NVIDIA GB10, 128GB Unified Memory LPDDR5X, ARM64/aarch64)
-**Variant:** Unsloth (`unsloth/gemma-4-12B-it-GGUF:UD-Q4_K_XL`)
+**Variant:** Unsloth (`unsloth/gemma-4-12b-it-GGUF-it:UD-Q4_K_XL`)
 **Text Capacity:** 256K tokens (full context window) • Sliding window: 1024
 **Vocabulary:** 262K tokens • Architecture: Dense, 48 layers, 11.95B parameters
 **Server Port:** `8000`
@@ -62,7 +62,7 @@ llamacpp/gemma-4-12b-dgx-spark/
 | Setting | Value | Purpose |
 |---------|-------|---------|
 | **Image** | `ghcr.io/ggml-org/llama.cpp:server-cuda13` | Official multi-arch CUDA 13 image (ARM64) |
-| **Model** | `-hf unsloth/gemma-4-12B-it-GGUF:UD-Q4_K_XL` | Unsloth Dynamic 2.0 4-bit, 7.37 GB |
+| **Model** | `-hf unsloth/gemma-4-12b-it-GGUF-it:UD-Q4_K_XL` | Unsloth Dynamic 2.0 4-bit, 7.37 GB |
 | **Port** | `8000:8000` | Host 8000 → Container 8000 |
 | **Platform** | `linux/arm64` | Native ARMv9 Grace CPU |
 | **GPU Layers** | `999` | Full GPU offload (all layers to unified memory) |
@@ -94,7 +94,7 @@ This makes it ideal for latency-sensitive use cases, high-throughput serving, an
 
 ```bash
 # Core model loading
--hf unsloth/gemma-4-12B-it-GGUF:UD-Q4_K_XL
+-hf unsloth/gemma-4-12b-it-GGUF-it:UD-Q4_K_XL
 --host 0.0.0.0
 --port 8000
 
@@ -386,4 +386,4 @@ Hosted on GitHub Container Registry: [ggml-org/llama.cpp versions](https://githu
 
 - **llama.cpp**: [ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp)
 - **Gemma 4 12B by Google DeepMind**: [Google DeepMind](https://ai.google.dev/gemma) — Apache 2.0
-- **Unsloth GGUF Quantization**: [unsloth/gemma-4-12B-it-GGUF](https://huggingface.co/unsloth/gemma-4-12B-it-GGUF) — UD-Q4_K_XL (Dynamic 2.0 4-bit)
+- **Unsloth GGUF Quantization**: [unsloth/gemma-4-12b-it-GGUF-it](https://huggingface.co/unsloth/gemma-4-12b-it-GGUF-it) — UD-Q4_K_XL (Dynamic 2.0 4-bit)
