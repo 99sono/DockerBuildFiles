@@ -1,0 +1,85 @@
+services:
+  gemma-4-12b-server:
+    # Official multi-arch image with CUDA 13 support for ARM64 / aarch64.
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda13
+    container_name: gemma-4-12b-dgx-spark
+    hostname: inference-server
+    platform: linux/arm64
+    # All models served on port 8000. Single-model capacity avoids client port mismatches.
+    ports:
+      - "${INFERENCE_SERVER_PORT:-8000}:8000"
+
+    volumes:
+      # Central workstation cache to avoid redundant downloads.
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      # Shared memory for high-speed KV cache paging.
+      - /dev/shm:/dev/shm
+
+    # 70GB shm_size for GB10 unified memory architecture (generous headroom).
+    shm_size: "70g"
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=0
+      - HF_HOME=/root/.cache/huggingface
+    command:
+      # Loads directly from central cache via the -hf flag.
+      - "-hf"
+      # Model: Gemma 4 12B Unified quantization (UD-Q4_K_XL) by Unsloth.
+      # Encoder-free architecture — vision and audio baked into the model itself.
+      - "unsloth/gemma-4-12B-it-GGUF:UD-Q4_K_XL"
+      # Aliased name presented in /v1/models API response.
+      - "--alias"
+      - "${INFERENCE_MODEL_ALIAS:-gemma-4-12b}"
+      # API key authentication (Bearer token on all routes).
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
+      # Bind to all interfaces for network access.
+      - "--host"
+      - "0.0.0.0"
+      # Internal container port.
+      - "--port"
+      - "${INFERENCE_SERVER_PORT:-8000}"
+      # Load the full graph into the unified memory pool.
+      - "--n-gpu-layers"
+      - "999"
+      # Native FlashAttention-2 acceleration for deep context layers.
+      - "--flash-attn"
+      - "on"
+      # Q8_0 KV-cache: High precision (8-bit) to avoid "doom loop" logic errors.
+      - "--cache-type-k"
+      - "q8_0"
+      - "--cache-type-v"
+      - "q8_0"
+      # 256K context window — full trained capacity of the model.
+      - "--ctx-size"
+      - "262144"
+      # 10 concurrent slots for parallel sub-agent workloads.
+      # Each slot gets ctx_size / np tokens (262144 / 10 = ~26K per slot).
+      - "--parallel"
+      - "10"
+      # --- SAMPLING (Gemma 4 standard) ---
+      # temperature=1.0, top_p=0.95, top_k=64 per Google DeepMind / Unsloth docs.
+      - "--temp"
+      - "1.0"
+      - "--top-p"
+      - "0.95"
+      - "--top-k"
+      - "64"
+
+    networks:
+      - development-network
+
+networks:
+  # Allows this server to communicate with other internal tools/proxies.
+  development-network:
+    external: true
