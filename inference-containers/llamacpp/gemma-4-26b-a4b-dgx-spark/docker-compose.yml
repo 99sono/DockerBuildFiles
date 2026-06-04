@@ -1,0 +1,97 @@
+services:
+  gemma-4-26b-a4b-server:
+    # Official multi-arch image with CUDA 13 support for ARM64 / aarch64.
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda13
+    container_name: gemma-4-26b-a4b-dgx-spark
+    hostname: inference-server
+    platform: linux/arm64
+    # All models served on port 8000. Single-model capacity avoids client port mismatches.
+    ports:
+      - "${INFERENCE_SERVER_PORT:-8000}:8000"
+
+    volumes:
+      # Central workstation cache to avoid redundant downloads.
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      # Shared memory for high-speed KV cache paging.
+      - /dev/shm:/dev/shm
+
+    # 80GB shm_size: 17GB model file + large KV cache for MoE with 128 experts needs generous headroom.
+    shm_size: "80g"
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=0
+      - HF_HOME=/root/.cache/huggingface
+    command:
+      # Loads directly from central cache via the -hf flag.
+      - "-hf"
+      # MoE model: Gemma 4 26B A4B (25.2B total params, 3.8B active params, 8 of 128 experts + 1 shared).
+      # Unified quantization (UD-Q4_K_XL) — ~17GB model file.
+      # This is a Mixture-of-Experts model — only 3.8B params are active per forward pass despite 25.2B total.
+      - "unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q4_K_XL"
+      # --- VISION: mmproj is REQUIRED for this model ---
+      # Unlike the 12B (which is encoder-free with vision/audio baked in), the 26B A4B requires
+      # a separate mmproj-BF16.gguf file for vision capabilities.
+      - "--mmproj"
+      - "unsloth/gemma-4-26B-A4B-it-GGUF:mmproj-BF16"
+      # Aliased name presented in /v1/models API response.
+      - "--alias"
+      - "${INFERENCE_MODEL_ALIAS:-gemma-4-26b-a4b-moe}"
+      # API key authentication (Bearer token on all routes).
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
+      # Bind to all interfaces for network access.
+      - "--host"
+      - "0.0.0.0"
+      # Internal container port.
+      - "--port"
+      - "${INFERENCE_SERVER_PORT:-8000}"
+      # Load the full graph into the unified memory pool.
+      - "--n-gpu-layers"
+      - "999"
+      # Native FlashAttention-2 acceleration for deep context layers.
+      - "--flash-attn"
+      - "on"
+      # Q8_0 KV-cache: High precision (8-bit) to avoid "doom loop" logic errors.
+      - "--cache-type-k"
+      - "q8_0"
+      - "--cache-type-v"
+      - "q8_0"
+      # 256K context window — full trained capacity of the model.
+      - "--ctx-size"
+      - "262144"
+      # 15 concurrent slots for parallel sub-agent workloads.
+      # MoE model only activates 3.8B params per forward (8 of 128 experts + 1 shared),
+      # allowing higher concurrency than the 12B dense model.
+      - "--parallel"
+      - "15"
+      # --- SAMPLING (Gemma 4 standard) ---
+      # temperature=1.0, top_p=0.95, top_k=64 per Google DeepMind / Unsloth docs.
+      - "--temp"
+      - "1.0"
+      - "--top-p"
+      - "0.95"
+      - "--top-k"
+      - "64"
+      # --- MTP: Disable speculative decoding ---
+      # MoE models sometimes support MTP (Mixture of Token Paths) speculative decoding,
+      # but Gemma 4 26B A4B does NOT have MTP heads, so we explicitly disable it.
+      - "--mtp-speculative"
+      - "0"
+
+    networks:
+      - development-network
+
+networks:
+  # Allows this server to communicate with other internal tools/proxies.
+  development-network:
+    external: true
