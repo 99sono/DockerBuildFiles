@@ -32,20 +32,21 @@ services:
       - NVIDIA_VISIBLE_DEVICES=0
       - HF_HOME=/root/.cache/huggingface
     command:
-      # 1. MAIN MODEL (Dense 12B - Quantized for memory/bandwidth)
+      # Model: Gemma 4 12B Unified quantization (UD-Q4_K_XL) by Unsloth.
+      # Encoder-free architecture — vision and audio baked into the model itself.
       - "-hf"
-      - "unsloth/gemma-4-12b-it-GGUF:Q4_K_M.gguf"
+      - "unsloth/gemma-4-12b-it-GGUF:UD-Q4_K_XL"
 
+      # --- SPECULATIVE DECODING / MTP (Commented out - causes crashes on current llama.cpp)
+      # Note: spec-type is called "draft-mtp", not "mtp". Re-enable when stable.
       # 2. ASSISTANT MODEL (0.4B Drafter - Direct BF16 from official repo)
-      # Loads in native BF16 precision (~0.8 GB on 128GB unified memory)
-      - "--spec-draft-hf"
-      - "google/gemma-4-12B-it-assistant"
-
-      # 3. MTP SPECULATION SETTINGS (Native Multi-Token Prediction)
-      - "--spec-type"
-      - "mtp"
-      - "--spec-draft-n-max"
-      - "2"
+      # - "--spec-draft-hf"
+      # - "google/gemma-4-12B-it-assistant"
+      # 3. MTP SPECULATION SETTINGS
+      # - "--spec-type"
+      # - "draft-mtp"
+      # - "--spec-draft-n-max"
+      # - "2"
 
       # Aliased name presented in /v1/models API response.
       - "--alias"
