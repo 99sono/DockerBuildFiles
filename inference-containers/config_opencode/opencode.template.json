@@ -1,0 +1,77 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "model": "dgx-spark/gemma-4-12b",
+
+  "agent": {
+    "dgx-spark": {
+      "model": "dgx-spark/gemma-4-12b",
+      "description": "When opencode is calling subagents via the agent_type, this is the model we want to use.",
+      "mode": "subagent"
+    }
+  },
+
+  "provider": {
+
+    "dgx-spark": {
+      "name": "DGX Spark",
+      "options": {
+        "baseURL": "https://spark-8ddc/v1",
+        "apiKey": "dummy-key"
+      },
+      
+      "models": {
+        "gemma-4-26b": {
+          "name": "gemma-4-26b",
+          "limit": { "context": 200000, "output": 32768 }
+        },
+        "gemma-4-12b": {
+          "name": "gemma-4-12b",
+          "limit": { "context": 200000, "output": 32768 }
+        },
+        "qwen3.6-35b": {
+          "name": "qwen3.6-35b",
+          "limit": { "context": 200000, "output": 32768 }
+        }
+      }
+    },
+
+    "local": {
+      "name": "local (RTX 5090)",
+      "options": {
+        "baseURL": "http://localhost:8000/v1",
+        "apiKey": "dummy-key"
+      },
+      "models": {
+        "gemma-4-26b": {
+          "name": "gemma-4-26b",
+          "limit": { "context": 192000, "output": 32768 }
+        }, 
+        "qwen3.6-27b": {
+          "name": "qwen3.6-27b",
+          "limit": { "context": 235000, "output": 32768 }
+        }
+      }
+    },    
+
+    
+  
+   "dgx-spark-debug": {
+      "name": "DGX Spark debug",
+      "options": {
+        "baseURL": "http://spark-8ddc:8888/v1",
+        "apiKey": "dummy-key"
+      },
+      "models": {
+        "Qwen3.6-35B-A3B-NVFP4": {
+          "name": "Qwen3.6-35B-A3B-NVFP4",
+          "limit": { "context": 200000, "output": 32768 }
+        }
+      }
+    }
+
+  }
+
+}
+
+

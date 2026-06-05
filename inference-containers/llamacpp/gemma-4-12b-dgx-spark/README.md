@@ -3,7 +3,7 @@
 > Encoder-free "Unified" multimodal architecture • Text, Image, Audio • NVIDIA Grace Blackwell Superchip • ARM64 Optimized
 
 **Target Hardware:** Acer Veriton GN100 / DGX Spark (NVIDIA GB10, 128GB Unified Memory LPDDR5X, ARM64/aarch64)
-**Variant:** Unsloth (`unsloth/gemma-4-12b-it-GGUF-it:UD-Q4_K_XL`)
+**Variant:** Unsloth `Q4_K_M.gguf` + Google Assistant BF16 (Native MTP)
 **Text Capacity:** 256K tokens (full context window) • Sliding window: 1024
 **Vocabulary:** 262K tokens • Architecture: Dense, 48 layers, 11.95B parameters
 **Server Port:** `8000`
@@ -16,7 +16,7 @@
 # 1. Pull the multi-arch image (ARM64)
 ./00_a_pull_image.sh
 
-# 2. Pre-download model weights (Unsloth UD-Q4_K_XL, 7.37 GB)
+# 2. Pre-download model weights (Unsloth Q4_K_M + BF16 Assistant)
 ./00_d_pre_download_model.sh
 
 # 3. Start the server
@@ -35,7 +35,7 @@
 
 ```
 llamacpp/gemma-4-12b-dgx-spark/
-├── docker-compose.yml              # Main compose config (UD-Q4_K_XL)
+├── docker-compose.yml              # Main compose config (Q4_K_M + MTP Assistant)
 ├── .env.example                    # Environment variables template
 ├── 00_a_pull_image.sh              # Pull ggml-org/llama.cpp:server-cuda13 (ARM64)
 ├── 00_b_create_conda_env.sh         # Create conda environment for tools
@@ -62,14 +62,14 @@ llamacpp/gemma-4-12b-dgx-spark/
 | Setting | Value | Purpose |
 |---------|-------|---------|
 | **Image** | `ghcr.io/ggml-org/llama.cpp:server-cuda13` | Official multi-arch CUDA 13 image (ARM64) |
-| **Model** | `-hf unsloth/gemma-4-12b-it-GGUF-it:UD-Q4_K_XL` | Unsloth Dynamic 2.0 4-bit, 7.37 GB |
+| **Model** | `-hf unsloth/gemma-4-12b-it-GGUF:Q4_K_M.gguf` | Unsloth Q4_K_M quantization |
 | **Port** | `8000:8000` | Host 8000 → Container 8000 |
 | **Platform** | `linux/arm64` | Native ARMv9 Grace CPU |
 | **GPU Layers** | `999` | Full GPU offload (all layers to unified memory) |
-| **Context Size** | `262144` (256K) | Full context window capacity |
+| **Context Size** | `2649600` (2.65M) | 10x global context leveraging GB10's 128GB unified memory headroom |
 | **Parallel Slots** | `--parallel 10` | 10 concurrent slots for sub-agent workloads (~26K ctx/slot) |
 | **KV Cache** | `q8_0` (K & V) | High precision cache |
-| **Batch Size** | `512` | Optimized for LPDDR5X bandwidth (~300 GB/s) |
+| **Speculative Decoding** | `--spec-type mtp` | Native MTP with 0.4B BF16 Assistant Drafter |
 | **Flash Attention** | `--flash-attn on` | Native Blackwell acceleration |
 
 ### Unified Memory Architecture
@@ -88,15 +88,31 @@ At just 12B active parameters, this model is one of the most memory-efficient op
 
 This makes it ideal for latency-sensitive use cases, high-throughput serving, and scenarios where the multimodal capabilities of the "Unified" architecture are needed.
 
+### Batch Size Configuration
+
+`--batch-size` and `--ubatch-size` are omitted by default for this configuration.
+
+**Why:** For MTP speculative decoding with `--parallel 10` on the GB10's unified memory architecture, automatic batch sizing outperforms fixed values. Fixed batch sizes (e.g., 512) cause:
+- Padding overhead on short prompts
+- Suboptimal interaction with the 2-token MTP speculation pipeline
+- 5-15% lower throughput compared to auto-tuning
+
+**If you need consistent latency bounds:** Experiment with `--batch-size 512` but expect lower peak throughput. The memory bandwidth (300 GB/s) is the primary bottleneck, not compute batch sizing. 
+
 ---
 
 ## Server Command Breakdown
 
 ```bash
-# Core model loading
--hf unsloth/gemma-4-12b-it-GGUF-it:UD-Q4_K_XL
+# Core model loading (Main Model + BF16 Assistant Drafter)
+-hf unsloth/gemma-4-12b-it-GGUF:Q4_K_M.gguf
+--spec-draft-hf google/gemma-4-12B-it-assistant
 --host 0.0.0.0
 --port 8000
+
+# MTP Speculative Decoding
+--spec-type mtp
+--spec-draft-n-max 2
 
 # GPU offload (entire model to unified memory pool)
 --n-gpu-layers 999
@@ -105,23 +121,16 @@ This makes it ideal for latency-sensitive use cases, high-throughput serving, an
 --flash-attn on
 --cache-type-k q8_0
 --cache-type-v q8_0
---ctx-size 262144
+--ctx-size 2649600
 
 # 10 concurrent slots for parallel sub-agent workloads
-# Each slot gets ctx_size / np tokens (~26K per slot at 256K context)
+# Each slot gets ctx_size / np tokens (~265K per slot at 2.65M context)
 --parallel 10
-
-# Batch optimization (LPDDR5X bandwidth tuned)
---batch-size 512
---ubatch-size 512
 
 # Sampling parameters (Gemma 4 standard)
 --temp 1.0
 --top-p 0.95
 --top-k 64
-
-# No speculative decoding — Gemma 4 has no MTP heads
-# No presence-penalty — keep at 1.0 per Unsloth recommendation
 ```
 
 ---
@@ -330,13 +339,13 @@ This setup uses `--top-k 64` following Google/Unsloth Gemma recommendations. Gem
 - **top-k 20**: More conservative — may feel more deterministic but less creative
 - **top-p 0.95** is used alongside top-k (dual-sampling), providing additional control
 
-### No Speculative Decoding Available
+### Multi-Token Prediction (MTP) Speculative Decoding
 
-Gemma 4 does not have Multi-Token Prediction (MTP) heads, so `--spec-type` options are not supported. The model cannot use MTP speculative decoding. This does not significantly impact performance for a 12B model, where the decode speed is dominated by memory bandwidth rather than sequential generation overhead.
+This setup leverages native MTP speculative decoding using Google's official `gemma-4-12B-it-assistant` model. The assistant is loaded directly in BF16 (~0.8 GB memory footprint) via `--spec-draft-hf`. It acts as a high-fidelity drafter, predicting up to 2 tokens ahead (`--spec-draft-n-max 2`) which the main Q4_K_M model validates. This significantly boosts token generation speed by reducing sequential overhead on the GB10 unified memory architecture.
 
 ### "No mmproj" Clarification
 
-If you're following documentation for multimodal models that require an `mmproj.gguf`, note that Gemma 4 Unified does not use one. Vision and audio are baked into the model architecture itself. The single `gemma-4-12b-it-UD-Q4_K_XL.gguf` file (7.37 GB) is all you need.
+If you're following documentation for multimodal models that require an `mmproj.gguf`, note that Gemma 4 Unified does not use one. Vision and audio are baked into the model architecture itself. The single `gemma-4-12b-it-Q4_K_M.gguf` file is all you need for the main model, plus the automatically downloaded BF16 assistant.
 
 ---
 

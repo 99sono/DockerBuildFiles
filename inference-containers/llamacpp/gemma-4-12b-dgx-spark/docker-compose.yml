@@ -32,43 +32,63 @@ services:
       - NVIDIA_VISIBLE_DEVICES=0
       - HF_HOME=/root/.cache/huggingface
     command:
-      # Loads directly from central cache via the -hf flag.
+      # 1. MAIN MODEL (Dense 12B - Quantized for memory/bandwidth)
       - "-hf"
-      # Model: Gemma 4 12B Unified quantization (UD-Q4_K_XL) by Unsloth.
-      # Encoder-free architecture — vision and audio baked into the model itself.
-      - "unsloth/gemma-4-12b-it-GGUF:UD-Q4_K_XL"
+      - "unsloth/gemma-4-12b-it-GGUF:Q4_K_M.gguf"
+
+      # 2. ASSISTANT MODEL (0.4B Drafter - Direct BF16 from official repo)
+      # Loads in native BF16 precision (~0.8 GB on 128GB unified memory)
+      - "--spec-draft-hf"
+      - "google/gemma-4-12B-it-assistant"
+
+      # 3. MTP SPECULATION SETTINGS (Native Multi-Token Prediction)
+      - "--spec-type"
+      - "mtp"
+      - "--spec-draft-n-max"
+      - "2"
+
       # Aliased name presented in /v1/models API response.
       - "--alias"
       - "${INFERENCE_MODEL_ALIAS:-gemma-4-12b}"
+
       # API key authentication (Bearer token on all routes).
       - "--api-key"
       - "${INFERENCE_API_KEY:-dummy-key}"
+
       # Bind to all interfaces for network access.
       - "--host"
       - "0.0.0.0"
+
       # Internal container port.
       - "--port"
       - "${INFERENCE_SERVER_PORT:-8000}"
+
       # Load the full graph into the unified memory pool.
       - "--n-gpu-layers"
       - "999"
+
       # Forces the OS to lock/pin memory footprint, preventing paging on GB10.
       - "--mlock"
+
       # Native FlashAttention-2 acceleration for deep context layers.
       - "--flash-attn"
       - "on"
-      # Q8_0 KV-cache: High precision (8-bit) to avoid "doom loop" logic errors.
+
+      # Q8_0 KV-cache: High precision (8-bit) to avoid logic errors in long contexts.
       - "--cache-type-k"
       - "q8_0"
       - "--cache-type-v"
       - "q8_0"
-      # 256K context window — full trained capacity of the model.
+
+      # 2.65M global context — 10x increase leveraging GB10's 128GB unified memory headroom.
       - "--ctx-size"
-      - "262144"
+      - "2649600"
+
       # 10 concurrent slots for parallel sub-agent workloads.
-      # Each slot gets ctx_size / np tokens (262144 / 10 = ~26K per slot).
+      # Each slot gets ctx_size / np tokens (2649600 / 10 = ~265K per slot).
       - "--parallel"
       - "10"
+
       # --- SAMPLING (Gemma 4 standard) ---
       # temperature=1.0, top_p=0.95, top_k=64 per Google DeepMind / Unsloth docs.
       - "--temp"
