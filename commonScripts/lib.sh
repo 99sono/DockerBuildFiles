@@ -216,17 +216,24 @@ docker_exec_enter() {
 #        file       — optional specific filename within the repo; if omitted,
 #                     downloads the entire repo
 hf_download_with_check() {
-  local env_name="${1:?Usage: hf_download_with_check <env_name> <model_id> [file]}"
+  local env_name="${1:?Usage: hf_download_with_check <env_name> <model_id> [file] [force]}"
   local model_id="$2"
   local model_file="${3:-}"
+  local force="$4"
 
   if ! conda_env_exists "$env_name"; then
     echo "❌ Conda env '$env_name' not found. Run 00_b and 00_c first." >&2; exit 1
   fi
   mkdir -p "$HOME/.cache/huggingface"
+
+  local extra_args=""
+  if [ "$force" = "true" ]; then
+    extra_args="--force-download"
+  fi
+
   if [ -n "$model_file" ]; then
-    hf download "$model_id" "$model_file"
+    hf download "$model_id" "$model_file" $extra_args
   else
-    hf download "$model_id"
+    hf download "$model_id" $extra_args
   fi
 }
