@@ -1,0 +1,104 @@
+services:
+  gemma-4-12b-server:
+    # Official multi-arch image with CUDA 13 support for AMD64.
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda13
+    container_name: gemma-4-12b-5090
+    hostname: inference-server
+    platform: linux/amd64
+    # All models served on port 8000. Single-model capacity avoids client port mismatches.
+    ports:
+      - "${INFERENCE_SERVER_PORT:-8000}:8000"
+
+    volumes:
+      # Central workstation cache to avoid redundant downloads.
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      # Shared memory for high-speed KV cache paging.
+      - /dev/shm:/dev/shm
+
+    # 32GB shm_size matches RTX 5090 VRAM; crucial for large context windows (256k).
+    shm_size: "32g"
+    ipc: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      # Critical: Forces the container to use Blackwell-optimized libraries.
+      - LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64
+      - HF_HOME=/root/.cache/huggingface
+      - NVIDIA_VISIBLE_DEVICES=0
+    command:
+      # Model: Gemma 4 12B Unified quantization (UD-Q4_K_XL) by Unsloth.
+      # Encoder-free architecture — vision and audio baked into the model itself.
+      - "-hf"
+      - "unsloth/gemma-4-12b-it-GGUF:UD-Q4_K_XL"
+
+      # Aliased name presented in /v1/models API response.
+      - "--alias"
+      - "${INFERENCE_MODEL_ALIAS:-gemma-4-12b}"
+
+      # API key authentication (Bearer token on all routes).
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
+
+      # Bind to all interfaces for network access.
+      - "--host"
+      - "0.0.0.0"
+
+      # Internal container port.
+      - "--port"
+      - "${INFERENCE_SERVER_PORT:-8000}"
+
+      # Load the full graph into GPU VRAM.
+      - "--n-gpu-layers"
+      - "999"
+
+      # Forces the OS to lock/pin memory footprint, preventing paging on RTX 5090.
+      - "--mlock"
+
+      # Native FlashAttention-2 acceleration for deep context layers.
+      - "--flash-attn"
+      - "on"
+
+      # Q8_0 KV-cache: High precision (8-bit) to avoid logic errors in long contexts.
+      - "--cache-type-k"
+      - "q8_0"
+      - "--cache-type-v"
+      - "q8_0"
+
+      # 256K context — Gemma 4 12B's native max context length, fits in 32GB VRAM.
+      - "--ctx-size"
+      - "262144"
+
+      # Single concurrent slot — RTX 5090 has 32GB VRAM, optimized for one heavy session.
+      - "--parallel"
+      - "1"
+
+      # --- THREADING OPTIMIZATION ---
+      # 12 threads for single-token generation (lean, CPU cache friendly).
+      # 24 threads for batch verification bursts using SMT cores.
+      - "--threads"
+      - "12"
+      - "--threads-batch"
+      - "24"
+
+      # --- SAMPLING (Gemma 4 standard) ---
+      # temperature=1.0, top_p=0.95, top_k=64 per Google DeepMind / Unsloth docs.
+      - "--temp"
+      - "1.0"
+      - "--top-p"
+      - "0.95"
+      - "--top-k"
+      - "64"
+
+    networks:
+      - development-network
+
+networks:
+  # Allows this server to communicate with other internal tools/proxies.
+  development-network:
+    external: true
