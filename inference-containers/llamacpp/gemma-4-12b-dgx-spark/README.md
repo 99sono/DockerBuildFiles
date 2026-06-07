@@ -27,6 +27,16 @@ The container uses the official `linux/arm64` platform build (`server-cuda13`), 
 - **Multi-agent parallelism** — `--parallel 10` for concurrent sub-agent workloads, with ~265K tokens per slot.
 - **Sampling** — Unsloth-standard: `temp=1.0`, `top_p=0.95`, `top_k=64`.
 
+## Setup
+
+```bash
+# Pre-download model to HF cache (skips if already cached)
+./00_d_pre_download_model.sh
+
+# Force re-download (bypasses local cache, useful for corrupted files or updates)
+./00_e_force_download_model.sh
+```
+
 ## Usage
 
 ```bash

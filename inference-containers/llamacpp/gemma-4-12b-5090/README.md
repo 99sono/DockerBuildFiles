@@ -27,6 +27,16 @@ The container uses the `ghcr.io/ggml-org/llama.cpp:server-cuda13` image but over
 - **Threading** — `--threads 12` / `--threads-batch 24` tuned for single-token generation and batch verification on SMT-enabled CPUs.
 - **Sampling** — Unsloth-standard: `temp=1.0`, `top_p=0.95`, `top_k=64`.
 
+## Setup
+
+```bash
+# Pre-download model to HF cache (skips if already cached)
+./00_d_pre_download_model.sh
+
+# Force re-download (bypasses local cache, useful for corrupted files or updates)
+./00_e_force_download_model.sh
+```
+
 ## Usage
 
 ```bash

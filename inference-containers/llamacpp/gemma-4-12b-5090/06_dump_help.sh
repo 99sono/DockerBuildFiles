@@ -12,6 +12,7 @@ echo "  00_a_pull_image.sh            — Pull llama.cpp server image (CUDA, AMD
 echo "  00_b_create_conda_env.sh      — Create conda environment 'testLlamaCppGemma5090'"
 echo "  00_c_install_packages.sh      — Install HuggingFace Hub and CLI packages"
 echo "  00_d_pre_download_model.sh    — Download Gemma 4 12B UD-Q4_K_XL GGUF"
+echo "  00_e_force_download_model.sh  — Force re-download model (bypasses cache)"
 echo ""
 echo "Server lifecycle:"
 echo "  01_up.sh                      — Start Gemma 4 12B container"
