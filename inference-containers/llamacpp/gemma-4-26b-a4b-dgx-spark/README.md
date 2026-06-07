@@ -41,6 +41,7 @@ llamacpp/gemma-4-26b-a4b-dgx-spark/
 ├── 00_b_create_conda_env.sh         # Create conda environment for tools
 ├── 00_c_install_packages.sh         # Install test client deps (openai)
 ├── 00_d_pre_download_model.sh       # Pre-download Unsloth GGUF (~17 GB + mmproj)
+├── 00_e_force_download_model.sh     # Force re-download (bypasses local cache)
 ├── 01_up.sh                        # Start the server
 ├── 02_down.sh                      # Stop and remove containers
 ├── 03_enter_container.sh           # Enter container for debugging
@@ -73,6 +74,7 @@ llamacpp/gemma-4-26b-a4b-dgx-spark/
 | **Batch Size** | `512` | Optimized for LPDDR5X bandwidth (~300 GB/s) |
 | **Flash Attention** | `--flash-attn on` | Native Blackwell acceleration |
 | **Shared Memory** | `shm_size: "80g"` | Larger shared memory for model size + KV cache |
+| **Chat Template** | `--jinja` | Required for Gemma 4 thinking tokens (`<|think|>`) and multimodal formatting |
 
 ### Unified Memory Architecture
 
@@ -227,9 +229,9 @@ When thinking is disabled (no `<|think|>` in system prompt), the model may emit 
 [final answer]
 ```
 
-### No Special Flag Needed
+### Server Requirement: `--jinja`
 
-Thinking mode is purely prompt-based — no llama.cpp command-line flag is required. The model recognizes `<|think|>` in the system prompt and adjusts its generation pattern accordingly.
+While thinking mode itself is triggered via the prompt, the llama.cpp server **must** be started with the `--jinja` flag. This ensures the correct Gemma 4 Jinja chat template is applied, which properly handles `<|think|>` and `<|channel>` control tokens, multimodal inputs, and multi-turn conversation structure. Without it, raw control tokens may leak into the final output.
 
 ---
 
@@ -428,3 +430,11 @@ Hosted on GitHub Container Registry: [ggml-org/llama.cpp versions](https://githu
 - **llama.cpp**: [ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp)
 - **Gemma 4 26B A4B MoE by Google DeepMind**: [Google DeepMind](https://ai.google.dev/gemma) — Apache 2.0
 - **Unsloth GGUF Quantization**: [unsloth/gemma-4-26b-A4B-moE-it-GGUF](https://huggingface.co/unsloth/gemma-4-26b-A4B-moE-it-GGUF) — UD-Q4_K_XL (Dynamic 2.0 4-bit)
+
+---
+
+## References
+
+- [Unsloth Gemma 4 GGUF Models](https://huggingface.co/unsloth/gemma-4-12b-it-GGUF)
+- [Unsloth Dynamic 2.0 GGUFs Documentation](https://unsloth.ai/docs/basics/unsloth-dynamic-2.0-ggufs)
+- [Official Gemma 4 Documentation by Google](https://ai.google.dev/gemma/docs/core)

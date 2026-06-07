@@ -72,6 +72,10 @@ services:
       # allowing higher concurrency than the 12B dense model.
       - "--parallel"
       - "15"
+
+      # Required for Gemma 4 chat template and native thinking token handling.
+      - "--jinja"
+
       # --- SAMPLING (Gemma 4 standard) ---
       # temperature=1.0, top_p=0.95, top_k=64 per Google DeepMind / Unsloth docs.
       - "--temp"
