@@ -74,6 +74,9 @@ services:
       - "--ctx-size"
       - "262144"
 
+      # Required for Gemma 4 chat template and native thinking token handling.
+      - "--jinja"
+
       # Single concurrent slot — RTX 5090 has 32GB VRAM, optimized for one heavy session.
       - "--parallel"
       - "1"
