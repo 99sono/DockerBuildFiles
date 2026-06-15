@@ -33,20 +33,19 @@ services:
       - HF_HOME=/root/.cache/huggingface
     command:
       # Model: Gemma 4 12B Unified quantization (UD-Q4_K_XL) by Unsloth.
-      # Encoder-free architecture — vision and audio baked into the model itself.
       - "-hf"
       - "unsloth/gemma-4-12b-it-GGUF:UD-Q4_K_XL"
 
-      # --- SPECULATIVE DECODING / MTP (Commented out - causes crashes on current llama.cpp)
-      # Note: spec-type is called "draft-mtp", not "mtp". Re-enable when stable.
-      # 2. ASSISTANT MODEL (0.4B Drafter - Direct BF16 from official repo)
-      # - "--spec-draft-hf"
-      # - "google/gemma-4-12B-it-assistant"
-      # 3. MTP SPECULATION SETTINGS
-      # - "--spec-type"
-      # - "draft-mtp"
-      # - "--spec-draft-n-max"
-      # - "2"
+      # --- SPECULATIVE DECODING / MTP (NOW ACTIVE & STABLE) ---
+      # 1. ASSISTANT MODEL (Specify the GGUF version of the assistant)
+      # auto discovery is used
+      # - "--model-draft"
+      # - "MTP/gemma-4-12b-it-BF16-MTP.gguf"
+      # 2. MTP SPECULATION SETTINGS
+      - "--spec-type"
+      - "draft-mtp"
+      - "--spec-draft-n-max"
+      - "4" 
 
       # Aliased name presented in /v1/models API response.
       - "--alias"
@@ -86,7 +85,6 @@ services:
       - "2649600"
 
       # 10 concurrent slots for parallel sub-agent workloads.
-      # Each slot gets ctx_size / np tokens (2649600 / 10 = ~265K per slot).
       - "--parallel"
       - "10"
 
@@ -94,7 +92,6 @@ services:
       - "--jinja"
 
       # --- SAMPLING (Gemma 4 standard) ---
-      # temperature=1.0, top_p=0.95, top_k=64 per Google DeepMind / Unsloth docs.
       - "--temp"
       - "1.0"
       - "--top-p"
@@ -109,3 +106,5 @@ networks:
   # Allows this server to communicate with other internal tools/proxies.
   development-network:
     external: true
+
+
