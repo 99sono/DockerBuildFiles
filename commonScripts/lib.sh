@@ -208,18 +208,19 @@ docker_exec_enter() {
 
 # --- MODEL DOWNLOAD ---
 
-## hf_download_with_check <env_name> <model_id> [file]
+## hf_download_with_check <env_name> <model_id> [file] [force]
 # Downloads a model from Hugging Face, verifying the conda env exists first.
 # Uses `conda run -n` internally to leverage the correct environment.
 # Args:  env_name   — conda environment name (must exist)
 #        model_id   — HuggingFace repo ID (e.g., unsloth/Qwen3.6-27B-MTP-GGUF)
 #        file       — optional specific filename within the repo; if omitted,
 #                     downloads the entire repo
+#        force      — optional, set to "true" to force a re-download
 hf_download_with_check() {
   local env_name="${1:?Usage: hf_download_with_check <env_name> <model_id> [file] [force]}"
   local model_id="$2"
   local model_file="${3:-}"
-  local force="$4"
+   local force="${4:-false}"
 
   if ! conda_env_exists "$env_name"; then
     echo "❌ Conda env '$env_name' not found. Run 00_b and 00_c first." >&2; exit 1
