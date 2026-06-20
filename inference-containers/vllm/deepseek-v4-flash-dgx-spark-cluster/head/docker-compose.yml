@@ -1,0 +1,83 @@
+services:
+  deepseek-v4-flash-head:
+    image: aidendle94/sparkrun-vllm-ds4-gb10:production-ready
+    container_name: deepseek-v4-flash-head
+    hostname: inference-server
+    network_mode: "host"
+    privileged: true
+    ipc: "host"
+    shm_size: "10g"
+    devices:
+      - /dev/infiniband:/dev/infiniband
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ~/.cache/huggingface:/cache/huggingface
+    env_file: ../.env
+    environment:
+      NCCL_IB_DISABLE: "0"
+      NCCL_IB_HCA: "${NCCL_IB_HCA:-rocep1s0f0,roceP2p1s0f0}"
+      NCCL_IB_GID_INDEX: "${NCCL_IB_GID_INDEX:-4,4}"
+      NCCL_SOCKET_IFNAME: "${NCCL_SOCKET_IFNAME:-enP7s7}"
+      GLOO_SOCKET_IFNAME: "${GLOO_SOCKET_IFNAME:-enP7s7}"
+      TP_SOCKET_IFNAME: "${TP_SOCKET_IFNAME:-enP7s7}"
+      NCCL_IGNORE_CPU_AFFINITY: "1"
+      NCCL_DEBUG: "WARN"
+      TORCH_CUDA_ARCH_LIST: "12.1a"
+      FLASHINFER_CUDA_ARCH_LIST: "12.1a"
+      VLLM_ALLOW_LONG_MAX_MODEL_LEN: "1"
+      VLLM_USE_B12X_MOE: "1"
+      VLLM_SPARSE_INDEXER_MAX_LOGITS_MB: "256"
+      HF_HOME: /cache/huggingface
+      HF_HUB_OFFLINE: "1"
+      VLLM_CACHE_ROOT: /cache/huggingface/vllm-cache
+
+    command:
+      - "serve"
+      - "deepseek-ai/DeepSeek-V4-Flash"
+      - "--served-model-name"
+      - "${INFERENCE_MODEL_ALIAS:-deepseek-v4-flash} deepseek-v4-flash stepfun-ai/Step-3.7-Flash-NVFP4"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+      - "--trust-remote-code"
+      - "--tensor-parallel-size"
+      - "2"
+      - "--pipeline-parallel-size"
+      - "1"
+      - "--kv-cache-dtype"
+      - "fp8"
+      - "--block-size"
+      - "256"
+      - "--max-model-len"
+      - "200000"
+      - "--max-num-seqs"
+      - "4"
+      - "--max-num-batched-tokens"
+      - "8192"
+      - "--gpu-memory-utilization"
+      - "0.8"
+      - "--enable-prefix-caching"
+      - "--speculative-config"
+      - '{"method":"mtp","num_speculative_tokens":2}'
+      - "--tokenizer-mode"
+      - "deepseek_v4"
+      - "--distributed-executor-backend"
+      - "mp"
+      - "--tool-call-parser"
+      - "deepseek_v4"
+      - "--enable-auto-tool-choice"
+      - "--reasoning-parser"
+      - "deepseek_v4"
+      - "--enable-flashinfer-autotune"
+      - "--nnodes"
+      - "2"
+      - "--node-rank"
+      - "0"
+      - "--master-addr"
+      - "${MASTER_ADDR:-10.0.1.1}"
+      - "--master-port"
+      - "29501"
