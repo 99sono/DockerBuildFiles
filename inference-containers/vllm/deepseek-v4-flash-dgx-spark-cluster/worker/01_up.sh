@@ -1,24 +1,12 @@
 #!/bin/bash
-# Start the WORKER node container on this machine (spark02, node-rank=1).
-# Headless — no API server, only participates in NCCL collective.
-#
-# Usage: sudo ./01_up.sh
-#
-# IMPORTANT: Start the WORKER FIRST, then the HEAD.
-set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$SCRIPT_DIR"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../../../../commonScripts/lib.sh"
 
-if [ ! -f ../.env ]; then
-  if [ -f ../.env.example ]; then
-    cp ../.env.example ../.env
-    echo "Created ../.env from .env.example — edit it with your settings."
-  else
-    echo "WARNING: no ../.env or ../.env.example found. Using defaults."
-  fi
+# Ensure local .env exists (copy from parent if needed)
+if [ ! -f "$SCRIPT_DIR/.env" ] && [ -f "$SCRIPT_DIR/../.env" ]; then
+  cp "$SCRIPT_DIR/../.env" "$SCRIPT_DIR/.env"
+  echo "Created $SCRIPT_DIR/.env from parent .env"
 fi
 
-docker compose up -d
-echo ""
-echo "Worker container launched. Now start the HEAD node on spark01."
-echo "Monitor: docker compose logs -f"
+load_env
+docker_compose_up

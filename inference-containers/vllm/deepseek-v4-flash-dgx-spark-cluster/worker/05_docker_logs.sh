@@ -1,6 +1,4 @@
 #!/bin/bash
-# Follow WORKER node logs.
-set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$SCRIPT_DIR"
-docker compose logs -f --tail=100
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../../../../commonScripts/lib.sh"
+docker_logs_follow_compose docker-compose.yml

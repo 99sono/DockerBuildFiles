@@ -1,6 +1,5 @@
 #!/bin/bash
-# Stop the HEAD node container.
-set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$SCRIPT_DIR"
-docker compose down
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../../../../commonScripts/lib.sh"
+load_env
+docker_compose_down

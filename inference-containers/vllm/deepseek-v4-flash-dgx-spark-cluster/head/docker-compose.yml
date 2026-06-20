@@ -15,7 +15,6 @@ services:
         hard: -1
     volumes:
       - ~/.cache/huggingface:/cache/huggingface
-    env_file: ../.env
     environment:
       NCCL_IB_DISABLE: "0"
       NCCL_IB_HCA: "${NCCL_IB_HCA:-rocep1s0f0,roceP2p1s0f0}"
@@ -39,6 +38,8 @@ services:
       - "deepseek-ai/DeepSeek-V4-Flash"
       - "--served-model-name"
       - "${INFERENCE_MODEL_ALIAS:-deepseek-v4-flash} deepseek-v4-flash stepfun-ai/Step-3.7-Flash-NVFP4"
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
       - "--host"
       - "0.0.0.0"
       - "--port"
