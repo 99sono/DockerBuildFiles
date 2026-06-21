@@ -21,7 +21,12 @@ RESPONSE=$(curl -s --max-time 30 http://localhost:8000/v1/chat/completions \
   exit 1
 }
 
-LAST_CHUNK=$(echo "$RESPONSE" | grep -a 'data: ' | tail -1)
+ALL_CHUNKS=$(echo "$RESPONSE" | grep -a 'data: ' | grep -v 'data: \[DONE\]')
+LAST_CHUNK=$(echo "$ALL_CHUNKS" | tail -1)
+
+echo "All stream chunks:"
+echo "$ALL_CHUNKS"
+echo ""
 
 echo "Last stream chunk:"
 echo "$LAST_CHUNK" | head -c 2000

@@ -47,9 +47,14 @@ resolve_common_dir() {
 # Returns: 0 always (no-op if .env is absent).
 load_env() {
   local script_dir
-  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  local caller="${BASH_SOURCE[1]:-}"
+  if [ -n "$caller" ]; then
+    script_dir="$(cd "$(dirname "$caller")" && pwd)"
+  else
+    script_dir="$PWD"
+  fi
   if [ -f "$script_dir/.env" ]; then
-    export $(grep -v '^#' "$script_dir/.env" | xargs)
+    export $(sed 's/[[:space:]]*#.*//; /^[[:space:]]*$/d' "$script_dir/.env" | xargs)
   fi
 }
 
