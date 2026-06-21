@@ -1,15 +1,19 @@
 # Open WebUI — Host Network Mode (for DeepSeek-V4-Flash cluster)
 
-This variant uses `network_mode: host` and connects to the inference API on
-`localhost:8000`. It is specifically designed for the DeepSeek-V4-Flash dual-Spark
-cluster, where the head container uses host networking (required for RoCE/RDMA).
+This variant uses bridge networking but points directly at the DeepSeek
+head node's management IP (`192.168.1.55:8000`). It is designed for the
+DeepSeek-V4-Flash dual-Spark cluster, where the head container uses
+`network_mode: host` (required for RoCE/RDMA) and therefore isn't reachable
+via Docker DNS as `inference-server`.
 
 ## When to use this
 
-Use this when running the web UI on the **same node as the head** of a
-host-networked inference cluster (like `deepseek-v4-flash-dgx-spark-cluster`).
-The container shares the host network stack, so it can reach the vLLM API at
-`localhost:8000` directly.
+Use this when the inference server uses `network_mode: host` instead of
+bridge networking. This happens when the server needs direct access to
+physical devices (InfiniBand/RoCE for multi-node GPU communication).
+
+The web-UI container itself uses standard bridge networking — only the
+API endpoint changes from the Docker DNS name to the head node's static IP.
 
 ## When to use the devnetwork version instead
 
@@ -22,11 +26,11 @@ That version resolves the server via Docker DNS as `inference-server` on the
 
 | Aspect | devnetwork | hostnetwork |
 |--------|-----------|-------------|
-| Network mode | Bridge (`development-network`) | Host |
-| API URL | `http://inference-server:8000/v1` | `http://localhost:8000/v1` |
-| Port | `11435:8080` (remapped) | `8080` (native) |
-| Use case | Single-node bridge-net servers | Multi-node host-net clusters (DeepSeek) |
-| Run on | Any node with dev-network | Same node as the inference head |
+| Network mode | Bridge (`development-network`) | Bridge (`development-network`) |
+| API URL | `http://inference-server:8000/v1` | `http://192.168.1.55:8000/v1` |
+| Port | `11435:8080` | `11436:8080` |
+| Use case | Bridge-net inference servers | Host-net inference clusters (DeepSeek) |
+| Run on | Any node with dev-network | Any node that can reach spark01 |
 
 ## Usage
 
@@ -46,4 +50,4 @@ That version resolves the server via Docker DNS as `inference-server` on the
 
 ## Access
 
-Once running, open `http://<host-ip>:8080` in your browser.
+Once running, open `http://spark01:11436` in your browser.

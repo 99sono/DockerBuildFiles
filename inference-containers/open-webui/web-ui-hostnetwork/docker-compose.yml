@@ -4,14 +4,21 @@ services:
     platform: linux/arm64
     container_name: open-webui-host
     hostname: web-ui-server
-    network_mode: "host"
+    ports:
+      - "11436:8080"
     volumes:
       - open-webui-host:/app/backend/data
     environment:
-      - OPENAI_API_BASE_URL=http://localhost:8000/v1
+      - OPENAI_API_BASE_URL=http://192.168.1.55:8000/v1
       - OPENAI_API_KEY=${INFERENCE_API_KEY:-dummy-key}
       - WEBUI_AUTH=${WEBUI_AUTH:-false}
     restart: no
+    networks:
+      - development-network
 
 volumes:
   open-webui-host:
+
+networks:
+  development-network:
+    external: true
