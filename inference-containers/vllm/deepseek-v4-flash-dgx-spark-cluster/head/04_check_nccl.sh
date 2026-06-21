@@ -65,6 +65,7 @@ for hca in rocep1s0f0 roceP2p1s0f0; do
     if echo "$gid" | grep -q "^0000:.*ffff:"; then
       best_idx="$i"
       best_gid="$gid"
+      break  # first match, not last
     fi
   done
   if [ -n "$best_idx" ]; then
@@ -107,10 +108,24 @@ echo ""
 
 # ---- 6. Docker GPU access ----
 echo "--- 6. Docker GPU Access ---"
-if docker info 2>/dev/null | grep -q "Runtimes:.*nvidia"; then
+if docker info 2>/dev/null | grep -q "nvidia" && docker info 2>/dev/null | grep -qi "runtimes"; then
   pass "Docker NVIDIA runtime available"
+elif docker run --rm --gpus all nvidia/cuda:12.5.0-base-ubuntu22.04 nvidia-smi 2>/dev/null | grep -q "NVIDIA-SMI"; then
+  pass "Docker NVIDIA runtime available (verified via GPU access)"
 else
   fail "Docker NVIDIA runtime NOT available — install nvidia-container-toolkit"
+fi
+
+GPU_CONTAINER="nvidia/cuda:12.5.0-base-ubuntu22.04"
+if docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | grep -q "nvidia/cuda:12.5.0-base-ubuntu22.04"; then
+  HAS_IMAGE=true
+else
+  HAS_IMAGE=false
+fi
+
+if [ "$HAS_IMAGE" = false ]; then
+  warn "  Pulling nvidia/cuda:12.5.0-base-ubuntu22.04 for GPU test (first time only)..."
+  docker pull nvidia/cuda:12.5.0-base-ubuntu22.04 > /dev/null 2>&1 || true
 fi
 
 if docker run --rm --gpus all nvidia/cuda:12.5.0-base-ubuntu22.04 nvidia-smi 2>/dev/null | grep -q "NVIDIA-SMI"; then
