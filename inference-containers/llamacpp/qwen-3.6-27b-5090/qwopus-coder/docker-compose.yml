@@ -1,0 +1,79 @@
+services:
+  qwopus-coder-server:
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda13
+    container_name: qwopus36-27b-coder-5090
+    hostname: inference-server
+    platform: linux/amd64
+    ports:
+      - "${INFERENCE_SERVER_PORT:-8000}:8000"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - /dev/shm:/dev/shm
+    shm_size: "32g"
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64
+      - HF_HOME=/root/.cache/huggingface
+      - NVIDIA_VISIBLE_DEVICES=0
+    command:
+      - "-hf"
+      # Model: Qwopus3.6-27B-Coder MTP quantization (Q5_K_M) by Jackrong.
+      # Benchmarked at 67% SWE-bench Verified (no-thinking) on RTX 5090 @ ~100 t/s.
+      - "Jackrong/Qwopus3.6-27B-Coder-MTP-GGUF:Q5_K_M"
+      - "--alias"
+      - "${INFERENCE_MODEL_ALIAS:-qwopus3.6-27b-coder}"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "${INFERENCE_SERVER_PORT:-8000}"
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
+      - "--n-gpu-layers"
+      - "999"
+      - "--flash-attn"
+      - "on"
+      - "--cache-type-k"
+      - "q8_0"
+      - "--cache-type-v"
+      - "q8_0"
+    # Single slot — Ferrari, not school bus
+      - "--parallel"
+      - "1"
+      - "--ctx-size"
+      - "262144"
+      # --- THREADING OPTIMIZATION ---
+      - "--threads"
+      - "12"
+      - "--threads-batch"
+      - "24"
+      # --- SPECULATIVE DECODING (MTP) ---
+      - "--spec-type"
+      - "draft-mtp"
+      - "--spec-draft-n-max"
+      - "2"
+      - "--spec-draft-p-min"
+      - "0.8"
+      # --- SAMPLING ---
+      - "--temp"
+      - "1.0"
+      - "--top-p"
+      - "0.95"
+      - "--top-k"
+      - "20"
+      - "--presence-penalty"
+      - "1.5"
+      # No mmproj — this is a text-only coder model, free up VRAM
+      - "--no-mmproj"
+      # force system to keep model in RAM rather than swapping or compressing
+      - "--mlock"
+    networks:
+      - development-network
+networks:
+  development-network:
+    external: true

@@ -5,7 +5,7 @@
 # Use 05_a_follow_logs.sh for live tail instead.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../../commonScripts/lib.sh"
+source "$SCRIPT_DIR/../../../../commonScripts/lib.sh"
 load_env
 
 CONTAINER="qwen-3.6-27b-mtp-5090"

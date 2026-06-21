@@ -219,7 +219,7 @@ hf_download_with_check() {
   local env_name="${1:?Usage: hf_download_with_check <env_name> <model_id> [file] [force]}"
   local model_id="$2"
   local model_file="${3:-}"
-  local force="$4"
+  local force="${4:-false}"
 
   if ! conda_env_exists "$env_name"; then
     echo "❌ Conda env '$env_name' not found. Run 00_b and 00_c first." >&2; exit 1
