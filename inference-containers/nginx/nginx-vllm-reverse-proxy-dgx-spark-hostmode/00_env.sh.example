@@ -4,28 +4,22 @@
 #
 # This file is for bash scripts (04_test_curl.sh, etc.), NOT docker-compose.
 # Docker-compose uses .env files; bash scripts use .sh env files.
-#
-# Shared values (VLLM_API_KEY) are loaded from .env if available,
-# so you only need to set them once.
 
 # ============================================================
-# Load shared values from .env (docker-compose configuration)
+# vLLM API KEY
 # ============================================================
-# SCRIPT_DIR is set by the parent script (01_up.sh, 04_test_curl.sh, etc.)
-# to the directory containing this file, so .env is in the same directory.
-if [ -n "${SCRIPT_DIR:-}" ] && [ -f "$SCRIPT_DIR/.env" ]; then
-  set -a
-  source "$SCRIPT_DIR/.env"
-  set +a
-fi
+# Set your vLLM API key. If you don't require authentication,
+# you can keep the default `dummy-key`.
+#
+# This key is used in the Authorization header:
+#   Authorization: Bearer $VLLM_API_KEY
+VLLM_API_KEY=dummy-key
 
 # ============================================================
 # DGX HOSTNAME
 # ============================================================
 # Set the hostname of the DGX server that vLLM is running on.
 # This is used to construct URLs for testing.
-# Defaults to localhost for local testing.
-# If you set DGX_IP in .env, update this to match.
 DGX_HOSTNAME=localhost
 
 # ============================================================
