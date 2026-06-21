@@ -15,6 +15,13 @@ services:
         hard: -1
     volumes:
       - ~/.cache/huggingface:/cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     environment:
       NCCL_IB_DISABLE: "0"
       NCCL_IB_HCA: "${NCCL_IB_HCA:-rocep1s0f0,roceP2p1s0f0}"
@@ -29,11 +36,13 @@ services:
       VLLM_ALLOW_LONG_MAX_MODEL_LEN: "1"
       VLLM_USE_B12X_MOE: "1"
       VLLM_SPARSE_INDEXER_MAX_LOGITS_MB: "256"
+      CUDA_VISIBLE_DEVICES: "0"
       HF_HOME: /cache/huggingface
       HF_HUB_OFFLINE: "1"
       VLLM_CACHE_ROOT: /cache/huggingface/vllm-cache
 
     command:
+      - "vllm"
       - "serve"
       - "deepseek-ai/DeepSeek-V4-Flash"
       - "--served-model-name"

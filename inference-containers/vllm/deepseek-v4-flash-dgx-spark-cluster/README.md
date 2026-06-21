@@ -124,7 +124,7 @@ docker run --rm -v ~/.cache/huggingface:/cache/huggingface \
 
 ```bash
 cd worker
-sudo ./01_up.sh
+./01_up.sh
 ```
 
 Wait a few seconds for the container to initialize.
@@ -133,7 +133,7 @@ Wait a few seconds for the container to initialize.
 
 ```bash
 cd head
-sudo ./01_up.sh
+./01_up.sh
 ```
 
 ### Step 5: Wait for model loading
@@ -167,10 +167,10 @@ On each node:
 
 ```bash
 # On spark01:
-cd head && sudo ./02_down.sh
+cd head && ./02_down.sh
 
 # On spark02:
-cd worker && sudo ./02_down.sh
+cd worker && ./02_down.sh
 ```
 
 ## Startup Order
