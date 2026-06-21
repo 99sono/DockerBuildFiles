@@ -4,8 +4,11 @@ services:
     platform: linux/arm64
     container_name: open-webui-host
     hostname: web-ui-server
-    ports:
-      - "11435:8080"
+    # Ports commented out to ensure communication is done via the nginx proxy on HTTPS.
+    # The web UI is now accessible at https://spark01/ instead of http://spark01:11435/.
+    # To restore direct HTTP access, uncomment below and remove from nginx.conf routing.
+    # ports:
+    #   - "11435:8080"
     volumes:
       - open-webui-host:/app/backend/data
     environment:
