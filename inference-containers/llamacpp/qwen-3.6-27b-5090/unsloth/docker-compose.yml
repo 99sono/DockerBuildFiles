@@ -1,4 +1,4 @@
-services:
+ot copy services:
   qwen-27b-mtp-server:
     # CUDA 12.8+ base ensures Blackwell SM120 support is native.
     image: ghcr.io/ggml-org/llama.cpp:server-cuda13
@@ -15,7 +15,7 @@ services:
     # 2026-05-17 10:32:17.832 | 
     # 2026-05-17 10:32:17.832 | 
     # 2026-05-17 10:32:17.832 | to show complete usage, run with -h
-        # image: ghcr.io/ggml-org/llama.cpp:server-cuda13
+    # image: ghcr.io/ggml-org/llama.cpp:server-cuda13
     container_name: qwen-3.6-27b-mtp-5090
     hostname: inference-server
     platform: linux/amd64
