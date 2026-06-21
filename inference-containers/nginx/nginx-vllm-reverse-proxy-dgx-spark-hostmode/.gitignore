@@ -1,0 +1,14 @@
+# Environment and secrets
+.env
+00_env.sh
+
+# SSL certificates (copied from sibling folder, not generated here)
+*.key
+*.crt
+*.pem
+nginx-proxy/ssl/*.crt
+nginx-proxy/ssl/*.key
+nginx-proxy/ssl/*.pem
+
+# Logs
+logs/
