@@ -1,26 +1,4 @@
 # ============================================================
-# vLLM API KEY
-# ============================================================
-VLLM_API_KEY=your-api-key-here
-
-# ============================================================
-# INFERENCE SERVER ADDRESS
-# ============================================================
-# Address of the inference server running in host mode.
-# Since both nginx (hostmode) and vLLM share the host network,
-# use the host's management IP or a resolvable hostname.
-# Examples:
-#   INFERENCE_SERVER=http://192.168.1.55:8000   (management IP)
-#   INFERENCE_SERVER=http://localhost:8000       (shared loopback)
-INFERENCE_SERVER=http://192.168.1.55:8000
-
-# ============================================================
-# DGX HOSTNAME (for external HTTPS access via nginx)
-# ============================================================
-# Hostname of the DGX Spark machine.
-DGX_HOSTNAME=spark-8ddc
-
-# ============================================================
 # CONTAINER / PROJECT NAMES
 # ============================================================
 NGINX_CONTAINER_NAME=nginx-proxy-hostmode
