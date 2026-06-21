@@ -117,6 +117,58 @@ The same IP scheme, but the head's GID lands at index 2 and the worker's at
 index 4. Using a shared `.env` with `NCCL_IB_GID_INDEX="4,4"` on both nodes
 would be **correct for the worker but broken for the head**.
 
+#### Reading a GID Table (Intuition)
+
+When you dump a GID table, you see lines like this:
+
+```
+rocep1s0f0  GID 0: fe80:0000:0000:0000:4a21:0bff:fe96:8ddd
+rocep1s0f0  GID 1: fe80:0000:0000:0000:4a21:0bff:fe96:8ddd
+rocep1s0f0  GID 2: 0000:0000:0000:0000:0000:ffff:0a00:0101
+rocep1s0f0  GID 3: 0000:0000:0000:0000:0000:ffff:0a00:0101
+rocep1s0f0  GID 4: 0000:0000:0000:0000:0000:0000:0000:0000
+rocep1s0f0  GID 5: 0000:0000:0000:0000:0000:0000:0000:0000
+rocep1s0f0  GID 6: 0000:0000:0000:0000:0000:0000:0000:0000
+rocep1s0f0  GID 7: 0000:0000:0000:0000:0000:0000:0000:0000
+```
+
+There are only **three types** of entries. Train your eye:
+
+| Prefix | Meaning | Action |
+|--------|---------|--------|
+| `fe80:*` | Link-local IPv6 (auto-generated from MAC) | **Ignore** — works only on the same wire, not cross-node |
+| `0000:*:ffff:*` | **Mapped IPv4** ← our RoCE IPs | **This is what we need** |
+| `0000:*:0000` | Empty slot | Ignore |
+
+The IPv4 address is hex-encoded in the last 4 byte-pairs. For `10.0.1.1`:
+
+```
+0a  00  01  01
+10   0   1   1   →  10.0.1.1
+```
+
+And for `10.0.2.2`:
+
+```
+0a  00  02  02
+10   0   2   2   →  10.0.2.2
+```
+
+**The trick:** Scroll down the table looking for the *first* non-`fe80`, non-empty
+line. That's your GID index. Ignore `fe80:` lines entirely — they're just noise.
+
+In the head's table above, indices 0-1 are `fe80:` noise, index 2 is the first
+IPv4 entry. In the worker's table, there are more `fe80:` entries (4 per port),
+so the first IPv4 lands at index 4 instead.
+
+**Why the difference?** The worker happened to register extra link-local IPv6
+addresses before the IPv4 was added (different boot order or IP assignment
+sequence). Perfectly normal. The two nodes don't need to agree on the index —
+they just need each to use *their own* correct index.
+
+Also note: each IPv4 appears **twice** (e.g., indices 2 and 3, or 4 and 5).
+This duplication is normal — NCCL can use either. Always use the first one.
+
 #### How to find the right GID index
 
 **Method 1 — Automated (recommended):** Run the diagnostic script on each node:
