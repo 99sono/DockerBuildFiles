@@ -10,7 +10,7 @@ load_env
 
 CONTAINER="deepseek-v4-flash-worker"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
-METADATA_DIR="${SCRIPT_DIR}/../metadata"
+METADATA_DIR="${SCRIPT_DIR}/metadata"
 mkdir -p "$METADATA_DIR"
 OUTPUT_FILE="${METADATA_DIR}/${TIMESTAMP}_${CONTAINER}_log_dump.txt"
 
