@@ -1,4 +1,4 @@
-# NGINX Reverse Proxy for vLLM HTTPS — Host Network Backend
+ # NGINX Reverse Proxy for vLLM HTTPS — Host Network Backend
 
 This variant proxies to a vLLM inference server running in **host network mode** (e.g. the DeepSeek V4 Flash cluster). The nginx container itself uses standard bridge networking on the `development-network`.
 
