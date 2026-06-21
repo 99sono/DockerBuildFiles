@@ -74,28 +74,103 @@ GLOO_SOCKET_IFNAME=enP7s7
 TP_SOCKET_IFNAME=enP7s7
 ```
 
-**GID index verification:** Before running, confirm the correct GID index on both nodes:
+---
+
+### ⚠️ The GID Index Pitfall (Critical)
+
+This is the most common cause of NCCL failures in a dual-Spark setup.
+
+#### What is a GID?
+
+A **GID** (Global Identifier) is the RDMA equivalent of an IP address. On a RoCE
+(RDMA over Converged Ethernet) link, every IP assigned to the network interface
+is registered in a **GID table** — a small lookup table (8 entries, index 0–7)
+that maps an index number to an IPv4 or IPv6 address.
+
+When NCCL wants to establish a QP (Queue Pair) connection between two nodes, it
+needs to tell the InfiniBand hardware: *"use GID index X to reach the remote
+node"*. If the wrong index is configured, NCCL reads an empty or wrong GID, the
+QP transition fails, and the cluster handshake crashes.
+
+#### How GIDs relate to IPv4
+
+Each ConnectX-7 port has its own GID table. An IPv4 address like `10.0.1.1`
+appears in the table as a **mapped IPv4 GID** — the format is
+`0000:0000:0000:0000:0000:ffff:0a00:0101` where the last 4 bytes are the hex
+encoding of the IP (`0a` = 10, `00` = 0, `01` = 1, `01` = 1).
+
+The index at which this entry appears is **not deterministic** — it depends on
+the order in which IPs were assigned and how the kernel registered link-local
+IPv6 addresses at boot. Two identical DGX Sparks can have their IPv4 GID at
+different indices.
+
+For example, on our two nodes:
+
+| Node | Port | IPv4 | GID index (this node) |
+|------|------|------|----------------------|
+| spark01 (head) | `rocep1s0f0` | 10.0.1.1 | **2** |
+| spark01 (head) | `roceP2p1s0f0` | 10.0.2.1 | **2** |
+| spark02 (worker) | `rocep1s0f0` | 10.0.1.2 | **4** |
+| spark02 (worker) | `roceP2p1s0f0` | 10.0.2.2 | **4** |
+
+The same IP scheme, but the head's GID lands at index 2 and the worker's at
+index 4. Using a shared `.env` with `NCCL_IB_GID_INDEX="4,4"` on both nodes
+would be **correct for the worker but broken for the head**.
+
+#### How to find the right GID index
+
+**Method 1 — Automated (recommended):** Run the diagnostic script on each node:
 
 ```bash
-# Auto-detect with the diagnostic script:
 ./04_check_nccl.sh
+```
 
-# Or manually:
+This scans GID indices 0–7 on both HCAs, finds the first IPv4 entry
+(containing `ffff:0a00:xxxx`), reports the detected index, and warns if your
+`.env` has a different value.
+
+**Method 2 — Manual:**
+
+```bash
 for i in $(seq 0 7); do
-  echo -n "GID $i: "
+  echo -n "rocep1s0f0  GID $i: "
   cat /sys/class/infiniband/rocep1s0f0/ports/1/gids/$i
 done
 ```
 
-Look for a GID containing `ffff:0a00:xxxx` — that's your 10.0.x.x IP.
+Look for a line containing `ffff:0a00:xxxx` — that index is your
+`NCCL_IB_GID_INDEX` value for that port. Repeat for `roceP2p1s0f0`.
+Both ports on the same node almost always use the same index.
 
-⚠️ **The GID index often differs per node.** In our setup:
-- Head (spark01): index **2** (`NCCL_IB_GID_INDEX="2,2"`)
-- Worker (spark02): index **4** (`NCCL_IB_GID_INDEX="4,4"`)
+#### Setting the value
 
-Use the per-node `.env.example` files:
-- `head/.env.example` (pre-configured for head)
-- `worker/.env.example` (pre-configured for worker)
+`NCCL_IB_GID_INDEX` takes one index per HCA, comma-separated:
+
+| Syntax | Meaning |
+|--------|---------|
+| `"2,2"` | Both ports use GID index 2 (head) |
+| `"4,4"` | Both ports use GID index 4 (worker) |
+
+**The two nodes must use different values if their GID tables differ.**
+The `.env` files are per-node and cannot be blindly identical.
+
+Use the per-node `.env.example` templates:
+- `head/.env.example` — pre-configured with index `2,2`
+- `worker/.env.example` — pre-configured with index `4,4`
+
+Copy the relevant one to `.env` on each node:
+
+```bash
+# On spark01:
+cp head/.env.example head/.env
+
+# On spark02:
+cp worker/.env.example worker/.env
+```
+
+> **If you see** `ibv_modify_qp failed with 22 Invalid argument` and
+> `remote GID ::` or `local GID ::` in the container logs, your
+> `NCCL_IB_GID_INDEX` is wrong on at least one node.
 
 ## Usage
 
