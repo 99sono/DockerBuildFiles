@@ -77,14 +77,25 @@ TP_SOCKET_IFNAME=enP7s7
 **GID index verification:** Before running, confirm the correct GID index on both nodes:
 
 ```bash
-# Check which GID index holds your RoCEv2 IPv4 address
+# Auto-detect with the diagnostic script:
+./04_check_nccl.sh
+
+# Or manually:
 for i in $(seq 0 7); do
   echo -n "GID $i: "
   cat /sys/class/infiniband/rocep1s0f0/ports/1/gids/$i
 done
 ```
 
-Look for a GID containing `ffff:0a00:xxxx` — that's your 10.0.x.x IP. Use that index in `NCCL_IB_GID_INDEX`. On our setup it is index **4** for both ports.
+Look for a GID containing `ffff:0a00:xxxx` — that's your 10.0.x.x IP.
+
+⚠️ **The GID index often differs per node.** In our setup:
+- Head (spark01): index **2** (`NCCL_IB_GID_INDEX="2,2"`)
+- Worker (spark02): index **4** (`NCCL_IB_GID_INDEX="4,4"`)
+
+Use the per-node `.env.example` files:
+- `head/.env.example` (pre-configured for head)
+- `worker/.env.example` (pre-configured for worker)
 
 ## Usage
 
@@ -193,9 +204,25 @@ Always start **worker first, then head**. The head coordinates the NCCL rendezvo
 The container needs `--privileged` + `--ulimit memlock=-1`. Check the container was started with these flags.
 
 ### Cluster handshake hangs
+Run the diagnostic script on both nodes:
+```bash
+./04_check_nccl.sh
+```
+
+Or manually:
 - Verify both RoCE ports show LinkUp: `cat /sys/class/infiniband/*/ports/1/state`
 - Verify you can ping both RoCE IPs between nodes: `ping 10.0.1.2` from spark01
 - Check GID indices: `for i in 0 1 2 3 4 5 6 7; do cat /sys/class/infiniband/rocep1s0f0/ports/1/gids/$i; done`
+
+### NCCL "ibv_modify_qp failed" / GID mismatch
+If NCCL fails with `Call to ibv_modify_qp failed` and `remote GID ::` or
+`local GID ::`, the `NCCL_IB_GID_INDEX` is wrong for that node.
+Run `./04_check_nccl.sh` — it auto-detects the correct index and warns on
+mismatch. The GID index often differs between head and worker.
+
+**On our setup:**
+- Head (spark01): `NCCL_IB_GID_INDEX="2,2"`
+- Worker (spark02): `NCCL_IB_GID_INDEX="4,4"`
 
 ### Slow performance
 - Match firmware/driver/kernel versions on both nodes — the recipe's author saw **+140% prefill** from this alone
