@@ -1,36 +1,52 @@
-# Open WebUI — Host Network Mode (for DeepSeek-V4-Flash cluster)
+# Open WebUI — Host Network Mode (for host-net inference clusters)
 
-This variant uses bridge networking but points directly at the DeepSeek
-head node's management IP (`192.168.1.55:8000`). It is designed for the
-DeepSeek-V4-Flash dual-Spark cluster, where the head container uses
-`network_mode: host` (required for RoCE/RDMA) and therefore isn't reachable
-via Docker DNS as `inference-server`.
+Connects to an inference server that uses `network_mode: host` (required for
+RoCE/RDMA multi-node GPU communication). Unlike the devnetwork variant, this
+cannot rely on Docker DNS — it connects via a static IP configured in `.env`.
 
 ## When to use this
 
 Use this when the inference server uses `network_mode: host` instead of
-bridge networking. This happens when the server needs direct access to
-physical devices (InfiniBand/RoCE for multi-node GPU communication).
+bridge networking. This is necessary for multi-node clusters that need
+direct access to InfiniBand/RoCE hardware (like the DeepSeek-V4-Flash
+dual-Spark cluster).
 
-The web-UI container itself uses standard bridge networking — only the
-API endpoint changes from the Docker DNS name to the head node's static IP.
+The web-UI container itself uses standard bridge networking — the only
+difference from the devnetwork variant is the API endpoint URL.
 
 ## When to use the devnetwork version instead
 
 Use `../web-ui-devnetwork/` when the inference server uses Docker bridge
-networking (the standard setup for single-node vLLM or llama.cpp containers).
-That version resolves the server via Docker DNS as `inference-server` on the
-`development-network` bridge.
+networking (the standard single-node setup). That version resolves the
+server via Docker DNS as `inference-server` on the `development-network`
+bridge.
+
+## Configuration
+
+Edit `.env` (copy from `.env.example` first):
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `INFERENCE_SERVER_URL` | `http://192.168.1.55:8000/v1` | The head node's API endpoint |
+| `INFERENCE_API_KEY` | `dummy-key` | API key set on the vLLM server |
+| `WEBUI_AUTH` | `false` | Enable Open WebUI login |
+
+The default `INFERENCE_SERVER_URL` points to spark01's management IP (`192.168.1.55`).
+Change it if your cluster head is at a different address.
 
 ## Quick reference
 
 | Aspect | devnetwork | hostnetwork |
 |--------|-----------|-------------|
 | Network mode | Bridge (`development-network`) | Bridge (`development-network`) |
-| API URL | `http://inference-server:8000/v1` | `http://192.168.1.55:8000/v1` |
-| Port | `11435:8080` | `11436:8080` |
-| Use case | Bridge-net inference servers | Host-net inference clusters (DeepSeek) |
-| Run on | Any node with dev-network | Any node that can reach spark01 |
+| API URL | `http://inference-server:8000/v1` (Docker DNS) | `http://192.168.1.55:8000/v1` (configurable) |
+| Port | `11435:8080` | `11435:8080` |
+| Use case | Bridge-net inference servers | Host-net clusters (DeepSeek) |
+| Run on | Any node with `development-network` | Any node that can reach spark01 |
 
 ## Usage
 
@@ -50,4 +66,4 @@ That version resolves the server via Docker DNS as `inference-server` on the
 
 ## Access
 
-Once running, open `http://spark01:11436` in your browser.
+Open `http://spark01:11435` in your browser.

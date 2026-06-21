@@ -5,11 +5,11 @@ services:
     container_name: open-webui-host
     hostname: web-ui-server
     ports:
-      - "11436:8080"
+      - "11435:8080"
     volumes:
       - open-webui-host:/app/backend/data
     environment:
-      - OPENAI_API_BASE_URL=http://192.168.1.55:8000/v1
+      - OPENAI_API_BASE_URL=${INFERENCE_SERVER_URL:-http://192.168.1.55:8000/v1}
       - OPENAI_API_KEY=${INFERENCE_API_KEY:-dummy-key}
       - WEBUI_AUTH=${WEBUI_AUTH:-false}
     restart: no
