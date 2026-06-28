@@ -1,13 +1,13 @@
 services:
   mistral-small4-119b-nvfp4:
-    image: vllm/vllm-openai:nightly
-    container_name: mistral-small4-119b-nvfp4-nightly
+    image: aidendle94/sparkrun-vllm-ds4-gb10:production-ready
+    container_name: mistral-small4-119b-nvfp4-gb10
     hostname: inference-server
     platform: linux/arm64
     volumes:
-      - ~/.cache/huggingface:/root/.cache/huggingface
+      - ~/.cache/huggingface:/cache/huggingface
       - /dev/shm:/dev/shm
-    shm_size: "16g"
+    shm_size: "8g"
     ipc: host
 
     mem_limit: 100g
@@ -34,13 +34,12 @@ services:
       OMPI_MCA_btl_tcp_if_include: eth0
       MN_IF_NAME: eth0
 
-      # --- NVIDIA FORUM WORKAROUNDS (2026-03-17) ---
-      # MLA (head_size=320) not supported on SM 12.1a by all backends.
-      # Disable to fall back to standard attention (larger KV cache but stable).
-      VLLM_MLA_DISABLE: "1"
+      # --- CUDA ARCHITECTURE ---
+      TORCH_CUDA_ARCH_LIST: "12.1a"
 
     command:
-      - "--model"
+      - "vllm"
+      - "serve"
       - "mistralai/Mistral-Small-4-119B-2603-NVFP4"
       - "--served-model-name"
       - "${INFERENCE_MODEL_ALIAS:-mistral-small4-119b}"
@@ -53,33 +52,32 @@ services:
       - "${INFERENCE_SERVER_PORT:-8000}"
 
       # --- MEMORY & CONTEXT ---
-      # 40K cap = NVIDIA's proven max with standard attention + 66 GB model.
-      # Model loads to ~66 GiB on 128 GB UMA.
+      # Model loads to ~66 GiB. DGX Spark 128GB UMA.
       - "--gpu-memory-utilization"
-      - "0.75"
+      - "0.80"
       - "--max-model-len"
       - "262144"
       - "--max-num-seqs"
-      - "2"
+      - "3"
 
       # --- BATCHING ---
       - "--max-num-batched-tokens"
       - "8192"
 
       # --- ARCHITECTURE ---
-      # Standard attention (MLA disabled via env var), flashinfer backend.
+      # TRITON_MLA: native MLA with head_size=320 support on this image.
+      # CUTLASS auto-selected for NVFP4 GEMM (MARLIN has PTX toolchain mismatch).
       - "--dtype"
       - "auto"
       - "--kv-cache-dtype"
       - "fp8"
       - "--attention-backend"
-      - "flashinfer"
-      - "--moe-backend"
-      - "marlin"
+      - "TRITON_MLA"
       - "--enable-prefix-caching"
       - "--enable-chunked-prefill"
 
       # --- MISTRAL NATIVE FORMATS ---
+      # Use Mistral-native tokenizer/config/load for tekken.json v15 support.
       - "--tokenizer-mode"
       - "mistral"
       - "--config-format"
@@ -88,14 +86,21 @@ services:
       - "mistral"
 
       # --- CRASH AVOIDANCE ---
+      # Skip CUDA graph capture — most common freeze point after model load on UMA.
       - "--enforce-eager"
 
-      # --- PARSERS ---
+      # --- MISTRAL PARSERS ---
       - "--tool-call-parser"
       - "mistral"
       - "--enable-auto-tool-choice"
       - "--reasoning-parser"
       - "mistral"
+
+      # --- SPECULATIVE DECODING (EAGLE3) ---
+      # Uncomment below to enable EAGLE3 draft head (~13GB additional VRAM).
+      # Requires `--attention-backend FLASH_ATTN_MLA` and may need reduced context.
+      # - "--speculative-config"
+      # - '{"model":"mistralai/Mistral-Small-4-119B-2603-eagle","num_speculative_tokens":3,"method":"eagle","max_model_len":"32768"}'
 
     networks:
       - development-network
