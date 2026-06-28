@@ -1,24 +1,31 @@
-# NGINX Reverse Proxy for vLLM HTTPS (Self-Signed Certificate)
+# NGINX Reverse Proxy with Dual Routing: Inference + Open WebUI
 
-This guide sets up an Nginx reverse proxy to add HTTPS in front of an already running vLLM container. The proxy handles SSL termination, request buffering (disabled for streaming), and security hardening.
+This nginx reverse proxy provides HTTPS termination and request routing for two upstream services running on the `development-network` Docker network:
+
+- **`/inference/`** → Inference server (llamacpp, vLLM, etc.) at port 8000
+- **`/`** → Open WebUI at port 8080 (WebSocket support for streaming)
+
+No docker-compose changes needed — both upstream hostnames (`inference-server`, `web-ui-server`) resolve via Docker DNS when the respective containers join `development-network`.
 
 ## Key Features
 
 1. Self-signed certificate (clients must install it explicitly)
 2. Streaming support (`proxy_buffering off`)
 3. Blocks the vulnerable `/invocations` endpoint (CVE-2026-22778 mitigation)
-4. HTTP → HTTPS redirect on port 80
+4. Dual routing: `/inference/` → inference API, `/` → Open WebUI
+5. WebSocket upgrade support for real-time chat
 
 ## Reference
 
-This setup follows the official install guide:
+This setup follows the install guide:
 [HTTPS via Nginx Reverse Proxy with vLLM](https://github.com/99sono/install_guides/blob/main/nvidia_dgx_spark_vllm/HTTPS-via-nginx-reverse-proxy-with-vLLM.md)
 
 ## Prerequisites
 
-1. A running vLLM container on the `development-network` Docker network, without publishing its port to the host.
-2. Docker and Docker Compose installed on the same host.
-3. The DGX Spark hostname: `spark-8ddc`
+1. An inference container (llamacpp, vLLM, etc.) on `development-network` with `hostname: inference-server`, without publishing its port to the host.
+2. An Open WebUI container on `development-network` with `hostname: web-ui-server`.
+3. Docker and Docker Compose installed on the same host.
+4. The DGX Spark hostname: `spark01`
 
 ## Quick Start
 
@@ -45,40 +52,10 @@ bash 04_test_curl.sh
 ## API Endpoint
 
 ```
-https://spark-8ddc/v1/chat/completions
-https://spark-8ddc/v1/models
-https://spark-8ddc/health
+https://spark01/inference/v1/chat/completions
+https://spark01/inference/v1/models
+https://spark01/                        → Open WebUI
 ```
-
-## Expected Output
-
-Here is an example of what `bash 04_test_curl.sh` outputs when running correctly:
-
-```
-Warning: 00_env.sh not found. Auto-copying from 00_env.sh.example ...
-Testing nginx reverse proxy with vLLM ...
-
-=== Test 1: GET /health (HTTPS with -k) ===
-
-{"status":"ok"}
-
-=== Test 2: GET /v1/models (HTTPS with -k) ===
-{"object":"list","data":[{"id":"qwen3.6-35b","object":"model","created":1778346339,"owned_by":"vllm","root":"RedHatAI/Qwen3.6-35B-A3B-NVFP4","parent":null,"max_model_len":262144,"permission":[{"id":"modelperm-a13d647e6540f345","object":"model_permission","created":1778346339,"allow_create_engine":false,"allow_sampling":true,"allow_logprobs":true,"allow_search_indices":false,"allow_view":true,"allow_fine_tuning":false,"organization":"*","group":null,"is_blocking":false}]}]}
-
-=== Test 3: POST /v1/chat/completions ===
-{"id":"chatcmpl-87d17189b9199620","object":"chat.completion","created":1778346339,"model":"qwen3.6-35b","choices":[{"index":0,"message":{"role":"assistant","content":"Hello! I hope you're having a wonderful day.","refusal":null}}],"usage":{"prompt_tokens":16,"total_tokens":1050,"completion_tokens":1034}}
-
-=== Test 4: GET /invocations (should return 403) ===
-HTTP Status: 403
-
-All tests complete.
-```
-
-**Notes:**
-- Test 1 (`/health`) returns `{"status":"ok"}` with no body output when healthy.
-- Test 2 (`/v1/models`) lists available models with metadata.
-- Test 3 (`/v1/chat/completions`) sends a prompt and receives a completion.
-- Test 4 (`/invocations`) should return HTTP 403 (Forbidden) as this endpoint is blocked for security.
 
 ## Docker Compose Configuration
 
@@ -86,7 +63,7 @@ All tests complete.
 |-----------|-------|---------|
 | `image` | `nginx:latest` | Latest nginx container |
 | `ports` | `80:80, 443:443` | HTTP and HTTPS exposure |
-| `network` | `development-network` (external) | Shared with existing vLLM container |
+| `network` | `development-network` (external) | Shared with inference + webui containers |
 
 ## nginx.conf
 
@@ -100,6 +77,11 @@ http {
     proxy_buffering off;
     proxy_request_buffering off;
 
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        ''      close;
+    }
+
     server {
         listen 443 ssl;
         server_name _;
@@ -107,22 +89,46 @@ http {
         ssl_certificate     /etc/nginx/ssl/nginx-selfsigned.crt;
         ssl_certificate_key /etc/nginx/ssl/nginx-selfsigned.key;
 
-        # Security hardening
         ssl_protocols TLSv1.2 TLSv1.3;
         ssl_ciphers HIGH:!aNULL:!MD5;
 
-        # Block the vulnerable /invocations endpoint
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+        proxy_connect_timeout 60s;
+
+        # Block vulnerable /invocations endpoint
         location = /invocations {
             return 403;
         }
 
-        # Proxy everything else to vLLM
-        location / {
-            proxy_pass http://vllm:8000;
+        # Route /inference/ to inference server (llamacpp, vllm, etc.)
+        # Strips "/inference" prefix, so /inference/v1/chat/completions becomes /v1/chat/completions
+        location /inference/ {
+            client_max_body_size 100M;
+
+            rewrite ^/inference(/.*)$ $1 break;
+
+            proxy_pass http://inference-server:8000;
             proxy_set_header Host $proxy_host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # Default route: Open WebUI at root (no subpath, avoids redirect issues)
+        location / {
+            client_max_body_size 100M;
+
+            proxy_pass http://web-ui-server:8080;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            # WebSocket support for real-time chat streaming
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
         }
     }
 }
@@ -132,10 +138,13 @@ http {
 
 | Setting | Value | Purpose |
 |---------|-------|---------|
-| `server_name` | `_` | Matches any incoming Host header |
-| `proxy_set_header Host` | `$proxy_host` | Forwards the upstream container name |
+| `/inference/` | `rewrite` + `proxy_pass inference-server:8000` | Strips prefix, forwards to inference API |
+| `/` | `proxy_pass web-ui-server:8080` | Open WebUI as root application |
+| `proxy_set_header Host` (`/inference/`) | `$proxy_host` | Forwards upstream container name |
+| `proxy_set_header Host` (`/`) | `$host` | Preserves original Host header for webui |
 | `proxy_buffering` | `off` | Streaming passthrough for token-by-token output |
 | `/invocations` | `return 403` | Blocks vulnerable endpoint |
+| WebSocket upgrade | `map` + `proxy_set_header Upgrade` | Real-time chat streaming |
 
 ## Logging Scripts
 
@@ -155,9 +164,9 @@ http {
 
 | File | Purpose |
 |------|---------|
-| `docker-compose.yml` | nginx service — shares the external `development-network` with existing vLLM |
-| `nginx.conf` | nginx configuration with TLS, streaming support, and proxy settings |
-| `00_b_generate_self_signed_cert.sh` | Generates self-signed certificate with CN=spark-8ddc |
+| `docker-compose.yml` | nginx service — shares the external `development-network` with inference + webui |
+| `nginx.conf` | nginx configuration with TLS, dual routing, streaming, and WebSocket support |
+| `00_b_generate_self_signed_cert.sh` | Generates self-signed certificate with CN=spark01 |
 | `01_a_install_ca_cert.sh` | Installs certificate in Ubuntu's system trust store |
 | `01_b_remove_ca_cert.sh` | Removes certificate from Ubuntu's system trust store |
 | `01_c_verify_ca_cert.sh` | Verifies if certificate is installed in Ubuntu's trust store |
@@ -173,7 +182,7 @@ http {
 
 ## Client-Side Certificate Installation
 
-Every client that needs to access the vLLM API must trust the self-signed certificate.
+Every client that needs to access the inference API via HTTPS must trust the self-signed certificate.
 
 ### On Linux (Ubuntu/Debian)
 
@@ -215,9 +224,9 @@ import requests, os
 os.environ["REQUESTS_CA_BUNDLE"] = "/etc/ssl/certs/ca-certificates.crt"
 
 response = requests.post(
-    "https://spark-8ddc/v1/completions",
+    "https://spark01/inference/v1/chat/completions",
     headers={"Authorization": "Bearer your-api-key"},
-    json={"prompt": "Hello", "max_tokens": 10},
+    json={"model": "gemma-4-12b", "messages": [{"role": "user", "content": "Hello"}]},
 )
 ```
 
@@ -229,7 +238,7 @@ import httpx, os
 ca_bundle = "/etc/ssl/certs/ca-certificates.crt"
 
 client = openai.OpenAI(
-    base_url="https://spark-8ddc/v1",
+    base_url="https://spark01/inference/v1",
     api_key="your-api-key",
     http_client=httpx.Client(trust_env=True, verify=ca_bundle),
 )
@@ -241,9 +250,9 @@ client = openai.OpenAI(
 import requests
 
 response = requests.post(
-    "https://spark-8ddc/v1/completions",
+    "https://spark01/inference/v1/chat/completions",
     headers={"Authorization": "Bearer your-api-key"},
-    json={"prompt": "Hello", "max_tokens": 10},
+    json={"model": "gemma-4-12b", "messages": [{"role": "user", "content": "Hello"}]},
     verify="./nginx-proxy/ssl/nginx-selfsigned.crt"
 )
 ```
@@ -264,8 +273,8 @@ nginx-vllm-reverse-proxy-dgx-spark/
 ├── 02_down.sh                # Stop the reverse proxy
 ├── 03_enter_container.sh     # Enter the nginx container
 ├── 04_test_curl.sh           # Test HTTPS endpoints
-├── 05_a_follow_logs.sh          # Follow container logs in real-time
-├── 05_b_dump_logs.sh            # Dump container logs to file
+├── 05_a_follow_logs.sh       # Follow container logs in real-time
+├── 05_b_dump_logs.sh         # Dump container logs to file
 ├── 06_a_nginx_reload_config.sh  # Reload nginx config in-place
 ├── 06_b_nginx_verify_config.sh  # Validate nginx config syntax
 ├── docker-compose.yml        # nginx service configuration
@@ -309,7 +318,7 @@ nginx: [emerg] host not found in upstream "inference-server" in /etc/nginx/nginx
 
 ```bash
 # 1. Start the inference server (vLLM or llamacpp)
-cd ~/dev/DockerBuildFiles/vllm/<your-model-folder>
+cd ~/dev/DockerBuildFiles/inference-containers/vllm/<your-model-folder>
 docker compose up -d
 
 # 2. Verify it's running and has the correct hostname
@@ -317,9 +326,11 @@ docker inspect --format '{{.Config.Hostname}}' <container-name>
 # Should output: inference-server
 
 # 3. Then start nginx
-cd ~/dev/DockerBuildFiles/nginx/nginx-vllm-reverse-proxy-dgx-spark
+cd ~/dev/DockerBuildFiles/inference-containers/nginx/nginx-vllm-reverse-proxy-dgx-spark
 ./01_up.sh
 ```
+
+Note: The same applies to `web-ui-server`. If Open WebUI is not running, the root `/` route will fail. Start both upstreams before nginx, or start nginx first and use `06_a_nginx_reload_config.sh` after bringing them up.
 
 ## Timeout Configuration
 
@@ -331,18 +342,18 @@ Nginx defaults to a 60-second `proxy_read_timeout`. Most LLM generation requests
 upstream timed out (110: Connection timed out) while reading response header from upstream
 ```
 
-You will see no 502 in the access log — just a sudden disconnect while vLLM is still generating. The agent will receive a `connection reset` and abort mid-stream.
+You will see no 502 in the access log — just a sudden disconnect while the inference server is still generating. The agent will receive a `connection reset` and abort mid-stream.
 
 ### Symptoms
 
-- vLLM logs show `Running: 4 reqs` → `3 reqs` → `2 reqs` dropping mid-generation
+- Inference server logs show requests dropping mid-generation
 - nginx `error.log` shows `upstream timed out (110: Connection timed out)`
 - Agent output files are empty or truncated
 - Multi-agent tasks fail — one agent completes, others die
 
 ### Required `proxy_read_timeout`
 
-Add these settings to `nginx.conf` (server or location block) for long generation tasks:
+These settings are already present in `nginx.conf`:
 
 ```nginx
 proxy_read_timeout 600s;   # 10 minutes — default 60s is too short for multi-agent
@@ -356,15 +367,16 @@ proxy_connect_timeout 60s;
 # Check nginx error log for timed-out connections
 tail -f logs/error.log | grep "upstream timed out"
 
-# Check if vLLM was still generating when connection dropped
-# Compare timestamps: nginx error log vs vLLM Engine request count
+# Check if inference server was still generating when connection dropped
+# Compare timestamps: nginx error log vs inference server Engine request count
 ```
 
 ## Troubleshooting
 
 | Symptom | Likely Cause | Solution |
 |---------|--------------|----------|
-| 502 Bad Gateway | Nginx cannot reach vLLM | Check that both containers are on the same Docker network and vLLM is running. |
-| SSL errors (client side) | Certificate not trusted | Install the self-signed cert on the client as shown in Client-Side Certificate Installation. |
-| Streaming hangs | Buffering re-enabled | Ensure `proxy_buffering off;` is present in the `http` block. |
-| Host header mismatch | vLLM expects a specific host | Use `proxy_set_header Host $proxy_host;` (already in the config). |
+| 502 Bad Gateway on `/inference/` | Nginx cannot reach inference server | Check container is on `development-network` with `hostname: inference-server` |
+| 502 Bad Gateway on `/` | Nginx cannot reach Open WebUI | Check container is on `development-network` with `hostname: web-ui-server` |
+| SSL errors (client side) | Certificate not trusted | Install the self-signed cert on the client as shown above |
+| Streaming hangs | Buffering re-enabled | Ensure `proxy_buffering off;` is present in the `http` block |
+| Host header mismatch | Wrong `$proxy_host` vs `$host` | Use `$proxy_host` for inference, `$host` for webui (already correct in config) |
