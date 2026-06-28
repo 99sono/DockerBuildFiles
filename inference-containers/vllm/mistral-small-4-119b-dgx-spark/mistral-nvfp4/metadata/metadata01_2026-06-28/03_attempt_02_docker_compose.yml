@@ -1,0 +1,114 @@
+services:
+  mistral-small4-119b-nvfp4:
+    image: aidendle94/sparkrun-vllm-ds4-gb10:production-ready
+    container_name: mistral-small4-119b-nvfp4-gb10
+    hostname: inference-server
+    platform: linux/arm64
+    volumes:
+      - ~/.cache/huggingface:/cache/huggingface
+      - /dev/shm:/dev/shm
+    shm_size: "8g"
+    ipc: host
+
+    mem_limit: 100g
+    memswap_limit: 100g
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+    environment:
+      VLLM_WORKER_MULTIPROC_METHOD: spawn
+      PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+      HF_HUB_ENABLE_HF_TRANSFER: "1"
+      FLASHINFER_DISABLE_VERSION_CHECK: "1"
+      CUTE_DSL_ARCH: sm_121a
+      VLLM_USE_RUST_FRONTEND: "0"
+      TRANSFORMERS_OFFLINE: "0"
+      HF_HUB_OFFLINE: "0"
+      GLOO_SOCKET_IFNAME: eth0
+      NCCL_SOCKET_IFNAME: eth0
+      TP_SOCKET_IFNAME: eth0
+      OMPI_MCA_btl_tcp_if_include: eth0
+      MN_IF_NAME: eth0
+
+      # --- NVIDIA FORUM WORKAROUNDS (2026-03-17) ---
+      # MLA (head_size=320) not supported on SM 12.1a by any backend.
+      # Disable to fall back to standard attention:
+      VLLM_MLA_DISABLE: "1"
+      # Use MARLIN instead of CUTLASS for NVFP4 GEMM (CUTLASS unstable on Spark):
+      VLLM_NVFP4_GEMM_BACKEND: marlin
+      VLLM_USE_FLASHINFER_MOE_FP4: "0"
+      VLLM_TEST_FORCE_FP8_MARLIN: "1"
+
+    command:
+      - "vllm"
+      - "serve"
+      - "mistralai/Mistral-Small-4-119B-2603-NVFP4"
+      - "--served-model-name"
+      - "${INFERENCE_MODEL_ALIAS:-mistral-small4-119b}"
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
+      - "--trust-remote-code"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "${INFERENCE_SERVER_PORT:-8000}"
+
+      # --- MEMORY & CONTEXT ---
+      # Model loads to ~66 GiB. DGX Spark 128GB UMA.
+      - "--gpu-memory-utilization"
+      - "0.80"
+      - "--max-model-len"
+      - "262144"
+      - "--max-num-seqs"
+      - "3"
+
+      # --- BATCHING ---
+      - "--max-num-batched-tokens"
+      - "8192"
+
+      # --- ARCHITECTURE ---
+      # MLA disabled via env var VLLM_MLA_DISABLE=1 → standard attention.
+      # No --attention-backend flag needed.
+      - "--dtype"
+      - "auto"
+      - "--kv-cache-dtype"
+      - "fp8"
+      - "--enable-prefix-caching"
+      - "--enable-chunked-prefill"
+
+      # --- MISTRAL NATIVE FORMATS ---
+      # Required with VLLM_MLA_DISABLE=1 for proper weight loading.
+      - "--tokenizer-mode"
+      - "mistral"
+      - "--config-format"
+      - "mistral"
+      - "--load-format"
+      - "mistral"
+
+      # --- CRASH AVOIDANCE ---
+      # Skip CUDA graph capture — most common freeze point after model load on UMA.
+      - "--enforce-eager"
+
+      # --- MISTRAL PARSERS ---
+      - "--tool-call-parser"
+      - "mistral"
+      - "--enable-auto-tool-choice"
+      - "--reasoning-parser"
+      - "mistral"
+
+      # --- SPECULATIVE DECODING (EAGLE3) ---
+      # Uncomment below to enable EAGLE3 draft head (~13GB additional VRAM).
+      # Requires `--attention-backend FLASH_ATTN_MLA` and may need reduced context.
+      # - "--speculative-config"
+      # - '{"model":"mistralai/Mistral-Small-4-119B-2603-eagle","num_speculative_tokens":3,"method":"eagle","max_model_len":"32768"}'
+
+    networks:
+      - development-network
+
+networks:
+  development-network:
+    external: true
