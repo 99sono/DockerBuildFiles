@@ -15,7 +15,7 @@ load_dotenv()
 
 TEST_PROMPT_FILE = Path("test/test_file_01_prompt.md")
 OUTPUT_FILE = Path("test/test_output_01.md")
-URL = os.environ.get("INFERENCE_SERVER_URL", "https://localhost/v1")
+URL = os.environ.get("INFERENCE_SERVER_URL", "https://localhost/inference/v1")
 MODEL = os.environ.get("INFERENCE_MODEL_ALIAS", "gemma-4-26b")
 API_KEY = os.environ.get("INFERENCE_API_KEY", "dummy-key")
 

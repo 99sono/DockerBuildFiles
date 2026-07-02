@@ -25,7 +25,7 @@ except ImportError:
     print("❌ 'requests' package not found. Install with: pip install requests")
     sys.exit(1)
 
-URL = os.environ.get("INFERENCE_SERVER_URL", "https://localhost/v1")
+URL = os.environ.get("INFERENCE_SERVER_URL", "https://localhost/inference/v1")
 MODEL = os.environ.get("INFERENCE_MODEL_ALIAS", "qwen3.6-27b")
 API_KEY = os.environ.get("INFERENCE_API_KEY", "dummy-key")
 
