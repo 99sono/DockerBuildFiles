@@ -55,6 +55,8 @@ services:
       - "--async-scheduling"
       - "--safetensors-load-strategy"
       - "prefetch"
+      - "--speculative-config"
+      - '{"method":"mtp","num_speculative_tokens":1}'
     networks:
       - development-network
 networks:
