@@ -56,7 +56,7 @@ services:
       - "--safetensors-load-strategy"
       - "prefetch"
       - "--speculative-config"
-      - '{"method":"mtp","num_speculative_tokens":1}'
+      - '{"method":"mtp","num_speculative_tokens":2}'
     networks:
       - development-network
 networks:
