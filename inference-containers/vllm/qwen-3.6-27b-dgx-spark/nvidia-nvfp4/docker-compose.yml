@@ -1,66 +1,62 @@
 services:
-  qwen-3-6-27b-nvfp4-mtp-turbo:
-    image: vllm/vllm-openai:v0.20.2-ubuntu2404
-    container_name: qwen-3-6-27b-nvfp4-mtp-turbo
+  qwen36-27b-nvfp4:
+    image: vllm/vllm-openai:nightly
+    container_name: qwen36-27b-nvfp4-nightly
     hostname: inference-server
-    platform: linux/amd64
-
-    ports:
-      - "8000:8000"
-
+    platform: linux/arm64
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface
       - /dev/shm:/dev/shm
-
     shm_size: "32g"
     ipc: host
-
     deploy:
       resources:
         reservations:
           devices:
             - capabilities: [gpu]
-
     environment:
       VLLM_WORKER_MULTIPROC_METHOD: spawn
-      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+      PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
       HF_XET_HIGH_PERFORMANCE: "1"
-
+      VLLM_USE_RUST_FRONTEND: "0"
     command:
-      - "sakamakismile/Qwen3.6-27B-Text-NVFP4-MTP"
+      - "--model"
+      - "nvidia/Qwen3.6-27B-NVFP4"
       - "--served-model-name"
-      - "qwen3.6-27b-text"
+      - "${INFERENCE_MODEL_ALIAS:-qwen3.6-27b}"
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
       - "--trust-remote-code"
       - "--host"
       - "0.0.0.0"
       - "--port"
-      - "8000"
+      - "${INFERENCE_SERVER_PORT:-8000}"
       - "--gpu-memory-utilization"
-      - "0.9"
-      # TurboQuant target: 256K context
+      - "0.70"
       - "--max-model-len"
       - "262144"
       - "--max-num-seqs"
-      - "2"
+      - "8"
       - "--max-num-batched-tokens"
-      - "16384"
+      - "65536"
       - "--kv-cache-dtype"
-      - "turboquant_k8v4"
+      - "fp8"
+      - "--dtype"
+      - "auto"
       - "--quantization"
       - "modelopt"
-      - "--enable-prefix-caching"
-      - "--enable-chunked-prefill"
       - "--reasoning-parser"
       - "qwen3"
-      - "--language-model-only"
-      - "--moe-backend"
-      - "cutlass"
-      - "--speculative-config"
-      - '{"method":"qwen3_5_mtp","num_speculative_tokens":3}'
-
+      - "--tool-call-parser"
+      - "qwen3_coder"
+      - "--enable-auto-tool-choice"
+      - "--enable-prefix-caching"
+      - "--enable-chunked-prefill"
+      - "--async-scheduling"
+      - "--safetensors-load-strategy"
+      - "prefetch"
     networks:
       - development-network
-
 networks:
   development-network:
     external: true

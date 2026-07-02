@@ -7,7 +7,7 @@ CACHE_DIR="$HOME/.cache/huggingface"
 echo "Pre-downloading model: $MODEL_ID to global cache"
 mkdir -p "$CACHE_DIR"
 
-export HF_HUB_ENABLE_HF_TRANSFER=1
+export HF_XET_HIGH_PERFORMANCE=1
 echo "Starting download..."
 hf download "$MODEL_ID"
 

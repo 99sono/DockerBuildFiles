@@ -23,7 +23,7 @@ services:
     environment:
       VLLM_WORKER_MULTIPROC_METHOD: spawn
       PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
-      HF_HUB_ENABLE_HF_TRANSFER: "1"
+      HF_XET_HIGH_PERFORMANCE: "1"
       # NVIDIA DGX Spark specific env vars
       VLLM_USE_FLASHINFER_MOE_FP4: "0"
       VLLM_FP8_MOE_BACKEND: flashinfer_cutlass

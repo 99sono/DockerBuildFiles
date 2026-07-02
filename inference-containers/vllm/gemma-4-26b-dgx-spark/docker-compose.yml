@@ -28,7 +28,7 @@ services:
       VLLM_WORKER_MULTIPROC_METHOD: spawn
       # Critical for unified memory management on Spark
       PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
-      HF_HUB_ENABLE_HF_TRANSFER: "1"
+      HF_XET_HIGH_PERFORMANCE: "1"
 
     command:
       # --- MODEL (NVIDIA official NVFP4 checkpoint) ---

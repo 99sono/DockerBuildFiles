@@ -21,7 +21,7 @@ services:
     environment:
       VLLM_WORKER_MULTIPROC_METHOD: spawn
       PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
-      HF_HUB_ENABLE_HF_TRANSFER: "1"
+      HF_XET_HIGH_PERFORMANCE: "1"
       # Asynchronous CPU/GPU overlap for max speed
       # VLLM_USE_V2_MODEL_RUNNER: "1"
 

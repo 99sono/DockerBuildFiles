@@ -28,7 +28,7 @@ services:
             - capabilities: [gpu]
 
     environment:
-      HF_HUB_ENABLE_HF_TRANSFER: "1"
+      HF_XET_HIGH_PERFORMANCE: "1"
 
     command:
       # Serve the Qwen3.6-35B-A3B NVFP4 model via Atlas inference engine

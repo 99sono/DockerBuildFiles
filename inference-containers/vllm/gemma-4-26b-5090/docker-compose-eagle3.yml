@@ -24,7 +24,7 @@ services:
 
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
-      - HF_HUB_ENABLE_HF_TRANSFER=1
+      - HF_XET_HIGH_PERFORMANCE=1
       - VLLM_WORKER_MULTIPROC_METHOD=spawn
       - VLLM_ATTENTION_BACKEND=FLASHINFER
     command:

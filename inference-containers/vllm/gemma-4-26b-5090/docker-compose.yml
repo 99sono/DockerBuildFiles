@@ -29,7 +29,7 @@ services:
       PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
 
       # Optional but useful for faster model pulls
-      HF_HUB_ENABLE_HF_TRANSFER: "1"
+      HF_XET_HIGH_PERFORMANCE: "1"
 
     command:
       # Model (NVIDIA official NVFP4 checkpoint)

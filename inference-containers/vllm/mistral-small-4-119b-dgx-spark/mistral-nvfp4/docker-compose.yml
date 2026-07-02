@@ -22,7 +22,7 @@ services:
     environment:
       VLLM_WORKER_MULTIPROC_METHOD: spawn
       PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
-      HF_HUB_ENABLE_HF_TRANSFER: "1"
+      HF_XET_HIGH_PERFORMANCE: "1"
       FLASHINFER_DISABLE_VERSION_CHECK: "1"
       CUTE_DSL_ARCH: sm_121a
       VLLM_USE_RUST_FRONTEND: "0"
