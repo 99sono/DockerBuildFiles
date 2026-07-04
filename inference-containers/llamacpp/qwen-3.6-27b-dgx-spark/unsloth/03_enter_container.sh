@@ -1,4 +1,4 @@
 #!/bin/bash
-source ../../../commonScripts/lib.sh
+source ../../../../commonScripts/lib.sh
 load_env
 docker_exec_enter "qwen-3.6-27b-mtp-dgx-spark"

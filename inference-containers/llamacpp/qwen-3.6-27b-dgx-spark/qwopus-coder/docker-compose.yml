@@ -1,0 +1,72 @@
+services:
+  qwopus-coder-server:
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda13
+    container_name: qwopus36-27b-coder-dgx-spark
+    hostname: inference-server
+    platform: linux/arm64
+    ports:
+      - "${INFERENCE_SERVER_PORT:-8000}:8000"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - /dev/shm:/dev/shm
+    shm_size: "70g"
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=0
+      - HF_HOME=/root/.cache/huggingface
+    command:
+      - "-hf"
+      - "Jackrong/Qwopus3.6-27B-Coder-MTP-GGUF:Q5_K_M"
+      - "--alias"
+      - "${INFERENCE_MODEL_ALIAS:-qwen3.6-27b}"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "${INFERENCE_SERVER_PORT:-8000}"
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
+      - "--n-gpu-layers"
+      - "999"
+      - "--flash-attn"
+      - "on"
+      - "--cache-type-k"
+      - "q8_0"
+      - "--cache-type-v"
+      - "q8_0"
+      - "--parallel"
+      - "1"
+      - "--ctx-size"
+      - "131072"
+      - "--batch-size"
+      - "512"
+      - "--ubatch-size"
+      - "512"
+      - "--spec-type"
+      - "draft-mtp"
+      - "--spec-draft-n-max"
+      - "2"
+      - "--spec-draft-p-min"
+      - "0.85"
+      - "--temp"
+      - "1.0"
+      - "--top-p"
+      - "0.95"
+      - "--top-k"
+      - "20"
+      - "--presence-penalty"
+      - "1.5"
+      - "--no-mmproj"
+      - "--mlock"
+    networks:
+      - development-network
+networks:
+  development-network:
+    external: true
