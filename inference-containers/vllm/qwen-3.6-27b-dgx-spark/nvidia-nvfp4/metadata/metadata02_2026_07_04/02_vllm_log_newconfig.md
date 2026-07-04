@@ -1,0 +1,119 @@
+# docker-compose.yml
+
+```yaml
+services:
+  qwen36-27b-nvfp4:
+    image: vllm/vllm-openai:nightly
+    container_name: qwen36-27b-nvfp4-nightly
+    hostname: inference-server
+    platform: linux/arm64
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - ./chat_template.jinja:/workspace/chat_template.jinja
+      - /dev/shm:/dev/shm
+    shm_size: "32g"
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    environment:
+      VLLM_WORKER_MULTIPROC_METHOD: spawn
+      PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+      HF_XET_HIGH_PERFORMANCE: "1"
+      VLLM_USE_RUST_FRONTEND: "0"
+    command:
+      - "--model"
+      - "nvidia/Qwen3.6-27B-NVFP4"
+      - "--served-model-name"
+      - "${INFERENCE_MODEL_ALIAS:-qwen3.6-27b}"
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
+      - "--trust-remote-code"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "${INFERENCE_SERVER_PORT:-8000}"
+      - "--gpu-memory-utilization"
+      - "0.70"
+      - "--max-model-len"
+      - "262144"
+      - "--max-num-seqs"
+      - "4"
+      - "--max-num-batched-tokens"
+      - "65536"
+      - "--kv-cache-dtype"
+      - "fp8"
+      - "--dtype"
+      - "auto"
+      - "--quantization"
+      - "modelopt"
+      - "--reasoning-parser"
+      - "qwen3"
+      - "--tool-call-parser"
+      - "qwen3_coder"
+      - "--enable-auto-tool-choice"
+      - "--chat-template"
+      - "/workspace/chat_template.jinja"
+      - "--default-chat-template-kwargs"
+      - '{"enable_thinking":true,"preserve_thinking":true}'
+      - "--enable-prefix-caching"
+      - "--enable-chunked-prefill"
+      - "--async-scheduling"
+      - "--attention-backend"
+      - "flashinfer"
+      - "--moe-backend"
+      - "marlin"
+      - "--load-format"
+      - "fastsafetensors"
+      - "--limit-mm-per-prompt"
+      - '{"image":4}'
+      - "--allowed-media-domains"
+      - '*'
+      - "--override-generation-config"
+      - '{"temperature":1.0,"top_p":0.95,"top_k":20}'
+      - "--safetensors-load-strategy"
+      - "prefetch"
+      - "--speculative-config"
+      - '{"method":"mtp","num_speculative_tokens":3,"moe_backend":"triton"}'
+    networks:
+      - development-network
+networks:
+  development-network:
+    external: true
+```
+
+# docker logs
+
+```
+WARNING 07-04 13:52:15 [argparse_utils.py:257] With `vllm serve`, you should provide the model as a positional argument or in a config file instead of via the `--model` option. The `--model` option will be removed in a future version.
+(APIServer pid=1) INFO 07-04 13:52:15 [api_utils.py:339] 
+(APIServer pid=1) INFO 07-04 13:52:15 [api_utils.py:339]        █     █     █▄   ▄█
+(APIServer pid=1) INFO 07-04 13:52:15 [api_utils.py:339]  ▄▄ ▄█ █     █     █ ▀▄▀ █  version 0.23.1rc1.dev771+gf329ce405
+(APIServer pid=1) INFO 07-04 13:52:15 [api_utils.py:339]   █▄█▀ █     █     █     █  model   nvidia/Qwen3.6-27B-NVFP4
+(APIServer pid=1) INFO 07-04 13:52:15 [api_utils.py:339]    ▀▀  ▀▀▀▀▀ ▀▀▀▀▀ ▀     ▀
+(APIServer pid=1) INFO 07-04 13:52:15 [api_utils.py:339] 
+(APIServer pid=1) INFO 07-04 13:52:15 [api_utils.py:273] non-default args: {'model_tag': 'nvidia/Qwen3.6-27B-NVFP4', 'chat_template': '/workspace/chat_template.jinja', 'default_chat_template_kwargs': {'enable_thinking': True, 'preserve_thinking': True}, 'enable_auto_tool_choice': True, 'tool_call_parser': 'qwen3_coder', 'host': '0.0.0.0', 'api_key': ['REDACTED'], 'model': 'nvidia/Qwen3.6-27B-NVFP4', 'trust_remote_code': True, 'allowed_media_domains': ['*'], 'max_model_len': 262144, 'quantization': 'modelopt', 'served_model_name': ['qwen3.6-27b'], 'override_generation_config': {'temperature': 1.0, 'top_p': 0.95, 'top_k': 20}, 'load_format': 'fastsafetensors', 'safetensors_load_strategy': 'prefetch', 'attention_backend': 'flashinfer', 'reasoning_parser': 'qwen3', 'gpu_memory_utilization': 0.7, 'kv_cache_dtype': 'fp8', 'enable_prefix_caching': True, 'limit_mm_per_prompt': {'image': 4}, 'max_num_batched_tokens': 65536, 'max_num_seqs': 4, 'enable_chunked_prefill': True, 'async_scheduling': True, 'moe_backend': 'marlin', 'speculative_config': {'method': 'mtp', 'num_speculative_tokens': 3, 'moe_backend': 'triton'}}
+(APIServer pid=1) WARNING 07-04 13:52:15 [envs.py:2035] Unknown vLLM environment variable detected: VLLM_BUILD_COMMIT
+(APIServer pid=1) WARNING 07-04 13:52:15 [envs.py:2035] Unknown vLLM environment variable detected: VLLM_BUILD_PIPELINE
+(APIServer pid=1) WARNING 07-04 13:52:15 [envs.py:2035] Unknown vLLM environment variable detected: VLLM_BUILD_URL
+(APIServer pid=1) WARNING 07-04 13:52:15 [envs.py:2035] Unknown vLLM environment variable detected: VLLM_IMAGE_TAG
+(APIServer pid=1) Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+(APIServer pid=1) INFO 07-04 13:52:24 [model.py:606] Resolved architecture: Qwen3_5ForConditionalGeneration
+(APIServer pid=1) INFO 07-04 13:52:24 [model.py:1736] Using max model len 262144
+(APIServer pid=1) INFO 07-04 13:52:24 [cache.py:286] Using fp8 data type to store kv cache. It reduces the GPU memory footprint and boosts the performance. Meanwhile, it may cause accuracy drop without a proper scaling factor
+(APIServer pid=1) INFO 07-04 13:52:30 [model.py:606] Resolved architecture: Qwen3_5MTP
+(APIServer pid=1) INFO 07-04 13:52:30 [model.py:1736] Using max model len 262144
+(APIServer pid=1) WARNING 07-04 13:52:30 [speculative.py:809] Enabling num_speculative_tokens > 1 will run multiple times of forward on same MTP layer,which may result in lower acceptance rate
+(APIServer pid=1) INFO 07-04 13:52:30 [scheduler.py:252] Chunked prefill is enabled with max_num_batched_tokens=65536.
+(APIServer pid=1) WARNING 07-04 13:52:30 [config.py:563] Mamba cache mode is set to 'align' for Qwen3_5ForConditionalGeneration by default when prefix caching is enabled
+(APIServer pid=1) INFO 07-04 13:52:30 [config.py:583] Warning: Prefix caching in Mamba cache 'align' mode is currently enabled. Its support for Mamba layers is experimental. Please report any issues you may observe.
+(APIServer pid=1) WARNING 07-04 13:52:30 [modelopt.py:384] Detected ModelOpt fp8 checkpoint (quant_algo=FP8). Please note that the format is experimental and could change.
+(APIServer pid=1) WARNING 07-04 13:52:30 [modelopt.py:1028] Detected ModelOpt NVFP4 checkpoint (quant_algo=NVFP4). Please note that the format is experimental and could change in future.
+(APIServer pid=1) WARNING 07-04 13:52:30 [modelopt.py:1028] Detected ModelOpt NVFP4 checkpoint (quant_algo=W4A16_NVFP4). Please note that the format is experimental and could change in future.
+(APIServer pid=1) WARNING 07-04 13:52:30 [modelopt.py:1698] Detected ModelOpt MXFP8 checkpoint. Please note that the format is experimental and could change in future.
+(APIServer pid=1) INFO 07-04 13:52:30 [vllm.py:1042] Asynchronous scheduling is enabled.
+(APIServer pid=1) INFO 07-04 13:52:30 [kernel.py:286] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+(APIServer pid=1) [transformers] The `use_fast` parameter is deprecated and will be removed in a future version. Use `backend="torchvision"` instead of `use_fast=True`, or `backend="pil"` instead of `use_fast=False`.
+```

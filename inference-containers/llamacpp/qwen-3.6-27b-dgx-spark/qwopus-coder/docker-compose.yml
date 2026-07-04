@@ -44,7 +44,7 @@ services:
       - "--parallel"
       - "1"
       - "--ctx-size"
-      - "131072"
+      - "262144"
       - "--batch-size"
       - "512"
       - "--ubatch-size"
