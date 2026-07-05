@@ -8,6 +8,41 @@ All credit goes upstream:
 
 Multi-node vLLM inference serving **DeepSeek-V4-Flash** across two nodes with tensor parallelism (TP=2), dual-port 200G RoCE interconnect.
 
+## Quick Start
+
+Each variant lives in its own subfolder under this directory. Choose one:
+
+### variant01 (MTP fp8 — original recipe)
+
+```bash
+cd variant01-tony2wild-original
+# Image comes pre-built — just pull it:
+./00_a_pull_image.sh
+# Download model (requires conda env):
+./00_b_create_conda_env.sh && ./00_c_install_packages.sh && ./00_d_pre_download_model.sh
+# Start head on spark01, worker on spark02:
+head/01_up.sh    # on spark01
+worker/01_up.sh  # on spark02 (after head is ready)
+```
+
+### variant02 (DSpark NVFP4 — 1M context)
+
+```bash
+cd variant02-dspark-nvfp4
+# Image must be built locally — 4-stage build (overlay + NVFP4 A/B/C):
+./00_pull_base_image.sh
+WORKER_BUILD=0 ./00_a_build_dspark_image.sh              # build locally
+# Set WORKER_HOST in .env, then run again to build on worker:
+./00_a_build_dspark_image.sh                              # builds on worker too
+# Download model:
+./00_b_create_conda_env.sh && ./00_c_install_packages.sh && ./00_d_pre_download_model.sh
+# Start head on spark01, worker on spark02:
+head/01_up.sh    # on spark01
+worker/01_up.sh  # on spark02 (after head is ready)
+```
+
+The build produces the image `vllm-dspark-runtime:dspark-nvfp4-stage-c` — a 22.7GB runtime with the DSpark speculative decoding overlay and NVFP4 KV cache path patched in.
+
 ## Architecture
 
 ```
