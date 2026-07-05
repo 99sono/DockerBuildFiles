@@ -16,29 +16,33 @@ Each variant lives in its own subfolder under this directory. Choose one:
 
 ```bash
 cd variant01-tony2wild-original
-# Image comes pre-built — just pull it:
+# 1. Set up environment config (on BOTH nodes):
+cp .env.example .env           # edit NCCL_IB_GID_INDEX and IPs per node
+# 2. Image comes pre-built — just pull it:
 ./00_a_pull_image.sh
-# Download model (requires conda env):
+# 3. Download model (requires conda env):
 ./00_b_create_conda_env.sh && ./00_c_install_packages.sh && ./00_d_pre_download_model.sh
-# Start head on spark01, worker on spark02:
-head/01_up.sh    # on spark01
-worker/01_up.sh  # on spark02 (after head is ready)
+# 4. Start head on spark01, worker on spark02:
+head/01_up.sh    # on spark01 — copies ../.env into head/.env automatically
+worker/01_up.sh  # on spark02 — copies ../.env into worker/.env automatically
 ```
 
 ### variant02 (DSpark NVFP4 — 1M context)
 
 ```bash
 cd variant02-dspark-nvfp4
-# Image must be built locally — 4-stage build (overlay + NVFP4 A/B/C):
+# 1. Set up environment config (on BOTH nodes):
+cp .env.example .env           # edit NCCL_IB_GID_INDEX and IPs per node
+# 2. Build the Docker image (4-stage: overlay + NVFP4 A/B/C):
 ./00_pull_base_image.sh
 WORKER_BUILD=0 ./00_a_build_dspark_image.sh              # build locally
 # Set WORKER_HOST in .env, then run again to build on worker:
 ./00_a_build_dspark_image.sh                              # builds on worker too
-# Download model:
+# 3. Download model:
 ./00_b_create_conda_env.sh && ./00_c_install_packages.sh && ./00_d_pre_download_model.sh
-# Start head on spark01, worker on spark02:
-head/01_up.sh    # on spark01
-worker/01_up.sh  # on spark02 (after head is ready)
+# 4. Start head on spark01, worker on spark02:
+head/01_up.sh    # on spark01 — copies ../.env into head/.env automatically
+worker/01_up.sh  # on spark02 — copies ../.env into worker/.env automatically
 ```
 
 The build produces the image `vllm-dspark-runtime:dspark-nvfp4-stage-c` — a 22.7GB runtime with the DSpark speculative decoding overlay and NVFP4 KV cache path patched in.
