@@ -62,7 +62,7 @@ cp worker/.env.example worker/.env   # edit NCCL_IB_GID_INDEX and IPs
 # 2. Build image:
 ./00_pull_base_image.sh
 WORKER_BUILD=0 ./00_a_build_dspark_image.sh
-# 3. Sync model cache from head (avoid downloading 40GB twice):
+# 3. On the worker, pull model cache from head (avoid downloading 40GB twice):
 rsync -ahvP --delete "your_user@10.0.1.1:$HOME/.cache/huggingface/hub/" "$HOME/.cache/huggingface/hub/"
 # 4. Start worker (after head is ready):
 worker/01_up.sh
