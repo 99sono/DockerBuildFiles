@@ -1,6 +1,12 @@
 # DeepSeek-V4-Flash — Dual DGX Spark Cluster
 
-Multi-node vLLM inference serving **DeepSeek-V4-Flash** across two DGX Spark (GB10) nodes with tensor parallelism (TP=2), MTP speculative decoding, FP8 KV cache, and dual-port 200G RoCE interconnect.
+Adaptation of [tonyd2wild](https://github.com/tonyd2wild)'s recipes for a local cluster of **ACER Veriton** (head/spark01) + **Gigabyte Top AI** (worker/spark02), both DGX Spark (GB10) class, connected via dual-port 200G RoCE.
+
+All credit goes upstream:
+- **variant02 (DSpark NVFP4)** — [DeepSeek-v4-Flash-DSpark-1M-NVFP4-KV-2x-DGX-Spark](https://github.com/tonyd2wild/DeepSeek-v4-Flash-DSpark-1M-NVFP4-KV-2x-DGX-Spark)
+- **variant01 (MTP fp8)** — [deepseek-v4-flash-dual-spark-recipe](https://github.com/tonyd2wild/deepseek-v4-flash-dual-spark-recipe)
+
+Multi-node vLLM inference serving **DeepSeek-V4-Flash** across two nodes with tensor parallelism (TP=2), dual-port 200G RoCE interconnect.
 
 ## Architecture
 
