@@ -8,4 +8,5 @@ if [ ! -f "$SCRIPT_DIR/.env" ] && [ -f "$SCRIPT_DIR/../.env" ]; then
 fi
 
 load_env
+cd "$SCRIPT_DIR"
 docker_compose_up
