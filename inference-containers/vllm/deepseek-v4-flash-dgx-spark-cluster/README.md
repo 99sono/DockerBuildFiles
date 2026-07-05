@@ -14,35 +14,56 @@ Each variant lives in its own subfolder under this directory. Choose one:
 
 ### variant01 (MTP fp8 — original recipe)
 
+On **spark01 (head):**
 ```bash
 cd variant01-tony2wild-original
-# 1. Set up environment config (on BOTH nodes):
-cp .env.example .env           # edit NCCL_IB_GID_INDEX and IPs per node
-# 2. Image comes pre-built — just pull it:
+# 1. Set up head config:
+cp head/.env.example head/.env   # edit NCCL_IB_GID_INDEX and IPs
+# 2. Pull image:
 ./00_a_pull_image.sh
-# 3. Download model (requires conda env):
+# 3. Download model:
 ./00_b_create_conda_env.sh && ./00_c_install_packages.sh && ./00_d_pre_download_model.sh
-# 4. Start head on spark01, worker on spark02:
-head/01_up.sh    # on spark01 — copies ../.env into head/.env automatically
-worker/01_up.sh  # on spark02 — copies ../.env into worker/.env automatically
+# 4. Start head:
+head/01_up.sh
+```
+
+On **spark02 (worker):**
+```bash
+cd variant01-tony2wild-original
+# 1. Set up worker config (different GID!):
+cp worker/.env.example worker/.env   # edit NCCL_IB_GID_INDEX and IPs
+# 2. Pull image:
+./00_a_pull_image.sh
+# 3. Start worker (after head is ready):
+worker/01_up.sh
 ```
 
 ### variant02 (DSpark NVFP4 — 1M context)
 
+On **spark01 (head):**
 ```bash
 cd variant02-dspark-nvfp4
-# 1. Set up environment config (on BOTH nodes):
-cp .env.example .env           # edit NCCL_IB_GID_INDEX and IPs per node
-# 2. Build the Docker image (4-stage: overlay + NVFP4 A/B/C):
+# 1. Set up head config:
+cp head/.env.example head/.env   # edit NCCL_IB_GID_INDEX and IPs
+# 2. Build Docker image (4-stage: overlay + NVFP4 A/B/C):
 ./00_pull_base_image.sh
-WORKER_BUILD=0 ./00_a_build_dspark_image.sh              # build locally
-# Set WORKER_HOST in .env, then run again to build on worker:
-./00_a_build_dspark_image.sh                              # builds on worker too
+WORKER_BUILD=0 ./00_a_build_dspark_image.sh
 # 3. Download model:
 ./00_b_create_conda_env.sh && ./00_c_install_packages.sh && ./00_d_pre_download_model.sh
-# 4. Start head on spark01, worker on spark02:
-head/01_up.sh    # on spark01 — copies ../.env into head/.env automatically
-worker/01_up.sh  # on spark02 — copies ../.env into worker/.env automatically
+# 4. Start head:
+head/01_up.sh
+```
+
+On **spark02 (worker):**
+```bash
+cd variant02-dspark-nvfp4
+# 1. Set up worker config (different GID!):
+cp worker/.env.example worker/.env   # edit NCCL_IB_GID_INDEX and IPs
+# 2. Build image (rsyncs from head or rebuild):
+./00_pull_base_image.sh
+WORKER_BUILD=0 ./00_a_build_dspark_image.sh
+# 3. Start worker (after head is ready):
+worker/01_up.sh
 ```
 
 The build produces the image `vllm-dspark-runtime:dspark-nvfp4-stage-c` — a 22.7GB runtime with the DSpark speculative decoding overlay and NVFP4 KV cache path patched in.
