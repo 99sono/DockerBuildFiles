@@ -1,6 +1,6 @@
 #!/bin/bash
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../../../commonScripts/lib.sh"
+source "$SCRIPT_DIR/../../../../../commonScripts/lib.sh"
 
 # Ensure local .env exists (copy from parent if needed)
 if [ ! -f "$SCRIPT_DIR/.env" ] && [ -f "$SCRIPT_DIR/../.env" ]; then

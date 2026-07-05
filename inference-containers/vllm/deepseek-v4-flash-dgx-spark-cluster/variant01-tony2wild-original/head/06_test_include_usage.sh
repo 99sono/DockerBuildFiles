@@ -1,6 +1,6 @@
 #!/bin/bash
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../../../commonScripts/lib.sh"
+source "$SCRIPT_DIR/../../../../../commonScripts/lib.sh"
 load_env
 
 echo "Testing stream_options include_usage on head node (localhost:8000)..."

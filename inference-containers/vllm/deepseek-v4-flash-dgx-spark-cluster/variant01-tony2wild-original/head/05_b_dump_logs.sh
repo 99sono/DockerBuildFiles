@@ -1,14 +1,14 @@
 #!/bin/bash
-# Dump worker container logs to a timestamped file in metadata/ for analysis.
+# Dump head container logs to a timestamped file in metadata/ for analysis.
 # Non-following snapshot — full log, no truncation.
 # Sensitive values (api_key) are masked with "dummy-key" before writing.
 # Use 05_a_follow_logs.sh for live tail instead.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../../../commonScripts/lib.sh"
+source "$SCRIPT_DIR/../../../../../commonScripts/lib.sh"
 load_env
 
-CONTAINER="deepseek-v4-flash-worker"
+CONTAINER="deepseek-v4-flash-head"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 METADATA_DIR="${SCRIPT_DIR}/metadata"
 mkdir -p "$METADATA_DIR"
