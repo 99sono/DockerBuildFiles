@@ -1,0 +1,73 @@
+INFO 07-05 08:51:12 [arg_utils.py:753] HF_HUB_OFFLINE is True, replace model_id [deepseek-ai/DeepSeek-V4-Flash-DSpark] to model_path [/cache/huggingface/hub/models--deepseek-ai--DeepSeek-V4-Flash-DSpark/snapshots/62af8fffb2f7030cac4de2f0169f5b8d1101b646]
+WARNING 07-05 08:51:12 [envs.py:2194] Unknown vLLM environment variable detected: VLLM_SKIP_INIT_MEMORY_CHECK
+WARNING 07-05 08:51:12 [envs.py:2194] Unknown vLLM environment variable detected: VLLM_TRITON_MLA_SPARSE
+INFO 07-05 08:51:12 [config.py:801] Detected quantization_config.scale_fmt=ue8m0; enabling UE8M0 for DeepGEMM.
+INFO 07-05 08:51:12 [model.py:617] Resolved architecture: DeepseekV4ForCausalLM
+INFO 07-05 08:51:12 [model.py:1752] Using max model len 1048576
+INFO 07-05 08:51:14 [cache.py:262] Using nvfp4_ds_mla data type to store kv cache. It reduces the GPU memory footprint and boosts the performance. Meanwhile, it may cause accuracy drop without a proper scaling factor
+INFO 07-05 08:51:14 [arg_utils.py:1905] Inferred data_parallel_rank 0 from node_rank 1
+INFO 07-05 08:51:14 [model.py:617] Resolved architecture: DeepSeekV4DSparkModel
+INFO 07-05 08:51:14 [model.py:1752] Using max model len 1048576
+INFO 07-05 08:51:14 [scheduler.py:239] Chunked prefill is enabled with max_num_batched_tokens=8192.
+INFO 07-05 08:51:14 [vllm.py:977] Asynchronous scheduling is enabled.
+INFO 07-05 08:51:14 [kernel.py:274] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+WARNING 07-05 08:51:14 [vllm.py:1719] Truncating max_cudagraph_capture_size to 8
+INFO 07-05 08:51:15 [compilation.py:321] Enabled custom fusions: norm_quant, act_quant
+INFO 07-05 08:51:15 [serve.py:212] Launching vLLM (v0.21.1rc1.dev339+g1967a5627bc3) headless multiproc executor, with head node address 10.0.1.1:25000 for torch.distributed process group.
+(Worker pid=50) INFO 07-05 08:51:18 [parallel_state.py:1422] world_size=2 rank=1 local_rank=0 distributed_init_method=tcp://10.0.1.1:25000 backend=nccl
+(Worker pid=50) INFO 07-05 08:51:56 [nccl.py:24] Found nccl from environment variable VLLM_NCCL_SO_PATH=/opt/env/lib/python3.12/site-packages/nvidia/nccl/lib/libnccl.so.2
+(Worker pid=50) WARNING 07-05 08:51:57 [symm_mem.py:66] SymmMemCommunicator: Device capability 12.1 not supported, communicator is not available.
+(Worker pid=50) INFO 07-05 08:51:57 [nccl.py:24] Found nccl from environment variable VLLM_NCCL_SO_PATH=/opt/env/lib/python3.12/site-packages/nvidia/nccl/lib/libnccl.so.2
+(Worker pid=50) INFO 07-05 08:51:57 [parallel_state.py:1735] rank 1 in world size 2 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 1, EP rank 1, EPLB rank N/A
+(Worker pid=50) INFO 07-05 08:51:58 [dspark_proposer.py:159] DSpark GPU rejected-context mask enabled. Rejected target suffix rows are masked during draft main-KV cache update without synchronizing rejection counts to CPU.
+(Worker pid=50) INFO 07-05 08:51:58 [dspark_proposer.py:170] DSpark fast draft-output mode enabled: confidence head and returned draft logits are skipped on the hot path.
+(Worker pid=50) WARNING 07-05 08:51:58 [__init__.py:204] min_p and logit_bias parameters won't work with speculative decoding.
+(Worker_TP1 pid=50) INFO 07-05 08:51:58 [quant_config.py:73] DeepSeek V4 expert_dtype resolved to 'fp4'
+(Worker_TP1 pid=50) INFO 07-05 08:51:58 [deep_gemm.py:117] DeepGEMM E8M0 enabled on current platform.
+(Worker_TP1 pid=50) INFO 07-05 08:51:58 [attention.py:930] Using probe DeepSeek V4 nvfp4_ds_mla KV cache format.
+(Worker_TP1 pid=50) INFO 07-05 08:51:58 [mxfp4.py:389] Using 'B12X' Mxfp4 MoE backend.
+(Worker_TP1 pid=50) INFO 07-05 08:51:58 [attention.py:1051] Using FP8 indexer cache for Lightning Indexer.
+(Worker_TP1 pid=50) INFO 07-05 08:52:02 [weight_utils.py:922] Filesystem type for checkpoints: EXT4. Checkpoint size: 155.43 GiB. Available RAM: 38.21 GiB.
+(Worker_TP1 pid=50) INFO 07-05 08:52:02 [weight_utils.py:952] Auto-prefetch is disabled because the filesystem (EXT4) is not a recognized network FS (NFS/Lustre) and the checkpoint size (155.43 GiB) exceeds 90% of available RAM (38.21 GiB).
+(Worker_TP1 pid=50) INFO 07-05 08:53:57 [default_loader.py:397] Loading weights took 115.34 seconds
+(Worker_TP1 pid=50) INFO 07-05 08:53:58 [mxfp4.py:1789] Using MoEPrepareAndFinalizeNoDPEPModular
+(Worker_TP1 pid=50) INFO 07-05 08:54:11 [gpu_model_runner.py:5337] Loading drafter model...
+(Worker_TP1 pid=50) INFO 07-05 08:54:11 [vllm.py:977] Asynchronous scheduling is enabled.
+(Worker_TP1 pid=50) INFO 07-05 08:54:11 [kernel.py:274] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+(Worker_TP1 pid=50) INFO 07-05 08:54:11 [kernel.py:274] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+(Worker_TP1 pid=50) INFO 07-05 08:54:12 [dspark.py:494] DSpark replicated Markov W1 enabled for model.layers.45.markov_head. This removes the per-position vocab-parallel embedding all-reduce.
+(Worker_TP1 pid=50) INFO 07-05 08:54:12 [dspark.py:767] DSpark local vocab-parallel argmax is enabled. This is experimental and may add per-position synchronization overhead.
+(Worker_TP1 pid=50) WARNING 07-05 08:54:12 [vllm.py:2159] `torch.compile` is turned on, but the model /cache/huggingface/hub/models--deepseek-ai--DeepSeek-V4-Flash-DSpark/snapshots/62af8fffb2f7030cac4de2f0169f5b8d1101b646 does not support it. Please open an issue on GitHub if you want it to be supported.
+(Worker_TP1 pid=50) INFO 07-05 08:54:12 [weight_utils.py:922] Filesystem type for checkpoints: EXT4. Checkpoint size: 155.43 GiB. Available RAM: 33.71 GiB.
+(Worker_TP1 pid=50) INFO 07-05 08:54:12 [weight_utils.py:952] Auto-prefetch is disabled because the filesystem (EXT4) is not a recognized network FS (NFS/Lustre) and the checkpoint size (155.43 GiB) exceeds 90% of available RAM (33.71 GiB).
+(Worker_TP1 pid=50) INFO 07-05 08:54:46 [default_loader.py:397] Loading weights took 33.21 seconds
+(Worker_TP1 pid=50) INFO 07-05 08:54:47 [llm_base_proposer.py:1334] Detected MTP model. Sharing target model embedding weights with the draft model.
+(Worker_TP1 pid=50) INFO 07-05 08:54:47 [llm_base_proposer.py:1390] Detected MTP model. Sharing target model lm_head weights with the draft model.
+(Worker_TP1 pid=50) INFO 07-05 08:54:47 [llm_base_proposer.py:1424] Detected MTP model with topk_indices_buffer. Sharing target model topk_indices_buffer with the draft model.
+(Worker_TP1 pid=50) INFO 07-05 08:54:54 [gpu_model_runner.py:5408] Model loading took 79.52 GiB memory and 169.379611 seconds
+(Worker_TP1 pid=50) INFO 07-05 08:55:20 [backends.py:1089] Using cache directory: /cache/huggingface/vllm-cache/torch_compile_cache/d8d288a9e4/rank_1_0/backbone for vLLM's torch.compile
+(Worker_TP1 pid=50) INFO 07-05 08:55:20 [backends.py:1148] Dynamo bytecode transform time: 1.87 s
+(Worker_TP1 pid=50) INFO 07-05 08:55:21 [backends.py:292] Directly load the compiled graph(s) for compile range (1, 8192) from the cache, took 0.359 s
+(Worker_TP1 pid=50) INFO 07-05 08:55:21 [decorators.py:311] Directly load AOT compilation from path /cache/huggingface/vllm-cache/torch_compile_cache/torch_aot_compile/348fd1f53f1288e7b7d4f92e3b1446d86243296fd5981cd7dd3f01f5b1fe1c3f/rank_1_0/model
+(Worker_TP1 pid=50) INFO 07-05 08:55:21 [monitor.py:53] torch.compile took 2.91 s in total
+(Worker_TP1 pid=50) INFO 07-05 08:55:35 [monitor.py:81] Initial profiling/warmup run took 13.74 s
+(Worker_TP1 pid=50) INFO 07-05 08:55:37 [gpu_model_runner.py:6568] Profiling CUDA graph memory: PIECEWISE=2 (largest=8), FULL=2 (largest=8)
+(Worker_TP1 pid=50) INFO 07-05 08:55:49 [gpu_model_runner.py:6654] Estimated CUDA graph memory: 0.29 GiB total
+(Worker_TP1 pid=50) INFO 07-05 08:55:49 [gpu_worker.py:466] Available KV cache memory: 20.31 GiB
+(Worker_TP1 pid=50) WARNING 07-05 08:55:49 [gpu_worker.py:498] CUDA graph memory profiling is disabled (VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0). Without it, CUDA graph memory is not accounted for during KV cache allocation, which may require lowering --gpu-memory-utilization to avoid OOM. Consider re-enabling it (the default as of v0.21.0) and increasing --gpu-memory-utilization from 0.8500 to 0.8524.
+(Worker_TP1 pid=50) INFO 07-05 08:55:54 [deepseek_v4_mhc_warmup.py:200] Warming up DeepSeek V4 mHC kernels for token sizes: [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]
+(Worker_TP1 pid=50) INFO 07-05 08:55:54 [deepseek_v4_mhc_warmup.py:209] DeepSeek V4 mHC warmup finished in 0.41 seconds.
+(Worker_TP1 pid=50) INFO 07-05 08:55:54 [kernel_warmup.py:624] Warming up DeepSeek V4 sparse MLA attention for mixed tokens=16 and prefill tokens=8192.
+(Worker_TP1 pid=50) 2026-07-05 08:56:00,487 - INFO - autotuner.py:1837 - flashinfer.jit: [Autotuner]: Loaded 30 configs from /cache/huggingface/vllm-cache/flashinfer_autotune_cache/0.6.12/121a/e1e60266726f0f43c8cbc0c4718f9bf226d0d45561c0b3670a11f59521dd39f9/autotune_configs.json
+(Worker_TP1 pid=50) INFO 07-05 08:56:00 [kernel_warmup.py:592] DeepSeek V4 sparse MLA decode autotune cache loaded on rank 1 from /cache/huggingface/vllm-cache/flashinfer_autotune_cache/0.6.12/121a/e1e60266726f0f43c8cbc0c4718f9bf226d0d45561c0b3670a11f59521dd39f9/autotune_configs.json.
+(Worker_TP1 pid=50) 2026-07-05 08:56:00,498 - INFO - autotuner.py:961 - flashinfer.jit: [Autotuner]: Config cache hit for sparse_mla_sm120_decode_dsv4 (runner=SparseMlaDecodeV3Runner, source=config file)
+(Worker_TP1 pid=50) INFO 07-05 08:56:09 [kernel_warmup.py:498] Warming up DeepSeek V4 request preparation kernels.
+(Worker_TP1 pid=50) 2026-07-05 08:56:11,949 - INFO - autotuner.py:622 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
+(Worker_TP1 pid=50) 2026-07-05 08:56:14,459 - INFO - autotuner.py:641 - flashinfer.jit: [Autotuner]: Autotuning process ends
+(Worker_TP1 pid=50) INFO 07-05 08:56:17 [gpu_model_runner.py:6745] Graph capturing finished in 3 secs, took 0.11 GiB
+(Worker_TP1 pid=50) INFO 07-05 08:56:17 [gpu_worker.py:619] CUDA graph pool memory: 0.11 GiB (actual), 0.29 GiB (estimated), difference: 0.18 GiB (162.0%).
+(Worker_TP1 pid=50) INFO 07-05 08:56:17 [jit_monitor.py:54] Kernel JIT monitor activated — Triton JIT compilations during inference will be logged as warnings.
+(Worker_TP1 pid=50) WARNING 07-05 09:03:01 [jit_monitor.py:103] Triton kernel JIT compilation during inference: sample_recovered_tokens_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+(Worker_TP1 pid=50) WARNING 07-05 09:03:01 [jit_monitor.py:103] Triton kernel JIT compilation during inference: rejection_random_sample_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+(Worker_TP1 pid=50) WARNING 07-05 09:03:09 [jit_monitor.py:103] Triton kernel JIT compilation during inference: _pack_topk_routes_prefix_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+(Worker_TP1 pid=50) WARNING 07-05 09:03:09 [jit_monitor.py:103] Triton kernel JIT compilation during inference: _pack_topk_routes_post_prefix_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
