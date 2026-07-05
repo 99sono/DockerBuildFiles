@@ -355,6 +355,14 @@ mismatch. The GID index often differs between head and worker.
 - Match firmware/driver/kernel versions on both nodes — the recipe's author saw **+140% prefill** from this alone
 - Verify both ConnectX-7 cables are active at 200 Gb/s
 
+## Variants
+
+| Variant | Spec | KV Cache | Context | Image |
+|---------|------|----------|---------|-------|
+| `variant01-tony2wild-original` | MTP (2 tokens, greedy) | fp8 | 200K | `aidendle94/sparkrun-vllm-ds4-gb10:production-ready` |
+| `variant02-dspark-nvfp4` | DSpark (3 tokens, probabilistic) | `nvfp4_ds_mla` | 1M+ | `vllm-dspark-runtime:dspark-nvfp4-stage-c` (local build) |
+
 ## Credits
 
-Based on the [tonyd2wild/deepseek-v4-flash-dgx-spark](https://github.com/tonyd2wild/deepseek-v4-flash-dgx-spark) recipe and the `aidendle94/sparkrun-vllm-ds4-gb10` Docker image.
+- **variant01** — based on the [tonyd2wild/deepseek-v4-flash-dgx-spark](https://github.com/tonyd2wild/deepseek-v4-flash-dgx-spark) recipe and the `aidendle94/sparkrun-vllm-ds4-gb10` Docker image.
+- **variant02** — based on the [tonyd2wild/DeepSeek-v4-Flash-DSpark-1M-NVFP4-KV-2x-DGX-Spark](https://github.com/tonyd2wild/DeepSeek-v4-Flash-DSpark-1M-NVFP4-KV-2x-DGX-Spark) recipe with the DSpark speculative decoding overlay, NVFP4 KV cache path, and Keys' concurrency patch.
