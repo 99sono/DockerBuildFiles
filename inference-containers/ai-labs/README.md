@@ -15,6 +15,56 @@ These profiles are the *upstream* source of the models this repository actually 
 > names/sizes/licences beyond the assistant's training cutoff are cited to live sources in each
 > report's References section. Re-verify before building on any specific claim.
 
+## Hardware topology: gaming GPU (HBM) vs unified memory (DGX Spark)
+
+Local serving has **two very different memory topologies**, and the "right" open model depends
+heavily on which one you have. This is the single most important lens for picking a model below.
+
+### Gaming GPU — RTX 5090 (fast HBM, small capacity) = the "Ferrari"
+A consumer GPU like the RTX 5090 has **very fast HBM** but **limited capacity** (24–32 GB). The
+trade-off reads like a sports car: the memory bandwidth is absurdly fast, so it can decode dense
+weights much quicker, but it physically cannot hold that many billions of parameters (or a long
+context) because the HBM is small. Practically:
+- A **27B dense** model on a 5090 decodes at **tolerable single-session speed** — this is exactly why
+  Qwen3.6-27B is the "best small local model": dense, fits, and decodes fast enough.
+- Push past ~27B dense (e.g. Gemma 4 31B) and you need **MTP / speculative decoding active** (or
+  aggressive GGUF quant) just to stay usable, because the bandwidth helps decode but the capacity
+  cap hurts.
+- Small dense models (e.g. **Gemma 4 12B**) run at **amazing speed** on a gaming GPU.
+
+### Unified memory — DGX Spark (GB10, lots of slow-ish RAM) = the "truck"
+A DGX Spark has **huge unified memory (128 GB)** but the bandwidth per token is far lower than HBM.
+Without acceleration a model is only *barely* usable, and the natural comfort limit for single-session
+decode is about **12B active params (~20 tok/s)**. What makes it useful is the **MTP breakthrough**
+(multi-token prediction speculative decoding), which multiplies tokens/sec. Empirically from this
+repo's metadata:
+- A well-tuned **DeepSeek-V4-Flash** (MoE, ~13B active) hits **40–50 tok/s** on a DGX Spark *because*
+  of excellent MTP — despite the slow unified memory.
+- So unified-memory boxes **gravitate strongly toward very sparse MoEs**: Gemma 4 26B-A4B (3.8B active)
+  or Qwen3.6-35B-A3B (3B active) are the natural fits, because the tiny active-param count compensates
+  for the slow memory.
+
+### Dense vs MoE under multi-session load (the batching asymmetry)
+This is the subtle part that decides **single-session vs army-of-agents** use:
+- A **dense** model (e.g. Gemma 4 12B) always uses the **same 12B parameters** regardless of how many
+  concurrent sessions hit it. vLLM batches these beautifully, so it scales cleanly to many parallel
+  sub-agents. Quality per param stays constant.
+- An **MoE** model activates *different experts per session*. As you add sessions, **more experts
+  activate**, and the worst case converges to the model's **total** size (not its active size). So an
+  MoE that is feather-light at one session gets heavier (and memory-bound on unified memory) as the
+  agent army grows.
+
+### So, which model for which workload?
+- **Single-session / one big delegation → MoEs are a no-brainer.** Few active params = fast, cheap
+  decode on either topology (Qwen3.6-35B-A3B, Gemma 4 26B-A4B, DeepSeek-V4-Flash, Mistral Small 4).
+- **Army of sub-agents / massive task delegation → small dense models are a no-brainer.** Constant
+  per-session cost, superb batching, predictable memory (Gemma 4 12B, Qwen3.6-27B). For multi-agent
+  orchestration especially, small high-intelligence dense models win on throughput and predictability.
+
+> Practical takeaway for this repo: pair the **5090** with dense/mid models (Qwen3.6-27B, Gemma 4 12B,
+> Mistral Small 4 at NVFP4) and reserve the **DGX Spark** for sparse MoEs + MTP (Qwen3.6-35B-A3B,
+> Gemma 4 26B-A4B, DeepSeek-V4-Flash). Dense models >~12B active on a Spark need MTP to be tolerable.
+
 ## Overview
 
 | Lab | Notable open models | Openness | In this repo? | Report |
