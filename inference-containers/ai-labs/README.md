@@ -109,16 +109,43 @@ perception (mid-2026) of the strongest open-weight models, split by the class of
    2-node DGX Spark cluster (and is the model this repo actually serves at that tier).
 4. **Qwen3.6-35B-A3B** (35B / 3B active, Apache-2.0) — the efficient open MoE alternative at scale.
 
-**Single DGX Spark / 128 GB edge class:**
-- **Qwen3.6-27B** (dense, Apache-2.0) — widely regarded as the **best small local model**: dense,
-  runs on a single DGX Spark or RTX 5090, and is the practical quality ceiling for single-node local
-  serving. GLM-4.5→5.2 and Kimi K2.x also fit here at quantization.
+**Single DGX Spark / 128 GB unified-memory edge class:**
+
+This is the most interesting class because unified memory lets you choose the architecture for the job —
+but the *model's DNA* matters. The Spark isn't just "less VRAM than a datacenter"; its bandwidth ceiling
+(~273 GB/s) makes per-token decode the real constraint, so the fit splits cleanly by what you're doing:
+
+- **Qwen3.6-35B-A3B** (35B total / 3B active, Apache-2.0) — the **best MoE you can put on a single Spark
+  and the model whose architecture is *made* for it**. Sparse (3B active) so decode is fast and memory is
+  comfortable; this repo's llama.cpp metadata shows ~18–22 tok/s generation (1.7K tok/s prompt) with MTP.
+  This is the Spark's natural "ferrari".
+- **Mistral Small 4** (119B total / 6.5B active, NVFP4, Apache-2.0) — the opposite end: the biggest MoE a
+  single Spark can hold without clustering two Sparks, pushing intelligence to the limit of one node. Its
+  6.5B active is *not* a decode bottleneck, but this repo's vLLM metadata shows only ~9.8 tok/s generation
+  (MARLIN + `--enforce-eager` workaround, MLA disabled) — tolerable for single-session use, not for fan-out.
+- **Gemma 4 12B** (dense, Apache-2.0) — the ultimate **"school bus"** of the class. Amazing model for its
+  size, and the **work-horse** when you need to spin up many parallel sub-agents: tiny active footprint means
+  it batches and parallelizes cleanly on the Spark's unified memory. This repo serves it at ~89 tok/s on a
+  5090 and it scales well to concurrent sessions on a Spark.
+- **Qwen3.6-27B** (dense, Apache-2.0) — the **top-intelligence** option for a single Spark, but it's the
+  edge of tolerability. This repo's llama.cpp metadata (MTP active) shows ~18 tok/s generation (697 tok/s
+  prompt, 74% draft acceptance); *without* MTP it drops to roughly half that, so a 27B dense actively is
+  **no longer in the comfortably-tolerable range for a single Spark** — run it only when you need the quality
+  and can accept the pace. GLM-4.5→5.2 and Kimi K2.x also fit here at quantization.
+
+Rule of thumb for the Spark: **MoE/small-dense → ferrari (fast, single or few sessions); 27B dense → only
+when quality trumps speed; ≥35B dense → off the table.**
 
 **Single RTX 5090 / consumer GPU class:**
-- **Qwen3.6-27B** — the compact dense sweet spot (with Gemma 4 31B Dense as the higher-quality-but-heavier
-  dense option that realistically needs MTP active). At the MoE end, **Qwen3.6-35B-A3B** (3B active) is the
-  larger MoE that still fits a 5090 via quantization; **Mistral Small 4 (119B total / 6.5B active, NVFP4)**
-  is bigger still but needs a DGX Spark's unified memory (single-node, no clustering).
+
+The 5090's fast but small HBM (~32 GB) and its nature as a *single-session* card (not built for batching or
+parallel sessions) make the sizing rule simple: **as long as the total parameter count is in the ~27B range,
+a 4-bit quantization fits comfortably in the 32 GB**, and anything below 27B fits and runs fast. The prime
+(and essentially only sensible) example is **Qwen3.6-27B** (Q4, Apache-2.0): on this hardware it is the
+compact dense sweet spot, and because the 5090 isn't meant for fan-out there is currently **no other model
+that makes sense to run on it** — heavier models don't fit, and lighter ones merely waste the card's bandwidth.
+(Gemma 4 31B Dense is the higher-quality-but-heavier dense option that realistically needs MTP active and
+pushes the memory limit.)
 
 > Hall of fame (open weights, frontier-tier, July 2026): **Kimi K3** and **GLM-5.2** sit alone at the
 > top of the open leaderboard — K3 as the outright best, GLM-5.2 as the best at the ~1T scale and the
