@@ -117,9 +117,11 @@ but the *model's DNA* matters. The Spark isn't just "less VRAM than a datacenter
 
 - **Qwen3.6-35B-A3B** (35B total / 3B active, Apache-2.0) — the **best MoE you can put on a single Spark
   and the model whose architecture is *made* for it**. Sparse (3B active) so decode is fast and memory is
-  comfortable; this repo's vLLM **NVFP4** (`RedHatAI/Qwen3.6-35B-A3B-NVFP4`) DGX Spark metadata shows
-  **~36–38 tok/s generation** steady-state (single session), confirming it's the Spark's natural "ferrari"
-  (the llama.cpp GGUF path lands lower, ~18–22 tok/s).
+  comfortable. On DGX Spark the **best engine is the Avarok `dgx-vllm-nvfp4-kernel` image**, which patches
+  the Marlin NVFP4 MoE backend to bypass the GB10's 99 KiB SMEM ceiling (the stock **NVIDIA** image forces
+  `flashinfer_cutlass` and is throttled to **~36–38 tok/s**, matching this repo's vLLM NVFP4 log); the Avarok
+  path reaches **~42–67+ tok/s**. This is the Spark's natural "ferrari" (the llama.cpp GGUF path lands lower,
+  ~18–22 tok/s).
 - **Mistral Small 4** (119B total / 6.5B active, NVFP4, Apache-2.0) — the opposite end: the biggest MoE a
   single Spark can hold without clustering two Sparks, pushing intelligence to the limit of one node. Its
   6.5B active is *not* a decode bottleneck, but this repo's vLLM metadata shows only ~9.8 tok/s generation
