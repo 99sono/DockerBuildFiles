@@ -83,7 +83,7 @@ Cadence accelerated from roughly one major release per quarter in 2023–2024 to
 | Mistral Small 3.2 | 2025-06-20 | 24B | — | 128K | Apache 2.0 | Open-weight |
 | Mistral Large 3 | 2025-12-02 | 675B | 41B | 256K | Apache 2.0 | Open-weight (MoE, multimodal) |
 | Ministral 3 (3B/8B/14B) | 2025-12-02 | 3B/8B/14B | — | 128K | Apache 2.0 | Open-weight (edge) |
-| Mistral Small 4 | 2026-03-16 | 119B | ~4B (128 experts) | 128K | Apache 2.0 | Open-weight (MoE, multimodal) |
+| Mistral Small 4 | 2026-03-16 | 119B | 6.5B (128 experts, 4 active) | 128K | Apache 2.0 | Open-weight (MoE, multimodal) |
 | Mistral Medium 3.5 | 2026-04-29 | 128B | — | 128K | Modified MIT | Open-weight (commercial-friendly) |
 
 ## Openness Status
@@ -100,7 +100,7 @@ What remains not "fully open": training data and full training code are not rele
 
 ## Serving (vLLM / llama.cpp / Atlas)
 
-- **vLLM**: All standard Mistral dense and MoE architectures are supported (MistralForCausalLM, MixtralForCausalLM). Mixtral 8x7B/8x22B run as expert-routed MoE; Mistral Large 3 (675B/41B) and Mistral Small 4 (119B/~4B active) serve via vLLM with FP8/AWQ/GPTQ quantization. Pre-quantized AWQ/GPTQ checkpoints are common on Hugging Face for the smaller models.
+- **vLLM**: All standard Mistral dense and MoE architectures are supported (MistralForCausalLM, MixtralForCausalLM). Mixtral 8x7B/8x22B run as expert-routed MoE; Mistral Large 3 (675B/41B) and Mistral Small 4 (119B/6.5B active, 128 experts/4 active) serve via vLLM with FP8/AWQ/GPTQ quantization. Pre-quantized AWQ/GPTQ checkpoints are common on Hugging Face for the smaller models.
 - **llama.cpp / GGUF**: Mistral 7B, Mixtral 8x7B, Mistral NeMo 12B, Mistral Small 3/3.1/3.2, Pixtral 12B, and Magistral Small 24B all have official or community GGUF checkpoints. Magistral Small 24B quantizes well: Q4_K_M ≈ 15.2 GB VRAM (fits a 16/24 GB GPU), Q8_0 ≈ 26 GB, FP16 ≈ 48.5 GB. Mixtral 8x7B Q4_K_M runs on a single 24 GB GPU. Codestral Mamba (Mamba2) was not initially supported in llama.cpp (Mistral noted "keep an eye out for support") and relies on `mistral-inference` / TensorRT-LLM instead.
 - **Quantization formats**: GGUF (Q3_K–Q8_0), AWQ, GPTQ, FP8 for vLLM; BF16/FP16 for full-precision serving. MoE note: Mixtral 8x22B loads all 141B params (39B active/token), and Mistral Large 3 loads all 675B (41B active/token) — memory footprint resembles the total size despite MoE active savings.
 - **NOT yet runnable in this repo**: no Mistral models are currently deployed in `inference-containers/` (only Qwen, Gemma, DeepSeek, and Nemotron are). All mainstream Mistral open-weight models are fully runnable on consumer/edge hardware via vLLM or llama.cpp — there is no engine blocker.
@@ -134,7 +134,7 @@ What remains not "fully open": training data and full training code are not rele
 
 ## Local Deployment in This Repo
 
-This repo **does** deploy a Mistral model: **Mistral Small 4 (119B-A3B MoE, NVFP4)** served via vLLM on **DGX Spark**.
+This repo **does** deploy a Mistral model: **Mistral Small 4 (119B total / 6.5B active MoE, NVFP4)** served via vLLM on **DGX Spark**.
 
 - **Engine / folder**: `inference-containers/vllm/mistral-small-4-119b-dgx-spark/mistral-nvfp4` — `vllm/vllm-openai:nightly` under Docker Compose, platform `linux/arm64`.
 - **Checkpoint**: `mistralai/Mistral-Small-4-119B-2603-NVFP4` (NVFP4 compressed-tensors, Apache-2.0). Served model alias `mistral-small4-119b`.

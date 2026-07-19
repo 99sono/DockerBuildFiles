@@ -63,11 +63,13 @@ This is the subtle part that decides **single-session vs army-of-agents** use:
 
 > Practical takeaway for this repo: pair the **5090** with dense/mid models (Qwen3.6-27B, Gemma 4 12B,
 > and other ≤~27B dense that fit its fast-but-small HBM) and reserve the **DGX Spark** for sparse MoEs +
-> MTP (Qwen3.6-35B-A3B, Gemma 4 26B-A4B, DeepSeek-V4-Flash). **Mistral Small 4 (119B-A3B, NVFP4)** is the
-> biggest MoE you can run on a *single* DGX Spark without clustering two Sparks — it pushes intelligence to
-> the limit of one large unified-memory node, but at ~12–13B active params it also sits at the very edge of
-> acceptable interactive speed: this repo's metadata shows ~9.8 tok/s generation (59 tok/s prompt) single-session.
-> Dense models >~12B active on a Spark need MTP to be tolerable.
+> MTP (Qwen3.6-35B-A3B, Gemma 4 26B-A4B, DeepSeek-V4-Flash). **Mistral Small 4 (119B total, 6.5B active,
+> NVFP4)** is the biggest MoE you can run on a *single* DGX Spark without clustering two Sparks — it pushes
+> intelligence to the limit of one large unified-memory node. Its active count (~6.5B) is comfortably in the
+> tolerable range (like the other sparse MoEs), so the modest ~9.8 tok/s seen in this repo's metadata (59 tok/s
+> prompt, single session) is an artifact of the DGX Spark + MARLIN backend + `--enforce-eager` workaround
+> (MLA disabled, no CUDA graphs) rather than an active-param bottleneck. Dense models >~12B active on a Spark
+> need MTP to be tolerable.
 
 ## Overview
 
@@ -114,8 +116,9 @@ perception (mid-2026) of the strongest open-weight models, split by the class of
 
 **Single RTX 5090 / consumer GPU class:**
 - **Qwen3.6-27B** — the compact dense sweet spot (with Gemma 4 31B Dense as the higher-quality-but-heavier
-  dense option that realistically needs MTP active). At the MoE end, **Qwen3.6-35B-A3B** and
-  **Mistral Small 4 (119B-A3B NVFP4)** are the larger models that still fit a 5090 via quantization.
+  dense option that realistically needs MTP active). At the MoE end, **Qwen3.6-35B-A3B** (3B active) is the
+  larger MoE that still fits a 5090 via quantization; **Mistral Small 4 (119B total / 6.5B active, NVFP4)**
+  is bigger still but needs a DGX Spark's unified memory (single-node, no clustering).
 
 > Hall of fame (open weights, frontier-tier, July 2026): **Kimi K3** and **GLM-5.2** sit alone at the
 > top of the open leaderboard — K3 as the outright best, GLM-5.2 as the best at the ~1T scale and the
@@ -133,10 +136,10 @@ in July 2026).
 - Alibaba Qwen3.6-27B & -35B-A3B — `vllm/`, `llamacpp/`, `atlas/` on 5090 + DGX Spark (NVFP4-MTP / GGUF / FP8)
 - Google Gemma 4 26B & 12B — `vllm/`, `llamacpp/` on 5090 + DGX Spark (NVFP4 / GGUF)
 - NVIDIA Nemotron-Cascade-2-30B-A3B — `vllm/nemotron-cascade-2` (NVFP4 on 5090)
-- Mistral Small 4 119B-A3B-NVFP4 — `vllm/mistral-small-4-119b-dgx-spark/mistral-nvfp4` (NVFP4 on DGX Spark)
+- Mistral Small 4 119B (6.5B active) NVFP4 — `vllm/mistral-small-4-119b-dgx-spark/mistral-nvfp4` (NVFP4 on DGX Spark)
 
 **Open labs not yet deployed (candidates per report):**
-- Mistral — **Mistral Small 4 (119B-A3B NVFP4)** already deployed on DGX Spark (see above); Magistral Small 24B / Mistral Small 3.x on 5090; Mistral Large 3 (675B) on DGX Spark
+- Mistral — **Mistral Small 4 (119B total / 6.5B active, NVFP4)** already deployed on DGX Spark (see above); Magistral Small 24B / Mistral Small 3.x on 5090; Mistral Large 3 (675B) on DGX Spark
 - Zhipu/GLM — GLM-4-9B/32B on 5090; GLM-4.5→5.2 on DGX Spark
 - Moonshot/Kimi — Kimi-VL (16B) on 5090; Kimi K2.x (1T) on DGX Spark (offload); K3 needs multi-GPU
 - Thinking Machines — Inkling (975B) multi-GPU cluster only; Inkling-Small (pending) the local candidate
