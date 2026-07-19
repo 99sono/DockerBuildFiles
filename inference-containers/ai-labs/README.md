@@ -62,8 +62,12 @@ This is the subtle part that decides **single-session vs army-of-agents** use:
   orchestration especially, small high-intelligence dense models win on throughput and predictability.
 
 > Practical takeaway for this repo: pair the **5090** with dense/mid models (Qwen3.6-27B, Gemma 4 12B,
-> Mistral Small 4 at NVFP4) and reserve the **DGX Spark** for sparse MoEs + MTP (Qwen3.6-35B-A3B,
-> Gemma 4 26B-A4B, DeepSeek-V4-Flash). Dense models >~12B active on a Spark need MTP to be tolerable.
+> and other ≤~27B dense that fit its fast-but-small HBM) and reserve the **DGX Spark** for sparse MoEs +
+> MTP (Qwen3.6-35B-A3B, Gemma 4 26B-A4B, DeepSeek-V4-Flash). **Mistral Small 4 (119B-A3B, NVFP4)** is the
+> biggest MoE you can run on a *single* DGX Spark without clustering two Sparks — it pushes intelligence to
+> the limit of one large unified-memory node, but at ~12–13B active params it also sits at the very edge of
+> acceptable interactive speed: this repo's metadata shows ~9.8 tok/s generation (59 tok/s prompt) single-session.
+> Dense models >~12B active on a Spark need MTP to be tolerable.
 
 ## Overview
 
