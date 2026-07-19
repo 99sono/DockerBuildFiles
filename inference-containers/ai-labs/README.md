@@ -84,11 +84,12 @@ This is the subtle part that decides **single-session vs army-of-agents** use:
 | **Thinking Machines Lab** | Inkling (975B/41B MoE, Apache-2.0), Inkling-Small (pending) | open-weight (Apache-2.0) | No — too large for single node | [thinking-machines.md](thinking-machines.md) |
 | **AI2 (OLMo)** | OLMo 1/2/3 (7B–32B), OLMoE | **fully open** (weights+data+code+logs, Apache-2.0) | No | [ai2-olmo.md](ai2-olmo.md) |
 | **NVIDIA (Nemotron)** | Nemotron-Cascade-2-30B-A3B (this repo), Nemotron 3 Nano/Super/Ultra | open-weight + open data/recipes (NVIDIA Open Model License) | Yes — Cascade-2 NVFP4 on 5090 | [nvidia-nemotron.md](nvidia-nemotron.md) |
+| **Tencent Hunyuan (Hy3)** | Hy3 (295B/21B MoE, Apache-2.0, Jul 2026), Hunyuan-A13B (13B MoE) | open-weight (Apache-2.0 flagships) | No — Hy3 borderline for 2-Spark; A13B fits 5090/Spark | [tencent-hunyuan.md](tencent-hunyuan.md) |
 
 ## Openness spectrum
 
 - **Fully open** — releases weights *and* training data, code, and logs: **AI2 / OLMo** (the only one here).
-- **Open-weight, permissive** — Apache-2.0 / MIT weights, no data/code: Mistral, DeepSeek, Qwen, Gemma (since v4), Zhipu/GLM, Thinking Machines, Moonshot (Modified MIT).
+- **Open-weight, permissive** — Apache-2.0 / MIT weights, no data/code: Mistral, DeepSeek, Qwen, Gemma (since v4), Zhipu/GLM, Thinking Machines, Moonshot (Modified MIT), Tencent Hunyuan (Hy3, Apache-2.0).
 - **Open-weight, restricted license** — open weights but with field-of-use/redistribution terms: NVIDIA (Nemotron Open Model License).
 - **Partial / closing frontier** — small & mid models open, frontier flagships API-only: Qwen (Qwen3.6-Max/Plus, Qwen3.7 closed), Moonshot (K1.5 closed; K3 weights delayed).
 
@@ -185,6 +186,11 @@ in July 2026).
   (276B/12B active) is still beyond a single Spark's comfort and its weights are pending. Skip entirely.
 - AI2/OLMo — **OLMo 2/3 32B on 5090 or DGX Spark** (the fully-open, license-free option) — the standout
   candidate for truly open local experimentation.
+- Tencent Hunyuan — **Hunyuan-A13B (13B MoE, Apache-2.0) on 5090 or DGX Spark** is the realistic local
+  candidate. **Hy3 (295B/21B)** is *not* a comfortable local fit: its 21B active is fine, but the 295B total
+  weights (FP8 = 300 GB, 4-bit GGUF ~150 GB) only *stretch* onto a 2-Spark 4-bit TP setup and, per Tencent's
+  own 8-GPU guidance, fall into **cluster territory** — list as a "2-Spark-4-bit borderline" stretch goal,
+  not a standard local model.
 
 ## How these reports were produced
 
