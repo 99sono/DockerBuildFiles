@@ -23,8 +23,8 @@ These profiles are the *upstream* source of the models this repository actually 
 | **DeepSeek** | V2/V3/R1, V3.2 (DSA), V4-Flash (284B/13B), V4-Pro (1.6T/49B) | open-weight (MIT) | Yes — V4-Flash 2-node DGX Spark cluster | [deepseek.md](deepseek.md) |
 | **Alibaba (Qwen)** | Qwen3.6-27B (best small local model), Qwen3.6-35B-A3B MoE, Qwen3.5-397B-A17B | open-weight (Apache-2.0) small/mid; frontier tier closed in 2026 | Yes — 27B & 35B on 5090 + DGX Spark | [alibaba-qwen.md](alibaba-qwen.md) |
 | **Google (Gemma)** | Gemma 4 26B-A4B MoE, Gemma 4 12B, Gemma 3/2/1 | open-weight (Apache-2.0 since Gemma 4; was Gemma ToS) | Yes — 26B & 12B on 5090 + DGX Spark | [google-gemma.md](google-gemma.md) |
-| **Zhipu AI (GLM)** | GLM-4.5→5.2 (753B MoE, MIT), GLM-4-9B/32B (Apache-2.0) | open-weight (MIT flagships) | No | [zhipu-glm.md](zhipu-glm.md) |
-| **Moonshot AI (Kimi)** | Kimi K2 (1.04T), K2.5, K2.7 Code, K3 (2.8T, weights 2026-07-27) | open-weight (Modified MIT) | No | [moonshot-kimi.md](moonshot-kimi.md) |
+| **Zhipu AI (GLM)** | GLM-4.5→5.2 (753B MoE, MIT) — the ~1T-class open model widely rated a Claude Opus-class equivalent and, until Kimi K3, the best open model at that scale; GLM-4-9B/32B (Apache-2.0) | open-weight (MIT flagships) | No | [zhipu-glm.md](zhipu-glm.md) |
+| **Moonshot AI (Kimi)** | Kimi K2 (1.04T), K2.5, K2.7 Code, K3 (2.8T, weights 2026-07-27) — by far the best open model as of Jul 2026, but datacenter-class only | open-weight (Modified MIT) | No | [moonshot-kimi.md](moonshot-kimi.md) |
 | **Thinking Machines Lab** | Inkling (975B/41B MoE, Apache-2.0), Inkling-Small (pending) | open-weight (Apache-2.0) | No — too large for single node | [thinking-machines.md](thinking-machines.md) |
 | **AI2 (OLMo)** | OLMo 1/2/3 (7B–32B), OLMoE | **fully open** (weights+data+code+logs, Apache-2.0) | No | [ai2-olmo.md](ai2-olmo.md) |
 | **NVIDIA (Nemotron)** | Nemotron-Cascade-2-30B-A3B (this repo), Nemotron 3 Nano/Super/Ultra | open-weight + open data/recipes (NVIDIA Open Model License) | Yes — Cascade-2 NVFP4 on 5090 | [nvidia-nemotron.md](nvidia-nemotron.md) |
@@ -35,6 +35,42 @@ These profiles are the *upstream* source of the models this repository actually 
 - **Open-weight, permissive** — Apache-2.0 / MIT weights, no data/code: Mistral, DeepSeek, Qwen, Gemma (since v4), Zhipu/GLM, Thinking Machines, Moonshot (Modified MIT).
 - **Open-weight, restricted license** — open weights but with field-of-use/redistribution terms: NVIDIA (Nemotron Open Model License).
 - **Partial / closing frontier** — small & mid models open, frontier flagships API-only: Qwen (Qwen3.6-Max/Plus, Qwen3.7 closed), Moonshot (K1.5 closed; K3 weights delayed).
+
+## Best open-weight models by hardware class
+
+The "best open model" is meaningless without qualifying the **hardware you can actually run it on**.
+A 2.8T-param model that only runs on a datacenter cluster is not "better" than a 27B that runs on a
+single consumer GPU if your only hardware is an RTX 5090. With that caveat, here is the empirical
+perception (mid-2026) of the strongest open-weight models, split by the class of hardware required:
+
+**Datacenter / multi-GPU class (the frontier of open weights):**
+1. **Kimi K3** (Moonshot, 2.8T / ~50B active, weights 2026-07-27) — by far the best open model as of
+   July 2026. Only second to the closed **GPT-5.6 Max** and **Claude Mythos/Fable 5**; even with heavy
+   quantization it needs datacenter-class hardware. Hall-of-fame.
+2. **GLM-5.2** (Zhipu, 753B / 40B active, MIT) — the strongest ~1T-class open model, widely rated a
+   **Claude 4.8 Opus-class equivalent** and, until K3, the best open model at that scale. Hall-of-fame.
+3. **DeepSeek-V4-Flash** (284B / 13B active, MIT) — efficient frontier MoE, 1M context; runs on a
+   2-node DGX Spark cluster (and is the model this repo actually serves at that tier).
+4. **Qwen3.6-35B-A3B** (35B / 3B active, Apache-2.0) — the efficient open MoE alternative at scale.
+
+**Single DGX Spark / 128 GB edge class:**
+- **Qwen3.6-27B** (dense, Apache-2.0) — widely regarded as the **best small local model**: dense,
+  runs on a single DGX Spark or RTX 5090, and is the practical quality ceiling for single-node local
+  serving. GLM-4.5→5.2 and Kimi K2.x also fit here at quantization.
+
+**Single RTX 5090 / consumer GPU class:**
+- **Qwen3.6-27B** — the compact dense sweet spot (with Gemma 4 31B Dense as the higher-quality-but-heavier
+  dense option that realistically needs MTP active). At the MoE end, **Qwen3.6-35B-A3B** and
+  **Mistral Small 4 (119B-A3B NVFP4)** are the larger models that still fit a 5090 via quantization.
+
+> Hall of fame (open weights, frontier-tier, July 2026): **Kimi K3** and **GLM-5.2** sit alone at the
+> top of the open leaderboard — K3 as the outright best, GLM-5.2 as the best at the ~1T scale and the
+> clearest Claude-Opus-class open stand-in. Everything below them trades parameter count (and therefore
+> peak quality) for the ability to run on more modest hardware.
+
+This ranking is an empirical/community perception, not a benchmark table — see each lab's report for
+sizes, licenses, and sources. It also shifts monthly as new weights drop (e.g. K3 only overtook GLM-5.2
+in July 2026).
 
 ## Deployed here vs. not yet
 
