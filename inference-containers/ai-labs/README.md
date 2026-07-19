@@ -168,12 +168,23 @@ in July 2026).
 - NVIDIA Nemotron-Cascade-2-30B-A3B — `vllm/nemotron-cascade-2` (NVFP4 on 5090)
 - Mistral Small 4 119B (6.5B active) NVFP4 — `vllm/mistral-small-4-119b-dgx-spark/mistral-nvfp4` (NVFP4 on DGX Spark)
 
-**Open labs not yet deployed (candidates per report):**
-- Mistral — **Mistral Small 4 (119B total / 6.5B active, NVFP4)** already deployed on DGX Spark (see above); Magistral Small 24B / Mistral Small 3.x on 5090; Mistral Large 3 (675B) on DGX Spark
-- Zhipu/GLM — GLM-4-9B/32B on 5090; GLM-4.5→5.2 on DGX Spark
-- Moonshot/Kimi — Kimi-VL (16B) on 5090; Kimi K2.x (1T) on DGX Spark (offload); K3 needs multi-GPU
-- Thinking Machines — Inkling (975B) multi-GPU cluster only; Inkling-Small (pending) the local candidate
-- AI2/OLMo — OLMo 2/3 32B on 5090 or DGX Spark (the fully-open option)
+**Open labs not yet deployed (candidates that fit local hardware):**
+
+> Reality check on local limits: this is **not a datacenter**. The hard ceiling for local experimentation is
+> a **single DGX Spark (128 GB unified)** — or at most **two Sparks** — with the practical active-parameter
+> limit around **~12–13B active on a Spark** and **~27B total (4-bit) on a 5090**. Anything requiring a
+> multi-GPU datacenter cluster (e.g. 900B+ dense, or frontier MoEs that only run on B200/H200) is **out of
+> scope** and is not a candidate here — if it can't fit a single Spark, it isn't locally experimentable.
+
+- Mistral — Magistral Small 24B / Mistral Small 3.x on 5090; Mistral Small 4 (119B/6.5B active) is *already*
+  deployed on DGX Spark (see above). Mistral Large 3 (675B/41B active) is **out of local scope** (needs a cluster).
+- Zhipu/GLM — GLM-4-9B/32B on 5090; **GLM-4.5→5.2 are out of local scope** (753B/40B active, multi-GPU).
+- Moonshot/Kimi — **Kimi-VL (16B) on 5090** is the only local candidate; Kimi K2.x (1T) and K3 (2.8T) are
+  **out of local scope** (datacenter / multi-GPU only).
+- Thinking Machines — **no local candidate**: Inkling (975B/41B) needs a multi-GPU cluster, and Inkling-Small
+  (276B/12B active) is still beyond a single Spark's comfort and its weights are pending. Skip entirely.
+- AI2/OLMo — **OLMo 2/3 32B on 5090 or DGX Spark** (the fully-open, license-free option) — the standout
+  candidate for truly open local experimentation.
 
 ## How these reports were produced
 
