@@ -128,7 +128,14 @@ What remains not "fully open": training data and full training code are not rele
 
 ## Local Deployment in This Repo
 
-This repo does **not** yet deploy any Mistral AI model — only Qwen, Gemma, DeepSeek, and Nemotron are currently served under `inference-containers/`. Mistral's open-weight models are fully compatible with the repo's vLLM and llama.cpp pipelines, so adding them is straightforward. Suggested fits:
+This repo **does** deploy a Mistral model: **Mistral Small 4 (119B-A3B MoE, NVFP4)** served via vLLM on **DGX Spark**.
 
-- **RTX 5090 (24–32 GB)**: Mistral **Magistral Small 24B** (Apache 2.0 reasoning model, Q4_K_M GGUF ≈ 15.2 GB) or **Mistral Small 3.1/3.2 24B** (multimodal, Q4_K_M ≈ 15 GB) via llama.cpp; **Mixtral 8x7B** (Q4_K_M) also fits comfortably for an MoE option. For a vLLM GPU-serving demo, Mistral Small 4 (119B/~4B active) is feasible at FP8 since only ~4B params are active per token.
-- **DGX Spark (128 GB)**: **Mistral Large 3** (675B total / 41B active, Apache 2.0) is the flagship open-weight MoE and fits in memory at BF16/FP8; **Mixtral 8x22B** and the full **Magistral Small 24B** at FP16 also run well. DGX Spark is the natural home for the only truly frontier-class open Mistral model (Large 3).
+- **Engine / folder**: `inference-containers/vllm/mistral-small-4-119b-dgx-spark/mistral-nvfp4` — `vllm/vllm-openai:nightly` under Docker Compose, platform `linux/arm64`.
+- **Checkpoint**: `mistralai/Mistral-Small-4-119B-2603-NVFP4` (NVFP4 compressed-tensors, Apache-2.0). Served model alias `mistral-small4-119b`.
+- **Serving notes**: MLA is **disabled** (`VLLM_MLA_DISABLE=1`) because head_size=320 MLA is unsupported on SM 12.1a; MoE uses the **MARLIN** NVFP4 backend (CUTLASS is unstable on Spark); `--enforce-eager` to avoid CUDA-graph captures that froze earlier attempts; `--max-model-len 262144` with `--kv-cache-dtype fp8`. Uses Mistral-native `--tokenizer-mode/--config-format/--load-format mistral` and the `mistral` tool-call / reasoning parsers. EAGLE3 speculative decoding is available but disabled by default (adds ~13 GB). See the folder README for the full config-history (the working config came from an NVIDIA DGX Spark forum workaround).
+- **Hardware fit**: ~66 GB model + ~34 GB KV cache at 262K on 128 GB UMA (RAM usage near 100 GB). Runs on a single **DGX Spark (GB10)**. The RTX 5090 is not used for this model.
+
+Other Mistral open-weight models remain straightforward to add. Suggested additional fits:
+
+- **RTX 5090 (24–32 GB)**: Mistral **Magistral Small 24B** (Apache 2.0 reasoning model, Q4_K_M GGUF ≈ 15.2 GB) or **Mistral Small 3.1/3.2 24B** (multimodal, Q4_K_M ≈ 15 GB) via llama.cpp; **Mixtral 8x7B** (Q4_K_M) also fits comfortably for an MoE option.
+- **DGX Spark (128 GB)**: **Mistral Large 3** (675B total / 41B active, Apache 2.0) is the flagship open-weight MoE and fits in memory at BF16/FP8; **Mixtral 8x22B** and the full **Magistral Small 24B** at FP16 also run well.

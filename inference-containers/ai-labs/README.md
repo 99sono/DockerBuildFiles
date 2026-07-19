@@ -19,7 +19,7 @@ These profiles are the *upstream* source of the models this repository actually 
 
 | Lab | Notable open models | Openness | In this repo? | Report |
 |-----|---------------------|----------|--------------|--------|
-| **Mistral AI** | Mistral 7B, Mixtral 8x7B/8x22B, Mistral Large 3 (675B MoE, Apache-2.0), Magistral, Codestral | open-weight (mostly Apache-2.0) | No | [mistral-ai.md](mistral-ai.md) |
+| **Mistral AI** | Mistral 7B, Mixtral 8x7B/8x22B, Mistral Large 3 (675B MoE, Apache-2.0), Mistral Small 4 (119B MoE), Magistral, Codestral | open-weight (mostly Apache-2.0) | Yes — Mistral Small 4 119B NVFP4 on DGX Spark | [mistral-ai.md](mistral-ai.md) |
 | **DeepSeek** | V2/V3/R1, V3.2 (DSA), V4-Flash (284B/13B), V4-Pro (1.6T/49B) | open-weight (MIT) | Yes — V4-Flash 2-node DGX Spark cluster | [deepseek.md](deepseek.md) |
 | **Alibaba (Qwen)** | Qwen3.6-27B (best small local model), Qwen3.6-35B-A3B MoE, Qwen3.5-397B-A17B | open-weight (Apache-2.0) small/mid; frontier tier closed in 2026 | Yes — 27B & 35B on 5090 + DGX Spark | [alibaba-qwen.md](alibaba-qwen.md) |
 | **Google (Gemma)** | Gemma 4 26B-A4B MoE, Gemma 4 12B, Gemma 3/2/1 | open-weight (Apache-2.0 since Gemma 4; was Gemma ToS) | Yes — 26B & 12B on 5090 + DGX Spark | [google-gemma.md](google-gemma.md) |
@@ -43,9 +43,10 @@ These profiles are the *upstream* source of the models this repository actually 
 - Alibaba Qwen3.6-27B & -35B-A3B — `vllm/`, `llamacpp/`, `atlas/` on 5090 + DGX Spark (NVFP4-MTP / GGUF / FP8)
 - Google Gemma 4 26B & 12B — `vllm/`, `llamacpp/` on 5090 + DGX Spark (NVFP4 / GGUF)
 - NVIDIA Nemotron-Cascade-2-30B-A3B — `vllm/nemotron-cascade-2` (NVFP4 on 5090)
+- Mistral Small 4 119B-A3B-NVFP4 — `vllm/mistral-small-4-119b-dgx-spark/mistral-nvfp4` (NVFP4 on DGX Spark)
 
 **Open labs not yet deployed (candidates per report):**
-- Mistral — Magistral Small 24B / Mistral Small 3.x on 5090; Mistral Large 3 (675B) on DGX Spark
+- Mistral — **Mistral Small 4 (119B-A3B NVFP4)** already deployed on DGX Spark (see above); Magistral Small 24B / Mistral Small 3.x on 5090; Mistral Large 3 (675B) on DGX Spark
 - Zhipu/GLM — GLM-4-9B/32B on 5090; GLM-4.5→5.2 on DGX Spark
 - Moonshot/Kimi — Kimi-VL (16B) on 5090; Kimi K2.x (1T) on DGX Spark (offload); K3 needs multi-GPU
 - Thinking Machines — Inkling (975B) multi-GPU cluster only; Inkling-Small (pending) the local candidate
