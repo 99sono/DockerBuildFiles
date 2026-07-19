@@ -114,6 +114,10 @@ What remains **not fully open**: training data and full training code are not re
 - Model hub (ModelScope, ZhipuAI): https://modelscope.cn/organization/ZhipuAI
 - GLM-5.2 vs Thinking Machines Inkling (VentureBeat): https://venturebeat.com/ai/thinking-machines-open-sources-first-multimodal-language-model-inkling-focused-on-low-cost-and-resistance-to-censorship
 
+### Local-serving recipes
+- vLLM recipe — GLM-5.2: https://recipes.vllm.ai/zai-org/GLM-5.2
+- Unsloth GGUF — GLM-5.2: https://huggingface.co/unsloth/GLM-5.2-GGUF
+
 ## Local Deployment in This Repo
 
 This repo does **not** yet deploy any Zhipu AI / GLM model — only Qwen, Gemma, DeepSeek, and Nemotron are currently served under `inference-containers/`. Zhipu's open-weight models are fully compatible with the repo's vLLM and llama.cpp pipelines, so adding them is straightforward. Suggested fits:

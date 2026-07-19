@@ -107,6 +107,10 @@ What remains not "fully open" even for the open models: training data and full t
 - Qwen3.6-35B-A3B release blog: https://qwen.ai/blog?id=qwen3.6-35b-a3b
 - Qwen3.5 release blog: https://qwen.ai/blog?id=qwen3.5
 - vLLM recipe (Qwen3.6-35B-A3B, NVFP4/MTP): https://recipes.vllm.ai/Qwen/Qwen3.6-35B-A3B
+
+### Local-serving recipes
+- vLLM recipe — Qwen3.6-35B-A3B: https://recipes.vllm.ai/Qwen/Qwen3.6-35B-A3B
+- Unsloth GGUF — Qwen3.6-27B: https://huggingface.co/unsloth/Qwen3.6-27B-GGUF
 - NVIDIA NVFP4 checkpoint: https://huggingface.co/nvidia/Qwen3.6-35B-A3B-NVFP4
 - ModelScope (Alibaba mirror): https://modelscope.cn/collections/Qwen/Qwen36
 - Qwen2.5 blog: https://qwenlm.github.io/blog/qwen2.5 (now https://qwen.ai/blog?id=qwen2.5)

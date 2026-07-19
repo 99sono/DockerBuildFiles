@@ -103,6 +103,10 @@ What remains *not* fully open: training data, full training code, and the K1.5 b
 - vLLM Kimi-K2 recipe: https://docs.vllm.ai/projects/recipes/en/latest/moonshotai/Kimi-K2.html
 - Unsloth Kimi-K2 GGUF: https://huggingface.co/unsloth/Kimi-K2-Instruct-GGUF
 - Unsloth Kimi-K2.6 GGUF: https://huggingface.co/unsloth/Kimi-K2.6-GGUF
+
+### Local-serving recipes
+- vLLM recipe — Kimi-K2-Instruct: https://recipes.vllm.ai/moonshotai/Kimi-K2-Instruct
+- Unsloth GGUF — Kimi-K2-Instruct: https://huggingface.co/unsloth/Kimi-K2-Instruct-GGUF
 - Wikipedia (Moonshot AI / Kimi): https://en.wikipedia.org/wiki/Moonshot_AI
 
 ## Local Deployment in This Repo

@@ -78,6 +78,10 @@ The model card explicitly lists supported inference frameworks: **SGLang, vLLM, 
 - Artificial Analysis coverage: https://artificialanalysis.ai/articles/thinking-machines-has-released-inkling-the-new-leading-u-s-open-weights-model
 - Artificial Analysis model page: https://artificialanalysis.ai/models/inkling
 - Simon Willison (Inkling link blog): https://simonwillison.net/2026/Jul/16/inkling
+
+### Local-serving recipes
+- Unsloth GGUF — Inkling: https://huggingface.co/unsloth/inkling-GGUF
+- Note: no official vLLM Recipes page exists yet for Inkling (custom MoE layout); track the model card + Unsloth GGUF for serving-engine support.
 - TechCrunch (2026-07-15): Thinking Machines amps up its bet against one-size-fits-all AI
 - MarkTechPost (2026-07-15): https://www.marktechpost.com/2026/07/15/thinking-machines-lab-releases-inkling-a-975b-parameter-open-weights-multimodal-moe-with-41b-active-parameters-and-controllable-thinking-effort
 - Techzine (2026-07-16): https://www.techzine.eu/news/analytics/142945/thinking-machines-lab-releases-inkling-an-open-weights-model

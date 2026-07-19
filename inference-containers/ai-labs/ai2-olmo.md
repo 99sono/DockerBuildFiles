@@ -92,6 +92,10 @@ Every OLMo generation has honored this. OLMo 1 (Feb 2024) shipped 500+ intermedi
 - Training data (Dolma): https://huggingface.co/datasets/allenai/dolma
 - OLMoTrace (trace outputs to data): https://allenai.org/olmotrace
 
+### Local-serving recipes
+- Unsloth GGUF — OLMo 2 32B Instruct: https://huggingface.co/unsloth/OLMo-2-0325-32B-Instruct-GGUF
+- Note: no official vLLM Recipes page for OLMo; serve via vLLM (`OLMoForCausalLM`) or llama.cpp using the GGUF above.
+
 ## Local Deployment in This Repo
 
 This repo does **not** yet deploy any Ai2/OLMo model — only Qwen, Gemma, DeepSeek, and Nemotron are currently served under `inference-containers/`. OLMo's fully-open models are fully compatible with the repo's vLLM and llama.cpp pipelines, so adding them is straightforward and on-brand (the repo already values open models). Suggested fits:

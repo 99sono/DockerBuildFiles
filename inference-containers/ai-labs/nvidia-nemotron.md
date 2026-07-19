@@ -115,6 +115,13 @@ Supporting tooling is also open: **NVIDIA Model Optimizer (ModelOpt)** (Apache 2
 - build.nvidia.com (demo endpoints / NIM): https://build.nvidia.com/ and https://build.nvidia.com/nvidia/nemotron-3-nano-30b-a3b
 - Nemotron 3 Nano llama.cpp Playbook (DGX Spark): https://forums.developer.nvidia.com/t/nemotron-3-nano-30b-with-llama-cpp-playbook/355147
 
+### Local-serving recipes
+- vLLM recipe — Nemotron 3 Nano 30B-A3B: https://recipes.vllm.ai/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16
+- Unsloth "Run Nemotron 3 locally" guide: https://unsloth.ai/docs/models/nemotron-3
+- Unsloth GGUF — Nemotron 3 Nano 30B-A3B: https://huggingface.co/unsloth/Nemotron-3-Nano-30B-A3B-GGUF
+
+> Note: **Nemotron-Cascade-2** (the model deployed in this repo) has no official vLLM Recipes page and no Unsloth GGUF; run it via the NVIDIA-hosted vLLM launch command on its HF card (`nvidia/Nemotron-Cascade-2-30B-A3B`) or third-party GGUFs (`bartowski/nvidia_Nemotron-Cascade-2-30B-A3B-GGUF`).
+
 ## Local Deployment in This Repo
 
 This repo **does** deploy a Nemotron model: **Nemotron-Cascade-2-30B-A3B-NVFP4** served via **vLLM** at `inference-containers/vllm/nemotron-cascade-2/`.

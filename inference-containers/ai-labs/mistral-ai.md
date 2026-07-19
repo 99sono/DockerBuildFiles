@@ -126,6 +126,12 @@ What remains not "fully open": training data and full training code are not rele
 - Magistral technical paper (arXiv): https://arxiv.org/abs/2506.10910
 - Mamba architecture (arXiv): https://arxiv.org/abs/2312.00752
 
+### Local-serving recipes
+- vLLM recipe — Mistral Small 4 119B: https://recipes.vllm.ai/mistralai/Mistral-Small-4-119B-2603
+- vLLM recipe — Mistral Large 3 675B: https://recipes.vllm.ai/mistralai/Mistral-Large-3-675B-Instruct-2512
+- Unsloth GGUF — Mistral Small 4 119B: https://huggingface.co/unsloth/Mistral-Small-4-119B-2603-GGUF
+- Unsloth GGUF — Mistral Large 3 675B: https://huggingface.co/unsloth/Mistral-Large-3-675B-Instruct-2512-GGUF
+
 ## Local Deployment in This Repo
 
 This repo **does** deploy a Mistral model: **Mistral Small 4 (119B-A3B MoE, NVFP4)** served via vLLM on **DGX Spark**.

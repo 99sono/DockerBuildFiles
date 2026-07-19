@@ -88,6 +88,10 @@ What remains not "fully open": training data, full training code, and the Gemini
 - PyTorch impl: https://github.com/google/gemma_pytorch/
 - Model hub: https://huggingface.co/google and https://www.kaggle.com/models/google/gemma
 
+### Local-serving recipes
+- vLLM recipe — Gemma 4 26B-A4B: https://recipes.vllm.ai/Google/gemma-4-26B-A4B-it
+- Unsloth "Run Gemma 4 locally" guide: https://unsloth.ai/docs/models/gemma-4
+
 ## Local Deployment in This Repo
 
 This repo serves Gemma 4 locally on consumer and edge hardware:

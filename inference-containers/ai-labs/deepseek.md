@@ -111,6 +111,12 @@ DeepSeek is distinguished by a steady stream of architecture-first efficiency wo
 - vLLM large-scale DeepSeek serving: https://blog.vllm.ai/2025/12/17/large-scale-serving.html
 - vLLM V4 / NVFP4 on GB200: https://blog.vllm.ai/2026/02/03/v4-gb200.html
 
+### Local-serving recipes
+- vLLM recipe — DeepSeek-V4-Flash: https://recipes.vllm.ai/deepseek-ai/DeepSeek-V4-Flash
+- vLLM recipe — DeepSeek-V3: https://recipes.vllm.ai/deepseek-ai/DeepSeek-V3
+- Unsloth "Run DeepSeek-V4 locally" guide: https://unsloth.ai/docs/models/deepseek-v4
+- Unsloth GGUF — DeepSeek-V4-Flash: https://huggingface.co/unsloth/DeepSeek-V4-Flash-GGUF
+
 ## Local Deployment in This Repo
 
 This repo serves DeepSeek locally on edge/cluster hardware:
