@@ -20,6 +20,15 @@ services:
     shm_size: "32g"
     ipc: host
 
+    # Override the base image's healthcheck (probes default port 8080).
+    # We serve on 8000, so a correct healthcheck probes /health there.
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+
     deploy:
       resources:
         reservations:
