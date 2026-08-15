@@ -1,6 +1,9 @@
 .DS_Store
 *.zip
 downloaded_models
+
+# Externally downloaded GGUF models in llama.cpp folders (served locally via -m, never committed)
+inference-containers/llamacpp/**/models/
 .aider.*
 
 # The .env file is ignored because it often contains private API keys, so it should not be committed to a repo.

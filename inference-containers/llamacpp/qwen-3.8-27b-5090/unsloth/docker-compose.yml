@@ -1,0 +1,124 @@
+services:
+  qwen-38-27b-server:
+    # Official multi-arch image with CUDA 13 support and merged MTP support.
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda13
+    container_name: qwen-3.8-27b-5090
+    hostname: inference-server
+    platform: linux/amd64
+    # All models served on port 8000. Single-model capacity avoids client port mismatches.
+    ports:
+      - "${INFERENCE_SERVER_PORT:-8000}:8000"
+
+    volumes:
+      # Model downloaded externally (00_d) into ./models/ — mounted read-only.
+      # llama.cpp NEVER downloads; it serves this local GGUF via -m.
+      - ./models:/models:ro
+      # Shared memory for high-speed KV cache paging.
+      - /dev/shm:/dev/shm
+
+    # 32GB shm_size matches RTX 5090 VRAM; crucial for large context windows (256k).
+    shm_size: "32g"
+    ipc: host
+
+    # Override the base image's healthcheck (probes default port 8080).
+    # We serve on 8000, so a correct healthcheck probes /health there.
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      # Critical: Forces the container to use Blackwell-optimized libraries.
+      # This enables the 5.7x speedup via MMQ kernels (CUDA 13 runtime has offload bugs).
+      - LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64
+      - HF_HOME=/root/.cache/huggingface
+      - NVIDIA_VISIBLE_DEVICES=0
+    command:
+      # Model: Qwen3.8-27B largest 4-bit quant (UD-Q4_K_XL, 17.9 GB) by Unsloth.
+      # MTP is baked into the GGUF (unsloth_fixed_mtp: true), so --spec-type draft-mtp works.
+      # Downloaded externally by 00_d into ./models/ — served locally, no runtime download.
+      - "-m"
+      - "/models/Qwen3.8-27B-UD-Q4_K_XL.gguf"
+      # Aliased name presented in /v1/models API response.
+      - "--alias"
+      - "${INFERENCE_MODEL_ALIAS:-qwen3.8-27b}"
+      # API key authentication (Bearer token on all routes).
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
+      # Bind to all interfaces for network access.
+      - "--host"
+      - "0.0.0.0"
+      # Internal container port.
+      - "--port"
+      - "${INFERENCE_SERVER_PORT:-8000}"
+      # Load the full graph into GPU VRAM (17.9 GB model, 32 GB available).
+      - "--n-gpu-layers"
+      - "999"
+      # Forces the OS to lock/pin memory footprint, preventing paging on RTX 5090.
+      - "--mlock"
+      # Native FlashAttention-2 acceleration for deep context layers.
+      - "--flash-attn"
+      - "on"
+      # Q8_0 KV-cache: High precision (8-bit) to avoid "doom loop" logic errors.
+      - "--cache-type-k"
+      - "q8_0"
+      - "--cache-type-v"
+      - "q8_0"
+      # 256K context — Qwen3.8-27B native max. Hybrid attention (linear+full) keeps
+      # the KV cache tiny: only 16 of 64 layers are full-attention, so 256K fits in 32GB VRAM.
+      - "--ctx-size"
+      - "262144"
+      # Single concurrent slot — RTX 5090 optimized for one heavy reasoning session.
+      - "--parallel"
+      - "1"
+
+      # --- THREADING OPTIMIZATION ---
+      # 12 threads for single-token generation (lean, CPU cache friendly).
+      # 24 threads for batch/MTP verification bursts using SMT cores.
+      - "--threads"
+      - "12"
+      - "--threads-batch"
+      - "24"
+
+      # --- SPECULATIVE DECODING (MTP) ---
+      # MTP heads are baked into the Qwen3.8-27B GGUF (no separate draft model needed).
+      - "--spec-type"
+      - "draft-mtp"
+      # Conservative: 2 draft tokens. At deep context per-token acceptance ~52%:
+      # 0.52^2 = 27% full-chain success vs 0.52^3 = 14% for n=3.
+      - "--spec-draft-n-max"
+      - "2"
+      # High confidence threshold — only accept very confident draft tokens,
+      # reducing wasted compute on rejected speculative paths.
+      - "--spec-draft-p-min"
+      - "0.8"
+
+      # --- SAMPLING (Qwen3.8-27B thinking-mode defaults per Unsloth docs) ---
+      # Thinking mode: temp=1.0, top_p=0.95, top_k=20, min_p=0.0, presence_penalty=0.0
+      - "--temp"
+      - "1.0"
+      - "--top-p"
+      - "0.95"
+      - "--top-k"
+      - "20"
+      - "--min-p"
+      - "0.0"
+      - "--presence-penalty"
+      - "0.0"
+
+    networks:
+      - development-network
+
+networks:
+  # Allows this server to communicate with other internal tools/proxies.
+  development-network:
+    external: true
