@@ -213,19 +213,23 @@ docker_exec_enter() {
 
 # --- MODEL DOWNLOAD ---
 
-## hf_download_with_check <env_name> <model_id> [file] [force]
+## hf_download_with_check <env_name> <model_id> [file] [force] [local_dir]
 # Downloads a model from Hugging Face, verifying the conda env exists first.
 # Uses `conda run -n` internally to leverage the correct environment.
 # Args:  env_name   — conda environment name (must exist)
-#        model_id   — HuggingFace repo ID (e.g., unsloth/Qwen3.6-27B-MTP-GGUF)
+#        model_id   — HuggingFace repo ID (e.g., unsloth/Qwen3.8-27B-GGUF)
 #        file       — optional specific filename within the repo; if omitted,
 #                     downloads the entire repo
 #        force      — optional, set to "true" to force a re-download
+#        local_dir  — optional local directory for --local-dir (explicit path,
+#                     independent of the HF cache). Use this when the model must
+#                     be downloaded BEFORE the container starts and served via -m.
 hf_download_with_check() {
-  local env_name="${1:?Usage: hf_download_with_check <env_name> <model_id> [file] [force]}"
+  local env_name="${1:?Usage: hf_download_with_check <env_name> <model_id> [file] [force] [local_dir]}"
   local model_id="$2"
   local model_file="${3:-}"
-   local force="${4:-false}"
+  local force="${4:-false}"
+  local local_dir="${5:-}"
 
   if ! conda_env_exists "$env_name"; then
     echo "❌ Conda env '$env_name' not found. Run 00_b and 00_c first." >&2; exit 1
@@ -235,6 +239,10 @@ hf_download_with_check() {
   local extra_args=""
   if [ "$force" = "true" ]; then
     extra_args="--force-download"
+  fi
+  if [ -n "$local_dir" ]; then
+    mkdir -p "$local_dir"
+    extra_args="$extra_args --local-dir $local_dir"
   fi
 
   if [ -n "$model_file" ]; then
