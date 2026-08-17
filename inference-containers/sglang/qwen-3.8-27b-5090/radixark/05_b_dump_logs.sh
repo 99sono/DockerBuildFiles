@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../../../commonScripts/lib.sh"
 load_env
 
-CONTAINER="qwen-3.8-27b-5090"
+CONTAINER="qwen-3.8-27b-sglang-5090"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 OUTPUT_FILE="${SCRIPT_DIR}/${TIMESTAMP}_${CONTAINER}_log_dump.txt"
 

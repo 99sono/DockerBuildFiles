@@ -2,7 +2,7 @@ services:
   qwen-38-27b-nvfp4-server:
     # Official SGLang image tuned for Qwen3.8-27B NVFP4 deployment.
     image: lmsysorg/sglang:qwen38-27b
-    container_name: qwen-3.8-27b-5090
+    container_name: qwen-3.8-27b-sglang-5090
     hostname: inference-server
     platform: linux/amd64
     # All models served on port 8000. Single-model capacity avoids client port mismatches.
@@ -43,6 +43,9 @@ services:
     command:
       # Model: Qwen3.8-27B NVFP4 (W4A4 + FP8 projections, ~16.5 GB) by RadixArk.
       # Pre-downloaded externally by 00_d into ./models/ — served locally, no runtime download.
+      # Entrypoint is /opt/nvidia/nvidia_entrypoint.sh (NVIDIA container wrapper), so the
+      # sglang binary must be invoked explicitly as the command.
+      - "sglang"
       - "serve"
       - "--trust-remote-code"
       - "--model-path"
@@ -95,6 +98,13 @@ services:
       - "qwen3"
       - "--tool-call-parser"
       - "qwen3_coder"
+
+      # --- MULTIMODAL FEATURE TRANSPORT ---
+      # Text-only model; avoid the CUDA IPC feature pool which crashes on this
+      # card with 'invalid resource handle'. CPU transport is used for any
+      # (unused) multimodal features.
+      - "--mm-feature-transport"
+      - "cpu"
 
     networks:
       - development-network

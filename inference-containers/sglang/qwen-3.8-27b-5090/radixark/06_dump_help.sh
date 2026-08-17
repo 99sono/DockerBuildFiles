@@ -8,7 +8,7 @@ echo "  Qwen3.8-27B (NVFP4) — SGLang Help"
 echo "=========================================="
 echo ""
 
-CONTAINER="qwen-3.8-27b-5090"
+CONTAINER="qwen-3.8-27b-sglang-5090"
 if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
   echo "Active container: $CONTAINER"
   echo "Dumping SGLang server version/help info..."

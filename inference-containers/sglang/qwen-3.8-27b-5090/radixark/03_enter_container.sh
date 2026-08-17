@@ -1,6 +1,6 @@
 #!/bin/bash
 source ../../../../commonScripts/lib.sh
-CONTAINER="qwen-3.8-27b-5090"
+CONTAINER="qwen-3.8-27b-sglang-5090"
 if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
   echo "❌ Container '$CONTAINER' is not running." >&2; exit 1
 fi
