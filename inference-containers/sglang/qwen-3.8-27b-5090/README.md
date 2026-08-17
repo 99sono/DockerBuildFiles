@@ -1,5 +1,10 @@
 # Qwen3.8-27B NVFP4 Server on RTX 5090 (SGLang)
 
+> ⚠️ **Experiment concluded — see [Conclusion](#conclusion) below.** SGLang serves
+> the model at ~72 tok/s but cannot reach the model's 256k context on a 32 GB card;
+> the fp32 GDN state pool caps the server's total-token budget around 42k–113k.
+> llama.cpp remains the recommended backend for full 262k context.
+
 > RadixArk NVFP4 W4A4 checkpoint • FlashInfer attention • Blackwell SM 12.0 • in-checkpoint MTP
 
 **Target Hardware:** RTX 5090 (32 GB GDDR7, SM 12.0, x86_64)
@@ -61,6 +66,50 @@ qwen-3.8-27b-5090/
 
 ---
 
+## Conclusion
+
+**Verdict: not worth it on a single 32 GB RTX 5090 for long contexts.** SGLang
+serves Qwen3.8-27B NVFP4 correctly (~72 tok/s decode, FP8 KV + hybrid GDN state
+pool), but the model's **262,144** token context is physically unreachable on this
+card. The decision to run SGLang over llama.cpp was dropped for this model.
+
+### Why 256k won't fit
+
+Measured VRAM budget from the startup log (`radixark/metadata/01_docker_logs.txt`):
+
+| Component | Size | Notes |
+|---|---|---|
+| Weights (NVFP4) | 20.14 GB | fixed |
+| GDN state pool (ratio 4.59) | 5.59 GB | 38 fp32 slots |
+| GDN state pool (ratio 1.0) | 3.38 GB | 23 fp32 slots |
+| Full-attn KV cache | 32 KB/token | 16 layers × 4 KV heads × 256 dim × fp8 × 2 |
+| GPU total | 31.8 GB | 32607 MiB |
+
+Full 262,144-token context needs **~8.4 GB** of full-attention KV alone. Adding
+weights (20.14 GB) + minimum GDN pool (~3.4 GB) exceeds the 31.8 GB card before
+CUDA graphs and runtime buffers.
+
+### Measured server token budgets
+
+| `--mamba-full-memory-ratio` | `max_total_num_tokens` | Usable context |
+|---|---|---|
+| 4.59 (cookbook recommended) | 42,710 | ~42k |
+| 1.5 | — | ~85k (estimate) |
+| 1.0 (minimal) | 113,180 | ~113k |
+
+The 400 you'd get with a large prompt is the **server budget**, not the model:
+```
+Input length (84546 tokens) exceeds the maximum allowed length (42704 tokens).
+```
+
+### Recommended alternative
+
+Keep **llama.cpp** (`inference-containers/llamacpp/qwen-3.8-27b-5090/`) for this
+model: it fits the 262k context and reaches ~72–131 tok/s with MTP on the same
+card. SGLang adds batching/engine features this single-request tier does not need.
+
+---
+
 ## Configuration Highlights
 
 The compose file ships the **validated RTX 5090 recipe** from the SGLang cookbook
@@ -73,7 +122,7 @@ The compose file ships the **validated RTX 5090 recipe** from the SGLang cookboo
 | `--attention-backend` | `flashinfer` | SM120/SM121 Blackwell-optimized (trtllm_mha is SM100-only) |
 | `--max-running-requests` | `1` | Validated single-stream envelope |
 | `--cuda-graph-max-bs` | `1` | Match the single-request batch size |
-| `--mamba-full-memory-ratio` | `4.59` | Hybrid GDN state pool sizing (see below) |
+| `--mamba-full-memory-ratio` | `1.0` | Minimal GDN state pool → ~113k max tokens (see Conclusion) |
 | `--mamba-radix-cache-strategy` | `extra_buffer` | 5 state slots/request (default guidance) |
 | `--mamba-ssm-dtype` | `float32` | Checkpoint-declared GDN state precision |
 | `--reasoning-parser` | `qwen3` | Structured reasoning for agent harnesses |
@@ -86,8 +135,8 @@ full-attention layers. The **GDN state pool** (not the KV cache) is what runs ou
 first on 32 GB cards, so:
 
 - `--mamba-full-memory-ratio` divides post-weight memory between the GDN state
-  pool and the paged KV pool. Default 0.9 over-provisions and silently clamps
-  concurrency — 4.59 is the balanced value for this single-request tier.
+  pool and the paged KV pool. **Measured:** 4.59 → 42.7k max tokens, 1.0 →
+  113.2k. See [Conclusion](#conclusion) for the full budget analysis.
 - `--mamba-ssm-dtype`: one state slot is **153.9 MB at fp32** vs **78.4 MB at
   bf16**. We ship fp32 (checkpoint-declared); switch to `bfloat16` to hand more
   memory to KV if you need longer contexts.
@@ -99,9 +148,12 @@ first on 32 GB cards, so:
 
 ## Performance
 
-Expected decode throughput on RTX 5090 (NVFP4): **~150 tok/s/user** with EAGLE
-speculative decoding; higher still for short-context single streams. Measured
-numbers from this project's log dumps are tracked in `radixark/metadata/`.
+**Measured on this card (ratio 1.0, no EAGLE):** ~72 tok/s decode single stream
+(mean 69.5 across 147 decode batches), weights load ~15–46 s, 20.14 GB VRAM.
+The cookbook's **~150 tok/s/user with EAGLE** is optimistic; reaching it would
+require `--mem-fraction-static 0.94` and the in-checkpoint MTP head, further
+shrinking the already-tight context budget. Full log dumps are in
+`radixark/metadata/`.
 
 ### MTP / Speculative Decoding (optional)
 
@@ -145,6 +197,13 @@ are both 1.
 ### Port conflict
 Container uses port 8000 internally; change `INFERENCE_SERVER_PORT` in `.env` if
 another server is already on 8000.
+
+### "Input length exceeds maximum allowed length"
+The model's `context_len=262144` is **not** the real limit — the server's
+`max_total_num_tokens` is derived from free VRAM. Large prompts fail with a 400
+even though the model could handle them. Raise the budget by lowering
+`--mamba-full-memory-ratio` (see [Conclusion](#conclusion)); the fp32 GDN state
+pool is the blocker on 32 GB.
 
 ---
 

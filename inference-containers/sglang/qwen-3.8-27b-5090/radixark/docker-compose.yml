@@ -81,9 +81,11 @@ services:
       - "1"
 
       # --- HYBRID GDN STATE POOL (Qwen3.8-27B) ---
-      # Ratio computed for the low-latency single-request tier, fp32 GDN state.
+      # Ratio 1.0: minimal fp32 state slots (~8-12), maximizing the VRAM left
+      # for the full-attention KV/radix cache so max_total_num_tokens approaches
+      # the model's 262144 (256k) context. Single request → state slots are cheap.
       - "--mamba-full-memory-ratio"
-      - "4.59"
+      - "1.0"
       # extra_buffer radix strategy: 5 state slots per request (default guidance).
       - "--mamba-radix-cache-strategy"
       - "extra_buffer"
