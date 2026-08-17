@@ -11,15 +11,38 @@ accurate markdown performance report.
 | `dump_and_report.sh` | Bash wrapper: dumps the container logs to a timestamped file (via `commonScripts/lib.sh` → `docker_logs_dump_container`), then runs the parser to produce a markdown report. |
 | `README.md` | This file. |
 
-## Usage
+## How to use it
 
-### One-shot (dump + report)
+There are **two ways** to get a performance report. Pick whichever fits your
+workflow — they produce identical reports.
 
-Run from the directory where you want the two output files to appear
-(typically the project folder, matching the per-project dump scripts):
+### Option A — per-project dump script (recommended for everyday use)
+
+The per-project log script `05_b_dump_logs.sh` already dumps the container
+logs AND runs this parser. Just run it from the project folder, exactly as you
+always have:
 
 ```bash
-./dump_and_report.sh [CONTAINER]     # default container: qwen-3.8-27b-5090
+cd inference-containers/llamacpp/qwen-3.8-27b-5090/unsloth
+./05_b_dump_logs.sh
+```
+
+It produces two files **in that folder**:
+
+- `<TIMESTAMP>_qwen-3.8-27b-5090_log_dump.txt` — full log dump (masked)
+- `<TIMESTAMP>_qwen-3.8-27b-5090_log_report.md` — markdown performance report
+
+(If the project predates this toolchain, add the same two lines to its
+`05_b_dump_logs.sh`: point `PARSER` at the shared script and run
+`python3 "$PARSER" "$OUTPUT_FILE" > "$REPORT_FILE"`.)
+
+### Option B — shared one-shot wrapper
+
+Run from any directory (output files appear in the **current directory**):
+
+```bash
+cd inference-containers/llamacpp/qwen-3.8-27b-5090/unsloth
+../../scripts/dump_and_report.sh [CONTAINER]   # default container: qwen-3.8-27b-5090
 ```
 
 Produces in the current directory:
@@ -27,9 +50,10 @@ Produces in the current directory:
 - `<TIMESTAMP>_<CONTAINER>_log_dump.txt` — full log dump (sensitive values masked)
 - `<TIMESTAMP>_<CONTAINER>_log_report.md` — markdown performance report
 
-Requires the container to be running (docker is used for the dump).
+### Option C — parser only (no docker needed)
 
-### Parser only
+If you already have a log dump file (e.g. from an earlier run or another
+machine), parse it directly:
 
 ```bash
 python3 parse_llamacpp_log.py <log_dump.txt>            # markdown report to stdout
@@ -38,6 +62,9 @@ python3 parse_llamacpp_log.py /path/to/dump.txt > report.md
 ```
 
 No CLI arg → prints usage and exits non-zero. Malformed lines are skipped silently.
+
+> **Requirements:** the container must be running for Options A/B (they use
+> `docker logs`); Option C works on any existing dump file.
 
 ## What the report contains
 

@@ -70,11 +70,33 @@ qwen-3.8-27b-5090/
     ├── 02_down.sh                  # Stop server
     ├── 03_enter_container.sh       # Bash into running container
     ├── 05_a_follow_logs.sh         # Live tail of logs
-    ├── 05_b_dump_logs.sh           # Dump full logs to metadata/ (masked)
+    ├── 05_b_dump_logs.sh           # Dump logs + generate perf report (markdown)
     ├── 06_dump_help.sh             # Dump server version/help
     ├── docker-compose.yml          # llama-server MTP config
     └── metadata/                   # Benchmark logs, VRAM traces
 ```
+
+---
+
+## Performance Reports
+
+`05_b_dump_logs.sh` dumps the container logs **and** builds a markdown
+performance report from them via the shared toolchain
+(`inference-containers/llamacpp/scripts/parse_llamacpp_log.py`).
+
+```bash
+cd unsloth && ./05_b_dump_logs.sh
+```
+
+This writes two files into `unsloth/`:
+
+- `<TIMESTAMP>_qwen-3.8-27b-5090_log_dump.txt` — full log dump (masked)
+- `<TIMESTAMP>_qwen-3.8-27b-5090_log_report.md` — markdown report
+
+The report covers server/model info, per-task prompt-eval + generation
+throughput, aggregates (overall gen t/s, MTP draft acceptance, graphs
+reused), snapshot `tg`/`tg_3s` summaries, and warnings. See
+`../scripts/README.md` for all options (incl. parser-only and `--json`).
 
 ---
 
