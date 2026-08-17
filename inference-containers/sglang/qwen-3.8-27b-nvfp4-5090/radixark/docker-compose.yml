@@ -1,0 +1,105 @@
+services:
+  qwen-38-27b-nvfp4-server:
+    # Official SGLang image tuned for Qwen3.8-27B NVFP4 deployment.
+    image: lmsysorg/sglang:qwen38-27b
+    container_name: qwen-3.8-27b-nvfp4-5090
+    hostname: inference-server
+    platform: linux/amd64
+    # All models served on port 8000. Single-model capacity avoids client port mismatches.
+    ports:
+      - "${INFERENCE_SERVER_PORT:-8000}:8000"
+
+    volumes:
+      # Checkpoint pre-downloaded externally (00_d) into ./models/ — mounted read-only.
+      # SGLang NEVER downloads at runtime; it serves this local NVFP4 dir via --model-path.
+      - ./models:/models:ro
+      # Shared memory for high-speed KV cache paging.
+      - /dev/shm:/dev/shm
+
+    # 32GB shm_size matches RTX 5090 VRAM; SGLang needs large /dev/shm for paged KV.
+    shm_size: "32g"
+    ipc: host
+
+    # Healthcheck probes SGLang's /health endpoint on port 8000.
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 300s
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=0
+      # No runtime download: HF_HOME is only used if the server touches the hub.
+      - HF_HOME=/root/.cache/huggingface
+
+    command:
+      # Model: Qwen3.8-27B NVFP4 (W4A4 + FP8 projections, ~16.5 GB) by RadixArk.
+      # Pre-downloaded externally by 00_d into ./models/ — served locally, no runtime download.
+      - "serve"
+      - "--trust-remote-code"
+      - "--model-path"
+      - "/models"
+      # Aliased name presented in /v1/models API response.
+      - "--served-model-name"
+      - "${INFERENCE_MODEL_ALIAS:-qwen3.8-27b-nvfp4}"
+      # API key authentication (Bearer token on all routes).
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
+      # Bind to all interfaces for network access.
+      - "--host"
+      - "0.0.0.0"
+      # Internal container port.
+      - "--port"
+      - "${INFERENCE_SERVER_PORT:-8000}"
+
+      # --- QUANTIZATION / KV CACHE (RTX 5090 validated recipe) ---
+      # NVFP4 checkpoint declares kv_cache_quant_algo: FP8 → KV pool runs fp8_e4m3.
+      - "--kv-cache-dtype"
+      - "fp8_e4m3"
+      # 90% of 32 GB VRAM reserved for weights + KV/state pool.
+      - "--mem-fraction-static"
+      - "0.9"
+      # FlashInfer attention backend (SM120/SM121 Blackwell required).
+      - "--attention-backend"
+      - "flashinfer"
+      # Single concurrent request — the validated single-stream envelope on 32GB.
+      # GDN state pool (not KV) is what runs out first on this card.
+      - "--max-running-requests"
+      - "1"
+      - "--cuda-graph-max-bs"
+      - "1"
+
+      # --- HYBRID GDN STATE POOL (Qwen3.8-27B) ---
+      # Ratio computed for the low-latency single-request tier, fp32 GDN state.
+      - "--mamba-full-memory-ratio"
+      - "4.59"
+      # extra_buffer radix strategy: 5 state slots per request (default guidance).
+      - "--mamba-radix-cache-strategy"
+      - "extra_buffer"
+      # GDN state slot precision: fp32 (checkpoint-declared), 153.9 MB per slot.
+      - "--mamba-ssm-dtype"
+      - "float32"
+
+      # --- PARSERS (agent harnesses) ---
+      # qwen3 reasoning + qwen3_coder tool-call parsers ship with the recipe so
+      # harnesses receive structured tool_calls instead of raw text.
+      - "--reasoning-parser"
+      - "qwen3"
+      - "--tool-call-parser"
+      - "qwen3_coder"
+
+    networks:
+      - development-network
+
+networks:
+  # Allows this server to communicate with other internal tools/proxies.
+  development-network:
+    external: true
