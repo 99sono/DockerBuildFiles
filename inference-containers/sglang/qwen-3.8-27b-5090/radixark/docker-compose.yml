@@ -2,7 +2,7 @@ services:
   qwen-38-27b-nvfp4-server:
     # Official SGLang image tuned for Qwen3.8-27B NVFP4 deployment.
     image: lmsysorg/sglang:qwen38-27b
-    container_name: qwen-3.8-27b-nvfp4-5090
+    container_name: qwen-3.8-27b-5090
     hostname: inference-server
     platform: linux/amd64
     # All models served on port 8000. Single-model capacity avoids client port mismatches.

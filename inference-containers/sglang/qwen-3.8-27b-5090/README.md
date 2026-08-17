@@ -38,7 +38,7 @@ cd .. && ./04_test_curl.sh
 ### Scripts
 
 ```
-qwen-3.8-27b-nvfp4-5090/
+qwen-3.8-27b-5090/
 ├── 00_a_pull_image.sh              # Pull lmsysorg/sglang:qwen38-27b image
 ├── 00_b_create_conda_env.sh        # Create testSGLangQwen conda env
 ├── 00_c_install_packages.sh        # Install huggingface-hub, openai, python-dotenv
