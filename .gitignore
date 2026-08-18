@@ -35,3 +35,12 @@ deleteMe*
 cliCurllToolDump/deleteMe_*.html
 
 package-lock.json
+
+# AI agent scratchpad — model thought distillates, never committed (see AGENTS.md)
+# (directory is re-included before negating the .gitkeep, because git cannot
+#  re-include a file whose parent directory is excluded)
+model_chain_of_thought/*
+!model_chain_of_thought/.gitkeep
+!model_chain_of_thought/tasks/
+model_chain_of_thought/tasks/*
+!model_chain_of_thought/tasks/.gitkeep
