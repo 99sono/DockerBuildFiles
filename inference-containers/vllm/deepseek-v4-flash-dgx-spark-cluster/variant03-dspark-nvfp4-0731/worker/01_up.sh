@@ -2,9 +2,9 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../../../../commonScripts/lib.sh"
 
-if [ ! -f "$SCRIPT_DIR/.env" ] && [ -f "$SCRIPT_DIR/../.env" ]; then
-  cp "$SCRIPT_DIR/../.env" "$SCRIPT_DIR/.env"
-  echo "Created $SCRIPT_DIR/.env from parent .env"
+if [ ! -f "$SCRIPT_DIR/.env" ] && [ -f "$SCRIPT_DIR/../env.example.worker" ]; then
+  cp "$SCRIPT_DIR/../env.example.worker" "$SCRIPT_DIR/.env"
+  echo "Created $SCRIPT_DIR/.env from ../env.example.worker"
 fi
 
 load_env
