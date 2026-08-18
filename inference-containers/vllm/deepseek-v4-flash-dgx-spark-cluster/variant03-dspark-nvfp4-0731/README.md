@@ -79,7 +79,10 @@ Yes: **pull the base image, then a 4-stage `docker build` patches it into the ne
 #       (vLLM 0.21.1rc1.dev339+g1967a5627bc3 + B12X kernels, digest-pinned upstream)
 
 # 2. Build the 4-stage image:
-WORKER_BUILD=0 ./00_a_build_dspark_image.sh
+#    on this node only:
+./00_a_build_head_dspark_image.sh
+#    or, from the head, one-shot build here + worker (needs WORKER_HOST in .env):
+./00_b_build_worker_dspark_image.sh
 ```
 
 | Stage | Dockerfile | Output tag | What it does |
@@ -89,9 +92,10 @@ WORKER_BUILD=0 ./00_a_build_dspark_image.sh
 | 3 | `recipe/nvfp4/Dockerfile.stage-b` | `...-nvfp4-b` | NVFP4 probe path |
 | 4 | `recipe/nvfp4/Dockerfile.stage-c` | **`vllm-dspark-runtime:dspark-nvfp4-stage-c-0731`** | padded envelope — the final image |
 
-Run `WORKER_BUILD=1` (default) to rsync the folder to `WORKER_HOST` and rebuild there too;
-`WORKER_BUILD=0` builds locally only. A sanity gate inside the build script fails fast if
-Patch 4 is missing from the overlay.
+Both wrappers call the shared engine `00_build_dspark_image.sh` — the head wrapper sets
+`WORKER_BUILD=0` (local only), the worker wrapper sets `WORKER_BUILD=1` (local + rsync to
+`WORKER_HOST`). A sanity gate inside the engine fails fast if Patch 4 is missing from the
+overlay.
 
 ## Quick start
 
@@ -103,7 +107,7 @@ cp env.example.worker worker/.env  # spark02 — GID 4,4, VLLM_HOST_IP 10.0.1.2
 
 # 1. Pull base + build image (both nodes):
 ./00_pull_base_image.sh
-WORKER_BUILD=0 ./00_a_build_dspark_image.sh
+./00_a_build_head_dspark_image.sh
 
 # 2. Get the model (~167 GB) on BOTH nodes:
 ./00_d_pre_download_model.sh                       # on each node

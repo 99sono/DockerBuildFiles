@@ -4,6 +4,11 @@ set -euo pipefail
 # =============================================================================
 # Variant03 — Build DSpark NVFP4 Stage C runtime image (DeepSeek-V4-Flash-0731)
 # =============================================================================
+# SHARED BUILD ENGINE — do not invoke directly. Use the role wrappers, which
+# set WORKER_BUILD for you:
+#   00_a_build_head_dspark_image.sh    WORKER_BUILD=0  (this node only)
+#   00_b_build_worker_dspark_image.sh  WORKER_BUILD=1  (this node + WORKER_HOST)
+#
 # Distinct image tags from variant02 so both images can coexist on a node:
 #   base overlay  -> vllm-dspark-runtime:mia-raf-pr1-0731
 #   stage A/B/C   -> ...-nvfp4-a / -nvfp4-b
@@ -83,7 +88,7 @@ build_worker() {
   echo "=== Building on worker: $worker_host ==="
   ssh "$worker_host" "mkdir -p '$checkout'"
   rsync -az --delete "$SCRIPT_DIR/" "$worker_host:$checkout/"
-  ssh "$worker_host" "cd '$checkout' && DSPARK_BASE_IMAGE='$DSPARK_BASE_IMAGE' DSPARK_VLLM_IMAGE='$DSPARK_VLLM_IMAGE' WORKER_BUILD=0 ./00_a_build_dspark_image.sh"
+  ssh "$worker_host" "cd '$checkout' && DSPARK_BASE_IMAGE='$DSPARK_BASE_IMAGE' DSPARK_VLLM_IMAGE='$DSPARK_VLLM_IMAGE' WORKER_BUILD=0 ./00_build_dspark_image.sh"
 }
 
 echo "============================================"
