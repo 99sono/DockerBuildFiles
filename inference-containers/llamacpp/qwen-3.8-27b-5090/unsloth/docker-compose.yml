@@ -64,7 +64,9 @@ services:
       - "--n-gpu-layers"
       - "999"
       # Forces the OS to lock/pin memory footprint, preventing paging on RTX 5090.
-      - "--mlock"
+      # --mlock was deprecated by current llama.cpp; the successor flag form.
+      - "--load-mode"
+      - "mlock"
       # Native FlashAttention-2 acceleration for deep context layers.
       - "--flash-attn"
       - "on"
@@ -114,6 +116,13 @@ services:
       - "0.0"
       - "--presence-penalty"
       - "0.0"
+
+      # --- REASONING BUDGET ---
+      # Hard cap on thinking tokens: prevents runaway reasoning spirals on hard
+      # prompts while allowing full-depth planning for most tasks.
+      # Cap, not a target — the model stops thinking as soon as it converges.
+      - "--reasoning-budget"
+      - "2048"
 
     networks:
       - development-network
