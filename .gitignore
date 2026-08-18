@@ -44,3 +44,6 @@ model_chain_of_thought/*
 !model_chain_of_thought/tasks/
 model_chain_of_thought/tasks/*
 !model_chain_of_thought/tasks/.gitkeep
+
+# Scratchpad/analysis folders inside variants — never commit
+inference-containers/vllm/deepseek-v4-flash-dgx-spark-cluster/*/chain_of_thought/
