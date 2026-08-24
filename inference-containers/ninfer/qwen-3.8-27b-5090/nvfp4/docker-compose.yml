@@ -1,0 +1,97 @@
+services:
+  qwen-38-27b-ninfer-server:
+    # NInfer C++/CUDA Blackwell-optimized inference server
+    image: ninfer:latest
+    container_name: qwen-3.8-27b-ninfer-5090
+    hostname: inference-server
+    platform: linux/amd64
+    # All models served on port 8000. Single-model capacity avoids client port mismatches.
+    ports:
+      - "${INFERENCE_SERVER_PORT:-8000}:8000"
+
+    volumes:
+      # Model downloaded externally (00_d) into ./models/ — mounted read-only.
+      # NInfer serves the single-file .ninfer artifact via the positional argument.
+      - ./models:/models:ro
+      # Shared memory for high-speed KV cache paging & IPC.
+      - /dev/shm:/dev/shm
+
+    # 32GB shm_size matches RTX 5090 VRAM.
+    shm_size: "32g"
+    ipc: host
+
+    # Healthcheck probes NInfer's /v1/models endpoint on port 8000.
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/v1/models"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=0
+
+    command:
+      # Explicit entrypoint binary
+      - "ninfer-serve"
+      # Model: Qwen3.8-27B NVFP4 (W4A4 + FP8 projections, 20.02 GiB)
+      - "/models/qwen3_8_27b_nvfp4.ninfer"
+      # Bind to all interfaces for network access.
+      - "--host"
+      - "0.0.0.0"
+      # Internal container port.
+      - "--port"
+      - "${INFERENCE_SERVER_PORT:-8000}"
+      # Aliased name presented in /v1/models API response.
+      - "--model-id"
+      - "${INFERENCE_MODEL_ALIAS:-qwen3.8-27b}"
+      # API key authentication.
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
+
+      # --- SPECULATIVE DECODING (MTP-3) ---
+      # Multi-Token Prediction with 3 draft tokens for saturated decode acceleration.
+      - "--spec"
+      - "mtp"
+      - "--draft-tokens"
+      - "3"
+
+      # --- KV CACHE & MEMORY ---
+      # INT8 group-64 KV cache saves memory bandwidth and footprint on RTX 5090.
+      - "--kv-dtype"
+      - "int8"
+      # Automatic KV capacity sizing based on free VRAM after model weights load.
+      - "--kv-capacity"
+      - "auto"
+
+      # --- CONCURRENCY & PREFILL ---
+      # Up to 8 concurrent requests for max saturated aggregate throughput.
+      - "--max-concurrency"
+      - "8"
+      # Chunk size for prefill processing.
+      - "--prefill-chunk"
+      - "1024"
+
+      # --- SAMPLER DEFAULTS (Thinking mode enabled by default) ---
+      # Temperature and Top-P for reasoning
+      - "--temperature"
+      - "1.0"
+      - "--top-p"
+      - "0.95"
+      - "--top-k"
+      - "20"
+
+    networks:
+      - development-network
+
+networks:
+  # Allows this server to communicate with other internal tools/proxies.
+  development-network:
+    external: true
