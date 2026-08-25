@@ -70,11 +70,14 @@ services:
       # Automatic KV capacity sizing based on free VRAM after model weights load.
       - "--kv-capacity"
       - "auto"
+      # Maximum context window per session (128k native context with CUDA graphs)
+      - "--max-context"
+      - "131072"
 
       # --- CONCURRENCY & PREFILL ---
-      # Up to 8 concurrent requests for max saturated aggregate throughput.
+      # Single concurrent session: optimizes memory allocation for large context coding agent (Cline)
       - "--max-concurrency"
-      - "8"
+      - "1"
       # Chunk size for prefill processing.
       - "--prefill-chunk"
       - "1024"
