@@ -70,7 +70,7 @@ services:
       # Automatic KV capacity sizing based on free VRAM after model weights load.
       - "--kv-capacity"
       - "auto"
-      # Maximum context window per session (tested up to 131072 for long-context coding)
+      # Maximum context window per session (128k native context with CUDA graphs)
       - "--max-context"
       - "131072"
 
