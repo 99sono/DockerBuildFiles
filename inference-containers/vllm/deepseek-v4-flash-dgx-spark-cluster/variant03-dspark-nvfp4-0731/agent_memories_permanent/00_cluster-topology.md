@@ -40,6 +40,24 @@ dual-port RoCE fabric ("Port 1"). One model, one TP=2 group spanning both nodes.
   stop any other variant's container before bring-up.
 - Model alias: `deepseek-v4-flash-0731`.
 
+### Serving stack (3 containers on the head)
+
+The model is consumed through a reverse-proxy stack, not `:8000` directly:
+
+| Container | Role | Networking |
+|---|---|---|
+| `deepseek-v4-flash-0731-head` | The model (this variant), API on `:8000` | host mode (RDMA) |
+| `nginx-proxy-hostmode` | HTTPS 443 proxy; `/inference/…`→model, `/`→Open WebUI | bridge `development-network` |
+| `open-webui-host` | Chat UI, at `web-ui-server:8080` | shared `development-network` |
+
+- nginx reaches the host-mode model via `extra_hosts: inference-server:${DGX_IP}`
+  (the node's **management** IP, not the fabric IP) — host-mode isn't on Docker DNS.
+- `/inference/` prefix is stripped before proxying to `:8000`; `/` goes to Open WebUI
+  with WebSocket `Upgrade` for streaming; `/invocations` → 403.
+- Users: browser → `https://<host>/` (UI); API → `https://<host>/inference/v1/…`.
+- nginx config: `../../../nginx/nginx-vllm-reverse-proxy-dgx-spark-hostmode/`;
+  Open WebUI: `../../../open-webui/`. Bring these up only after the model is serving.
+
 ## Inter-node access
 
 - spark02 → spark01: `ssh sono99@10.0.1.1` — requires `source ~/.ssh/agent-env`

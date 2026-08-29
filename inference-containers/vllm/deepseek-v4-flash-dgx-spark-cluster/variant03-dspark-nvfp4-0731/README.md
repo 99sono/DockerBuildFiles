@@ -138,6 +138,53 @@ head/01_up.sh      # spark01
 #    INFERENCE_SERVER_URL=http://10.0.1.1:8000/v1 ./04_test_vllm_curl.py
 ```
 
+## Serving stack (how it's actually served)
+
+This model is not meant to be consumed by hitting `:8000` directly. On the head node
+(spark01) it is served through a **three-container stack**: the vLLM inference
+container built by this variant, an **nginx HTTPS reverse proxy**, and **Open WebUI**
+behind it.
+
+```
+$ docker ps   (spark01, full stack up)
+CONTAINER ID   IMAGE                                           NAMES
+fbaf469b4edb   vllm-dspark-runtime:dspark-nvfp4-stage-c-0731   deepseek-v4-flash-0731-head
+602758eac2b9   nginx:latest                                    nginx-proxy-hostmode
+538b8ae81ea2   ghcr.io/open-webui/open-webui:latest            open-webui-host
+```
+
+| Container | Role | Networking |
+|---|---|---|
+| `deepseek-v4-flash-0731-head` | The model (this variant). Serves the OpenAI API on `:8000`. | host mode (RDMA fabric) |
+| `nginx-proxy-hostmode` | HTTPS (443) reverse proxy. Splits traffic: `/inference/…` → the model, `/` → Open WebUI. | bridge (`development-network`) |
+| `open-webui-host` | Chat UI, behind the proxy. Reached by nginx at `web-ui-server:8080`. | shared `development-network` |
+
+Routing (from the nginx `nginx.conf`):
+
+- `https://<host>/inference/v1/chat/completions` → `/inference` prefix stripped →
+  `http://inference-server:8000/v1/chat/completions` (the model). `inference-server`
+  resolves via `extra_hosts` to the node's management IP (`DGX_IP`) — the model runs
+  host-mode on the RDMA fabric, so it's not reachable by Docker DNS.
+- `https://<host>/` → `http://web-ui-server:8080` (Open WebUI), with the WebSocket
+  `Upgrade` passthrough needed for real-time streaming.
+- `https://<host>/invocations` → 403 (vulnerable endpoint, deliberately blocked).
+
+So end users point a browser at `https://<host>/` for the chat UI, and API clients hit
+`https://<host>/inference/v1/…`. The model's `:8000` stays internal to the cluster.
+
+Bring up the proxy and UI **after** the model is serving:
+
+```bash
+# nginx — see ../../../nginx/nginx-vllm-reverse-proxy-dgx-spark-hostmode/
+cp .env.example .env          # set DGX_IP to this node's management IP
+./00_b_copy_certs_from_original.sh
+./00_a_pull_nginx_image.sh
+./01_up.sh
+
+# Open WebUI — see ../../../open-webui/ (must be reachable as web-ui-server:8080
+# on the shared development-network)
+```
+
 ## Configuration notes (read these)
 
 - **k is locked at ≤5** on this runtime. The draft model emits exactly
