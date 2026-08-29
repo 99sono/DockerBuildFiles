@@ -40,6 +40,11 @@ cliCurllToolDump/deleteMe_*.html
 
 package-lock.json
 
+# Local opencode-ai CLI install (npm) — binaries, never committed
+node_modules/
+# Root-only manifest for the CLI above (sub-projects may keep their own package.json)
+/package.json
+
 # AI agent scratchpad — model thought distillates, never committed (see AGENTS.md)
 # (directory is re-included before negating the .gitkeep, because git cannot
 #  re-include a file whose parent directory is excluded)
