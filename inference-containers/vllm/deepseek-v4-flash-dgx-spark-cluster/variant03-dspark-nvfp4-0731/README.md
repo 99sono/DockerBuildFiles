@@ -169,6 +169,13 @@ Measurement caveats (from upstream 2026-07-29/31):
 - Use `stream: false` and read `usage.completion_tokens`; under spec-decode, counting
   SSE chunks measures **steps/s**, not tokens/s.
 
+## Agent memories
+
+Durable, distilled knowledge from building and validating this variant — topology,
+image build/provenance, the runtime profile (incl. `DSPARK_SLOT_CLAMP`), and the
+operational runbook (bring-up order, smoke tests, failure modes). No secrets.
+See [`agent_memories_permanent/`](agent_memories_permanent/).
+
 ## Credits
 
 - Upstream: [tonyd2wild/DeepSeek-v4-Flash-DSpark-1M-NVFP4-KV-2x-DGX-Spark](https://github.com/tonyd2wild/DeepSeek-v4-Flash-DSpark-1M-NVFP4-KV-2x-DGX-Spark)
