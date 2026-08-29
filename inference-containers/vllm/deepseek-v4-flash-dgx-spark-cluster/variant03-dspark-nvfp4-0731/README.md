@@ -1,5 +1,18 @@
 # Variant03 — DeepSeek-V4-Flash-0731 (official) DSpark NVFP4 — 2x DGX Spark
 
+> **What this folder is:** a runner for the upstream recipe
+> [tonyd2wild/DeepSeek-v4-Flash-DSpark-1M-NVFP4-KV-2x-DGX-Spark](https://github.com/tonyd2wild/DeepSeek-v4-Flash-DSpark-1M-NVFP4-KV-2x-DGX-Spark),
+> following this repo's conventions (numbered `NN_*.sh` scripts, per-node
+> `docker-compose.yml`, `.env`/`.env.example` split). Its only job is to help run the
+> DeepSeek-V4-Flash DSpark recipe on this hardware.
+>
+> **The stock vLLM base image is NOT used directly.** DeepSeek-V4-Flash needs
+> DSpark-specific patches (speculative draft module, NVFP4 KV dtype, B12X MoE backend)
+> that only exist in the upstream recipe. Those recipe files are **vendored here under
+> `recipe/`** (a pinned snapshot of the upstream repo — see `recipe/README.md`), and the
+> runtime image is **built from them**: base image → 4-stage `docker build` →
+> `vllm-dspark-runtime:dspark-nvfp4-stage-c-0731` (the `00_*` scripts, below).
+
 Serves **`deepseek-ai/DeepSeek-V4-Flash-0731`** — DeepSeek's **official** release
 (2026-07-31, MIT) — across the two-node DGX Spark cluster (spark01 head + spark02
 worker, TP=2, dual-port 200G RoCE). This variant upgrades the DSpark preview
