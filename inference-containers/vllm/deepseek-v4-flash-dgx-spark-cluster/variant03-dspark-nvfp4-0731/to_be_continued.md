@@ -19,8 +19,13 @@
 - `head/.env`, `worker/.env`, parent `.env` already in place on **spark02**.
 - `node_modules/` + `package.json` at repo root are **unrelated** (untracked, not ours — leave alone).
 
-- **Image BUILT on spark02** (2026-08-29) — all 4 `-0731` tags present, final smoke passed.
-  Final image ID: `84a02c7e0857` (compare with spark01's after its build — should match).
+- **Image BUILT on BOTH nodes** (2026-08-29) — spark02 `00_b`, spark01 `00_a`, all 4
+  `-0731` tags + final smoke on each.
+  Image IDs differ by design (84a02c7e0857 on spark02 vs 62cc6866356f on spark01): stage-1's
+  `py_compile`/import `RUN` writes `__pycache__`/JIT artifacts, so builds are NOT bit-reproducible.
+  **Do NOT use `docker image inspect Id` as a parity check** — it will always differ. The real
+  parity signals (both confirmed identical): vLLM version `0.21.1rc1.dev339+g1967a5627bc3` and
+  the final smoke line `dspark nvfp4 stage-c 0731 image ok`.
 - **Gitignore bug found + fixed (`ec41c7e`):** `inference-containers/**/models/` (weight guard)
   silently swallowed 7 variant03 overlay files under `models/` paths — they existed on spark02
   but were never committed, so spark01's fresh clone was missing them and the build aborted at
@@ -28,8 +33,9 @@
   **If any recipe file under a `models/` path is new, it needs `git add -f`.**
 
 **NOT done yet:**
-- spark01: needs `git pull` (brings the 7 force-added files) + image build.
-- The cluster itself (worker up, then head up, then test).
+- Bring up the cluster: worker (spark02) `01_up.sh` FIRST, then head (spark01) `01_up.sh`,
+  then smoke-test `curl http://10.0.1.1:8000/v1/models`.
+- Optional: `git push` (branch is ahead; only matters if another clone needs the fixes).
 
 ## Next session — step by step
 
@@ -38,27 +44,17 @@ Built with `./00_b_build_worker_dspark_image.sh` (local stages all OK; the final
 `WORKER_HOST` error is harmless — it's the "propagate to the other node" step, and
 there's nothing to propagate from the worker). All 4 `-0731` tags present.
 
-### 2. Push (once you're ready — was deliberately held)
+### 2. spark01 image: DONE (2026-08-29)
+`git pull` restored the 7 force-added `models/` files; `./00_a_build_head_dspark_image.sh`
+completed all 4 stages + final smoke. All 4 `-0731` tags present. (Image ID differs from
+spark02 by design — see parity note above; do not "fix" it.)
+
+### 3. Push (once you're ready — was deliberately held)
 ```bash
 cd ~/dev/DockerBuildFiles
 git push          # pushes the current branch to its upstream (no branch name hardcoded)
 ```
 Pushes the unpushed variant03 commits (scaffold/README already on origin).
-
-### 3. Pull + build on spark01 (head)
-spark01 already has a clone; it was missing the 7 `models/`-path overlay files (gitignore
-bug) so its first build attempt failed at `verify-overlay-sources.sh`. The pull below
-restores them:
-```bash
-cd ~/dev/DockerBuildFiles
-git pull          # pulls the current branch's upstream (no branch name hardcoded)
-cd inference-containers/vllm/deepseek-v4-flash-dgx-spark-cluster/variant03-dspark-nvfp4-0731
-cp .env.example .env            # set WORKER_HOST etc.
-cp env.example.head head/.env
-./00_a_build_head_dspark_image.sh    # base image already on spark01 too (variant02 used it)
-# then confirm the ID matches spark02 (84a02c7e0857):
-docker image inspect --format '{{.Id}}' vllm-dspark-runtime:dspark-nvfp4-stage-c-0731
-```
 
 ### 4. Bring up the cluster
 ```bash
