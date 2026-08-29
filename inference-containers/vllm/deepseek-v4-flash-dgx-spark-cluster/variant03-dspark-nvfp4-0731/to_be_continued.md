@@ -9,7 +9,8 @@
   at `~/.cache/huggingface/hub/models--deepseek-ai--DeepSeek-V4-Flash-0731/`
   (snapshot `7872f01b1d1fe23eabc4c98b48bffcef5a386062`).
 - **rsync to spark01 COMPLETED OK** — same path on spark01. Model is on both nodes.
-- variant03 scaffold fully committed on branch `feature/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4`
+- variant03 scaffold fully committed on the current working branch (ephemeral feature
+  branch — will be merged to master; not pinned here on purpose)
   (commits: `2f5d643` scaffold, `8dfdd77` README, `28fe9b9` env-split, `989cc89` build-split,
   `b27ca46` this note, `f902735` recipe README, then the `0fec808` recipe sync).
 - **Recipe synced to upstream `0fec808` (2026-08-23)** — added the 2 tokenizer files
@@ -36,17 +37,17 @@ cd ~/dev/DockerBuildFiles/inference-containers/vllm/deepseek-v4-flash-dgx-spark-
   `vllm-dspark-runtime:dspark-nvfp4-stage-c-0731`. Takes a while.
 - Engine fails fast if **Patch 4** is missing from the overlay — that's expected behavior, not a bug.
 
-### 2. Push the branch (once you're ready — was deliberately held)
+### 2. Push (once you're ready — was deliberately held)
 ```bash
 cd ~/dev/DockerBuildFiles
-git push origin feature/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4
+git push          # pushes the current branch to its upstream (no branch name hardcoded)
 ```
-Pushes `28fe9b9` + `989cc89` (first two commits are already on origin).
+Pushes the unpushed variant03 commits (scaffold/README already on origin).
 
 ### 3. Pull + build on spark01 (head)
 ```bash
 cd ~/dev/DockerBuildFiles
-git pull origin feature/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4
+git pull          # pulls the current branch's upstream (no branch name hardcoded)
 cd inference-containers/vllm/deepseek-v4-flash-dgx-spark-cluster/variant03-dspark-nvfp4-0731
 cp .env.example .env            # set WORKER_HOST etc.
 cp env.example.head head/.env
