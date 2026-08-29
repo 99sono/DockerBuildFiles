@@ -4,6 +4,10 @@ downloaded_models
 
 # Externally downloaded model checkpoints in inference-containers folders
 # (served locally via -m/--model-path, never committed)
+# NOTE: this also matches vendored vllm overlay files under
+# recipe/overlay/vllm/models/ and .../model_executor/models/ — a plain
+# `git add` silently skips them. If you add recipe files under a models/ path,
+# use `git add -f` (variant03 hit this on a fresh clone; see to_be_continued.md).
 inference-containers/**/models/
 .aider.*
 
