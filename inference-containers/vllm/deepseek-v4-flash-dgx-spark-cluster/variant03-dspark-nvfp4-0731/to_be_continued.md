@@ -10,7 +10,11 @@
   (snapshot `7872f01b1d1fe23eabc4c98b48bffcef5a386062`).
 - **rsync to spark01 COMPLETED OK** — same path on spark01. Model is on both nodes.
 - variant03 scaffold fully committed on branch `feature/DeepSeek-v4-Flash-0731-DSpark-1M-NVFP4`
-  (4 commits: `2f5d643` scaffold, `8dfdd77` README, `28fe9b9` env-split, `989cc89` build-split).
+  (commits: `2f5d643` scaffold, `8dfdd77` README, `28fe9b9` env-split, `989cc89` build-split,
+  `b27ca46` this note, `f902735` recipe README, then the `0fec808` recipe sync).
+- **Recipe synced to upstream `0fec808` (2026-08-23)** — added the 2 tokenizer files
+  (`reasoning_effort` three-level fix) + Dockerfile COPY/compile/import lines; all 21 overlay
+  files + Dockerfile now byte-identical to upstream. See `recipe/README.md` (pin table).
 - `head/.env`, `worker/.env`, parent `.env` already in place on **spark02**.
 - `node_modules/` + `package.json` at repo root are **unrelated** (untracked, not ours — leave alone).
 
@@ -77,4 +81,4 @@ cd .../variant03-dspark-nvfp4-0731/head && ./01_up.sh
 ## Useful refs
 - README: `variant03-dspark-nvfp4-0731/README.md` (differences table, build flow, config notes)
 - Scratch analysis (gitignored): `variant03-dspark-nvfp4-0731/chain_of_thought/key-facts-and-analysis.md`
-- Upstream: `~/dev/thirdparty/DeepSeek-v4-Flash-DSpark-1M-NVFP4-KV-2x-DGX-Spark` (commit `2d4820f`)
+- Upstream: `~/dev/thirdparty/DeepSeek-v4-Flash-DSpark-1M-NVFP4-KV-2x-DGX-Spark` (recipe pinned at `0fec808`)

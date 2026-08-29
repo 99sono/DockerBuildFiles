@@ -20,11 +20,18 @@ git@github.com:tonyd2wild/DeepSeek-v4-Flash-DSpark-1M-NVFP4-KV-2x-DGX-Spark.git
 
 | What | Upstream path | Pinned at |
 |---|---|---|
-| `overlay/**` (19 files) | `recipe/overlay/**` | `2d4820f` (2026-08-12) — **byte-identical**, verified 2026-08-29 |
-| `Dockerfile.dspark-runtime-overlay` | `recipe/Dockerfile.dspark-runtime-overlay` | `2d4820f` — **byte-identical** |
-| `nvfp4/Dockerfile.stage-{a,b,c}` | `recipe/nvfp4/Dockerfile.stage-{a,b,c}` | `2d4820f` — see "local modifications" |
-| `official-main/Dockerfile.python-patch` | `recipe/official-main/Dockerfile.python-patch` | `2d4820f` — byte-identical (not used by this build chain) |
-| `verify-overlay-sources.sh` | `scripts/verify-overlay-sources.sh` | `2d4820f` — byte-identical |
+| `overlay/**` (21 files) | `recipe/overlay/**` | `0fec808` (2026-08-23) — **byte-identical**, verified 2026-08-29 |
+| `Dockerfile.dspark-runtime-overlay` | `recipe/Dockerfile.dspark-runtime-overlay` | `0fec808` — **byte-identical** |
+| `nvfp4/Dockerfile.stage-{a,b,c}` | `recipe/nvfp4/Dockerfile.stage-{a,b,c}` | `0fec808` — see "local modifications" |
+| `official-main/Dockerfile.python-patch` | `recipe/official-main/Dockerfile.python-patch` | `0fec808` — byte-identical (not used by this build chain) |
+| `verify-overlay-sources.sh` | `scripts/verify-overlay-sources.sh` | `0fec808` — byte-identical |
+
+**Note on the pin bump (2026-08-29):** `2d4820f → 0fec808` added two tokenizer files
+(`overlay/vllm/tokenizers/deepseek_v4.py`, `deepseek_v4_encoding.py`) plus their COPY /
+py_compile / import-check lines in the Dockerfile — the `reasoning_effort` three-level fix.
+Side effect worth knowing: after this, a request with `reasoning_effort="max"` injects
+DeepSeek's real *max* thinking text (526 chars) instead of the *high* text; `"high"` and
+omitted behave exactly as before.
 
 ## The one local modification
 
@@ -57,7 +64,7 @@ missing.
 The overlay is a **snapshot, not a submodule** — it does not update itself. When you
 `git pull` in the upstream repo:
 
-1. In upstream: `git log --oneline 2d4820f..HEAD` and read what changed.
+1. In upstream: `git log --oneline <old-pin>..HEAD` and read what changed.
 2. Check only the paths this recipe consumes:
    `git diff --stat <old-pin>..HEAD -- recipe/overlay/ recipe/Dockerfile.dspark-runtime-overlay recipe/nvfp4/ scripts/verify-overlay-sources.sh`
 3. Re-copy the changed files into the matching paths here (`overlay/` →
