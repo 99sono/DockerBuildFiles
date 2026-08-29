@@ -100,13 +100,13 @@ overlay.
 ## Quick start
 
 ```bash
-# head + worker, per node:
-cp .env.example .env            # shared / build-script config (WORKER_HOST, image tag)
-cp env.example.head head/.env   # spark01 — GID 2,2, VLLM_HOST_IP 10.0.1.1
-cp env.example.worker worker/.env  # spark02 — GID 4,4, VLLM_HOST_IP 10.0.1.2
+# Per node — node-specific runtime env (committed templates, .env is gitignored):
+cd head   && cp .env.example .env    # spark01 — GID 2,2, VLLM_HOST_IP 10.0.1.1
+cd ../worker && cp .env.example .env # spark02 — GID 4,4, VLLM_HOST_IP 10.0.1.2
+cp .env.example .env                 # variant root: build-script config (WORKER_HOST, image tag)
 
 # 1. Pull base + build image (both nodes):
-./00_pull_base_image.sh
+docker pull ghcr.io/bjk110/vllm-spark:unholy-fusion-prod-ready   # 22.7 GB base (skip if present)
 ./00_a_build_head_dspark_image.sh
 
 # 2. Get the model (~167 GB) on BOTH nodes:
