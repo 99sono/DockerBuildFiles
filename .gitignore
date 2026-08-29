@@ -4,6 +4,10 @@ downloaded_models
 
 # Externally downloaded model checkpoints in inference-containers folders
 # (served locally via -m/--model-path, never committed)
+# NOTE: this also matches vendored vllm overlay files under
+# recipe/overlay/vllm/models/ and .../model_executor/models/ — a plain
+# `git add` silently skips them. If you add recipe files under a models/ path,
+# use `git add -f` (variant03 hit this on a fresh clone; see to_be_continued.md).
 inference-containers/**/models/
 .aider.*
 
@@ -36,6 +40,11 @@ cliCurllToolDump/deleteMe_*.html
 
 package-lock.json
 
+# Local opencode-ai CLI install (npm) — binaries, never committed
+node_modules/
+# Root-only manifest for the CLI above (sub-projects may keep their own package.json)
+/package.json
+
 # AI agent scratchpad — model thought distillates, never committed (see AGENTS.md)
 # (directory is re-included before negating the .gitkeep, because git cannot
 #  re-include a file whose parent directory is excluded)
@@ -44,3 +53,6 @@ model_chain_of_thought/*
 !model_chain_of_thought/tasks/
 model_chain_of_thought/tasks/*
 !model_chain_of_thought/tasks/.gitkeep
+
+# Scratchpad/analysis folders inside variants — never commit
+inference-containers/vllm/deepseek-v4-flash-dgx-spark-cluster/*/chain_of_thought/
