@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../../../../../commonScripts/lib.sh"
 load_env
 
-CONTAINER="deepseek-v4-flash-dspark-head"
+CONTAINER="deepseek-v4-flash-0731-head"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 METADATA_DIR="${SCRIPT_DIR}/metadata"
 mkdir -p "$METADATA_DIR"

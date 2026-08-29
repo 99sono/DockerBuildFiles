@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 URL = os.environ.get("INFERENCE_SERVER_URL", "http://localhost:8888/v1")
-MODEL = os.environ.get("INFERENCE_MODEL_ALIAS", "deepseek-v4-flash-dspark")
+MODEL = os.environ.get("INFERENCE_MODEL_ALIAS", "deepseek-v4-flash-0731")
 API_KEY = os.environ.get("INFERENCE_API_KEY", "dummy-key")
 
 print(f"Server: {URL}")
