@@ -19,23 +19,24 @@
 - `head/.env`, `worker/.env`, parent `.env` already in place on **spark02**.
 - `node_modules/` + `package.json` at repo root are **unrelated** (untracked, not ours — leave alone).
 
-**NOT done yet — the build:**
-- Base image `ghcr.io/bjk110/vllm-spark:unholy-fusion-prod-ready` (22.7GB) is **already on spark02**.
-- The variant03 runtime image **has NOT been built yet** on either node.
+- **Image BUILT on spark02** (2026-08-29) — all 4 `-0731` tags present, final smoke passed.
+  Final image ID: `84a02c7e0857` (compare with spark01's after its build — should match).
+- **Gitignore bug found + fixed (`ec41c7e`):** `inference-containers/**/models/` (weight guard)
+  silently swallowed 7 variant03 overlay files under `models/` paths — they existed on spark02
+  but were never committed, so spark01's fresh clone was missing them and the build aborted at
+  `verify-overlay-sources.sh`. Fixed with `git add -f` + a `.gitignore` comment.
+  **If any recipe file under a `models/` path is new, it needs `git add -f`.**
+
+**NOT done yet:**
+- spark01: needs `git pull` (brings the 7 force-added files) + image build.
+- The cluster itself (worker up, then head up, then test).
 
 ## Next session — step by step
 
-### 1. Build image on spark02 (local only — this node is the worker)
-```bash
-cd ~/dev/DockerBuildFiles/inference-containers/vllm/deepseek-v4-flash-dgx-spark-cluster/variant03-dspark-nvfp4-0731
-./00_a_build_head_dspark_image.sh
-```
-- No `WORKER_BUILD=` prefix needed anymore — the wrapper scripts hardcode it:
-  - `00_a_build_head_dspark_image.sh` → local only (`WORKER_BUILD=0`)
-  - `00_b_build_worker_dspark_image.sh` → this node + `WORKER_HOST` (`WORKER_BUILD=1`)
-- 4-stage build: overlay → `nvfp4-a` → `nvfp4-b` → final tag
-  `vllm-dspark-runtime:dspark-nvfp4-stage-c-0731`. Takes a while.
-- Engine fails fast if **Patch 4** is missing from the overlay — that's expected behavior, not a bug.
+### 1. spark02 image: DONE (2026-08-29)
+Built with `./00_b_build_worker_dspark_image.sh` (local stages all OK; the final
+`WORKER_HOST` error is harmless — it's the "propagate to the other node" step, and
+there's nothing to propagate from the worker). All 4 `-0731` tags present.
 
 ### 2. Push (once you're ready — was deliberately held)
 ```bash
@@ -45,6 +46,9 @@ git push          # pushes the current branch to its upstream (no branch name ha
 Pushes the unpushed variant03 commits (scaffold/README already on origin).
 
 ### 3. Pull + build on spark01 (head)
+spark01 already has a clone; it was missing the 7 `models/`-path overlay files (gitignore
+bug) so its first build attempt failed at `verify-overlay-sources.sh`. The pull below
+restores them:
 ```bash
 cd ~/dev/DockerBuildFiles
 git pull          # pulls the current branch's upstream (no branch name hardcoded)
@@ -52,6 +56,8 @@ cd inference-containers/vllm/deepseek-v4-flash-dgx-spark-cluster/variant03-dspar
 cp .env.example .env            # set WORKER_HOST etc.
 cp env.example.head head/.env
 ./00_a_build_head_dspark_image.sh    # base image already on spark01 too (variant02 used it)
+# then confirm the ID matches spark02 (84a02c7e0857):
+docker image inspect --format '{{.Id}}' vllm-dspark-runtime:dspark-nvfp4-stage-c-0731
 ```
 
 ### 4. Bring up the cluster
