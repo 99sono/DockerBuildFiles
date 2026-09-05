@@ -177,7 +177,7 @@ class ParsedLog(TypedDict):
 # PROCESS strips the optional "(Name pid=N) " tag that vLLM prefixes to most lines.
 # Example:
 #   (APIServer pid=1) INFO 09-05 14:18:36 [api_utils.py:333] version 0.1.dev20073+g8e685d198
-PROCESS = re.compile(r"^\(([A-Za-z][A-Za-z0-9]*) pid=(\d+)\)\s?(.*)$")
+PROCESS = re.compile(r"^\(([A-Za-z][A-Za-z0-9_]*) pid=(\d+)\)\s?(.*)$")
 
 # TS_A captures Style A timestamps: Level MM-DD HH:MM:SS [source:line] Message
 # Example:
