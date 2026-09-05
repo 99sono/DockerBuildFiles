@@ -1,6 +1,6 @@
-# vLLM Docker Log Report — `inference-containers/vllm/qwen-3.8-flash-next-dgx-spark/metadata/2026-09-05/01_vllm_log.txt`
+# vLLM Docker Log Report — `inference-containers/vllm/qwen-3.8-flash-next-dgx-spark/mia-nvfp4/metadata/2026-09-05/01_vllm_log.txt`
 
-- generated: 2026-09-05 19:06:52
+- generated: 2026-09-05 19:35:28
 - input lines: 702 | log range: 2026-09-05 14:18:36 → 2026-09-05 14:56:00 (container clock)
 - engine samples: 46 | spec samples: 40 | http access: 30 | warnings: 25 | noise families: 532
 

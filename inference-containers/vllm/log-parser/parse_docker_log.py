@@ -33,7 +33,7 @@ WHY THIS DIFFERS FROM THE NINFER PARSER
 * No host-clock prefix. NInfer lines are `<host-ts> | <payload>`; vLLM lines
   start directly with an OPTIONAL process tag `(Name pid=N) ` then a payload.
   There is a single (container) clock, written in TWO styles:
-      A: `INFO 09-05 14:42:00 [loggers.py:310] <msg>`        (MM-DD, no year/ms)
+      A: `INFO MM-DD HH:MM:SS [file:line] <msg>`        (MM-DD, no year/ms)
       B: `2026-09-05 14:29:55,025 - INFO - autotuner.py:1699 - <msg>` (full, +ms)
   Style A's year is inferred from the first Style B (full-date) line seen; if
   the file has none, the current year is used. A and B are the same clock.
@@ -48,7 +48,7 @@ WHY THIS DIFFERS FROM THE NINFER PARSER
 
 DESIGN DECISIONS
 ================
-* Pure stdlib (re / datetime / math / statistics / collections / argparse):
+* Pure stdlib (re / datetime / math / statistics / collections / argparse / typing):
   no pip packages, so the conda env is reproducible with zero network deps.
 * Every non-empty line is counted and routed to exactly one bucket:
   engine sample / spec sample / access / startup fact / jit / warning /
@@ -62,33 +62,136 @@ USAGE
     python3 parse_docker_log.py <log_file> [-o output.md]
     # default output: <log_file>.report.md (01_vllm_log.txt -> ...report.md)
 """
-import argparse       # CLI: log path + optional -o output path
-import math           # pctl() nearest-rank percentile (no numpy dependency)
-import re             # line-grammar patterns defined below
-import statistics     # mean/median for the S4 distribution tables
+from __future__ import annotations
+
+import argparse
+import math
+import re
+import statistics
 from collections import Counter
 from datetime import datetime
+from typing import Any, Optional, TypedDict
+
 
 # =====================================================================
-# LINE-GRAMMAR PATTERNS
+# DATA CONTRACTS & SCHEMAS (TYPEDDICTS)
 # =====================================================================
-# PROCESS strips the optional "(Name pid=N) " tag that vLLM prefixes to most
-# lines; banner/progress/noise lines have no tag (group 1 = None).
-#
-# TS_A / TS_B capture the two container-clock styles (see module docstring).
-# TS_A groups: 1=level 2=mm 3=dd 4=hh 5=mi 6=ss 7=source 8=message
-# TS_B groups: 1=yyyy 2=mm 3=dd 4=hh 5=mi 6=ss 7=mmm 8=level 9=source 10=message
-#
-# Keep in sync if vLLM changes its logger format; the S7 section
-# (unrecognized lines) is the canary that tells you when they diverged.
 
+class EngineSample(TypedDict):
+    """10-second engine throughput and utilization sample.
+    
+    Emitted by `loggers.py:310` in vLLM.
+    """
+    ts: datetime
+    prompt: float         # Prompt throughput (tokens/s)
+    gen: float            # Generation throughput (tokens/s)
+    running: int          # Running requests count
+    waiting: int          # Waiting requests in queue
+    kv: float             # GPU KV cache usage (%)
+    prefix: float         # Prefix cache hit rate (%)
+    mm: Optional[float]   # Multimodal cache hit rate (%, or None if absent)
+
+
+class SpecSample(TypedDict):
+    """Companion speculative decoding metrics line.
+    
+    Emitted by `metrics.py:120` in vLLM at the same timestamp as EngineSample.
+    """
+    ts: datetime
+    acc_len: float        # Mean acceptance length (tokens per step)
+    acc_tps: float        # Accepted token throughput (tokens/s)
+    draft_tps: float      # Drafted token throughput (tokens/s)
+    accepted: int         # Cumulative accepted tokens
+    drafted: int          # Cumulative drafted tokens
+    p1: float             # Acceptance rate at draft position 1 [0.0 - 1.0]
+    p2: float             # Acceptance rate at draft position 2 [0.0 - 1.0]
+    p3: float             # Acceptance rate at draft position 3 [0.0 - 1.0]
+    draft_acc: float      # Overall draft acceptance rate (%)
+
+
+class AccessLogEntry(TypedDict):
+    """HTTP request access log line emitted by Uvicorn."""
+    seq: int              # Sequential index (1-based)
+    client: str           # Client IP:port (e.g. "172.18.0.3:59288")
+    method: str           # HTTP method ("GET", "POST")
+    path: str             # Endpoint path (e.g. "/v1/chat/completions")
+    status: int           # HTTP status code (e.g. 200, 401)
+    reason: str           # HTTP status phrase (e.g. "OK", "Unauthorized")
+
+
+class JitEntry(TypedDict):
+    """Triton kernel just-in-time compilation during active inference."""
+    ts: datetime
+    kernel: str           # Triton kernel identifier
+
+
+class WarningEntry(TypedDict):
+    """Warning or error log entry."""
+    level: str            # "WARNING", "ERROR", "CRITICAL"
+    ts: datetime
+    msg: str              # Log message
+
+
+class ActivityWindow(TypedDict):
+    """Contiguous active serving window derived from consecutive running samples."""
+    start: datetime       # Timestamp of first sample with running > 0
+    end: datetime         # Timestamp of last consecutive sample with running > 0
+    n: int                # Number of consecutive samples in window
+    peak: int             # Peak concurrent running requests
+    dur: float            # Duration in seconds ((end - start).total_seconds())
+
+
+class SessionStats(TypedDict):
+    """Summary throughput and session statistics."""
+    n_samples: int
+    first_sample: datetime
+    last_sample: datetime
+    span: float
+    peak_gen: float
+    peak_prompt: float
+    mean_gen_busy: Optional[float]
+    busy_samples: int
+    serving_span: float
+    n_active_windows: int
+
+
+class ParsedLog(TypedDict):
+    """Full structured output returned by parse()."""
+    startup: dict[str, Any]
+    engines: list[EngineSample]
+    specs: list[SpecSample]
+    accesses: list[AccessLogEntry]
+    jit: list[JitEntry]
+    warnings: list[WarningEntry]
+    noise: Counter[str]
+    info_by_source: Counter[str]
+    unrecognized: list[tuple[int, str]]
+    total: int
+    first: Optional[datetime]
+    last: Optional[datetime]
+
+
+# =====================================================================
+# LINE-GRAMMAR PATTERNS & REGEXES
+# =====================================================================
+# PROCESS strips the optional "(Name pid=N) " tag that vLLM prefixes to most lines.
+# Example:
+#   (APIServer pid=1) INFO 09-05 14:18:36 [api_utils.py:333] version 0.1.dev20073+g8e685d198
 PROCESS = re.compile(r"^\(([A-Za-z][A-Za-z0-9]*) pid=(\d+)\)\s?(.*)$")
-TS_A    = re.compile(r"^([A-Z]+)\s+(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})\s+\[([^\]]+)\]\s+(.*)$")
-TS_B    = re.compile(r"(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2}),(\d{3})\s+-\s+([A-Z]+)\s+-\s+([^\s-]+)\s+-\s+(.*)$")
 
-# Engine sample (loggers.py): the headline 10 s throughput line.
-#   g1=prompt tok/s g2=gen tok/s g3=running g4=waiting g5=KV % g6=prefix %
-#   g7=MM % (optional, newer builds only)
+# TS_A captures Style A timestamps: Level MM-DD HH:MM:SS [source:line] Message
+# Example:
+#   INFO 09-05 14:53:50 [loggers.py:310] Engine 000: Avg prompt throughput: 0.0 tokens/s ...
+TS_A = re.compile(r"^([A-Z]+)\s+(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})\s+\[([^\]]+)\]\s+(.*)$")
+
+# TS_B captures Style B timestamps: YYYY-MM-DD HH:MM:SS,mmm - Level - source - Message
+# Example:
+#   2026-09-05 14:29:55,025 - INFO - autotuner.py:1699 - Autotuning finished in 12.3s
+TS_B = re.compile(r"(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2}),(\d{3})\s+-\s+([A-Z]+)\s+-\s+([^\s-]+)\s+-\s+(.*)$")
+
+# Engine throughput sample:
+# Example:
+#   Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 31.3 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 6.1%, Prefix cache hit rate: 10.1%, MM cache hit rate: 0.0%
 ENG = re.compile(
     r"Engine \d+: Avg prompt throughput: ([\d.]+) tokens/s, "
     r"Avg generation throughput: ([\d.]+) tokens/s, "
@@ -96,9 +199,9 @@ ENG = re.compile(
     r"GPU KV cache usage: ([\d.]+)%, Prefix cache hit rate: ([\d.]+)%"
     r"(?:, MM cache hit rate: ([\d.]+)%)?")
 
-# SpecDecoding metrics (metrics.py): companion line, same timestamp as ENG.
-#   g1=acc len g2=acc tok/s g3=draft tok/s g4=accepted g5=drafted
-#   g6,g7,g8=per-position acceptance g9=avg draft acceptance %
+# MTP speculative decoding metrics sample:
+# Example:
+#   SpecDecoding metrics: Mean acceptance length: 2.39, Accepted throughput: 18.20 tokens/s, Drafted throughput: 39.30 tokens/s, Accepted: 182 tokens, Drafted: 393 tokens, Per-position acceptance rate: 0.626, 0.443, 0.321, Avg Draft acceptance rate: 46.3%
 SPEC = re.compile(
     r"SpecDecoding metrics: Mean acceptance length: ([\d.]+), "
     r"Accepted throughput: ([\d.]+) tokens/s, Drafted throughput: ([\d.]+) tokens/s, "
@@ -106,11 +209,12 @@ SPEC = re.compile(
     r"Per-position acceptance rate: ([\d.]+), ([\d.]+), ([\d.]+), "
     r"Avg Draft acceptance rate: ([\d.]+)%")
 
-# Uvicorn access line (APIServer): the only request-level signal. NO timestamp.
-#   g1=client ip:port g2=method g3=path g4=status g5=reason-phrase
+# Uvicorn access log lines:
+# Example:
+#   INFO:  172.18.0.3:59288 - "POST /v1/chat/completions HTTP/1.1" 200 OK
 ACC = re.compile(r'INFO:\s+(\S+:\d+)\s+-\s+"([A-Z]+) (\S+) HTTP/[\d.]+"\s+(\d{3})\s+(\w+)')
 
-# Startup one-shot facts (all live on a TS_A line; message matched in handle_startup).
+# Startup one-shot facts:
 INIT_ENGINE = re.compile(r"Initializing a V1 LLM engine \(v(.+?)\) with config: model='([^']+)'")
 NONDEFAULT  = re.compile(r"non-default args: (\{.*\})\s*$")
 ARCH        = re.compile(r"Resolved architecture: (\S+)")
@@ -132,13 +236,11 @@ ENC_BUDGET  = re.compile(r"Encoder cache will be initialized with a budget of (\
 SAMPLING    = re.compile(r"Default vLLM sampling parameters have been overridden by the model's `generation_config\.json`: (\{.*?\})")
 SUPPORTED   = re.compile(r"Supported tasks: (\[[^\]]*\])")
 
-# JIT compilation during inference (a real perf signal: first-token latency spike).
+# Real-time JIT compilation during inference (indicates first-token latency spike):
 JIT = re.compile(r"Triton kernel JIT compilation during inference: (\S+)\.")
 
-# Known repetitive boilerplate. A line matching one of these is recognized and
-# counted under its family name (S6) instead of landing in the S7 canary.
-# Order matters only for reporting; the first match wins.
-NOISE_RE = [
+# Known repetitive boilerplate families (Section 6 noise, counted to keep canary clean):
+NOISE_RE: list[tuple[str, re.Pattern[str]]] = [
     ("autotuner",                 re.compile(r"(?i)\[autotuner\]")),
     ("transformers-rope",         re.compile(r"^\[transformers\] Unrecognized keys")),
     ("transformers-use_fast",     re.compile(r"^\[transformers\] The `use_fast`")),
@@ -156,55 +258,85 @@ NOISE_RE = [
 
 
 # =====================================================================
-# SMALL HELPERS
+# STATISTICAL & EXTRACTION HELPERS
 # =====================================================================
 
-def pctl(vals, p):
-    """Nearest-rank percentile (p in 0..100), numpy-free.
+def pctl(vals: list[float], p: float) -> Optional[float]:
+    """Compute nearest-rank percentile (p in 0..100) without numpy.
 
-    Ranks sorted values and picks index ceil(p/100 * n) - 1, clamped to
-    [0, n-1] so p=0 -> min and p=100 -> max. Returns None for empty input.
+    Args:
+        vals: List of numeric float values.
+        p: Target percentile (0.0 to 100.0).
+
+    Returns:
+        The nearest-rank percentile value, or None if vals is empty.
     """
     if not vals:
         return None
     v = sorted(vals)
-    return v[max(0, min(len(v) - 1, math.ceil(p / 100 * len(v)) - 1))]
+    idx = max(0, min(len(v) - 1, math.ceil(p / 100.0 * len(v)) - 1))
+    return v[idx]
 
 
-def stat_row(label, vals, unit, nd=1):
-    """Render one S4 table row: n / mean / median / min / max / p95.
+def stat_row(label: str, vals: list[float], unit: str, nd: int = 1) -> str:
+    """Render a standard Markdown statistical distribution table row.
 
-    nd   = decimals (0 for tok/ms, 1 for tok/s and %).
-    unit = free-text unit label; empty vals -> dash-filled row.
+    Computes count (n), mean, median, min, max, and p95.
+
+    Args:
+        label: Row title (e.g. "acceptance length").
+        vals: List of numeric values to analyze.
+        unit: Metric unit label (e.g. "tok", "tok/s", "%").
+        nd: Number of decimal places for formatting (default 1).
+
+    Returns:
+        Formatted Markdown table row string.
     """
     if not vals:
         return f"| {label} | 0 | — | — | — | — | — | {unit} |"
-    return (f"| {label} | {len(vals)} | {sum(vals)/len(vals):.{nd}f} | {statistics.median(vals):.{nd}f} | "
-            f"{min(vals):.{nd}f} | {max(vals):.{nd}f} | {pctl(vals, 95):.{nd}f} | {unit} |")
+    return (
+        f"| {label} | {len(vals)} | {sum(vals)/len(vals):.{nd}f} | {statistics.median(vals):.{nd}f} | "
+        f"{min(vals):.{nd}f} | {max(vals):.{nd}f} | {pctl(vals, 95):.{nd}f} | {unit} |"
+    )
 
 
-def mean(vals):
+def mean(vals: list[float]) -> Optional[float]:
+    """Return arithmetic mean of values, or None if list is empty."""
     return sum(vals) / len(vals) if vals else None
 
 
-def noise_match(text):
-    """Return the family name of the first matching NOISE_RE entry, else None."""
+def noise_match(text: str) -> Optional[str]:
+    """Match text against registered NOISE_RE patterns.
+
+    Args:
+        text: Stripped line payload to classify.
+
+    Returns:
+        The matching noise family name (e.g. "autotuner"), or None if no match.
+    """
     for name, rx in NOISE_RE:
         if rx.search(text):
             return name
     return None
 
 
-def extract_args(s):
-    """Pull the few keys worth reporting out of the `non-default args` dict repr.
+def extract_args(s: str) -> dict[str, Any]:
+    """Extract operational configuration arguments from the non-default args dict repr.
 
-    The dict is too large to show verbatim and contains enum reprs
-    (`<CompilationMode.NONE: 0>`) so it is not a valid Python literal; we
-    regex each key of interest instead of parsing the whole thing.
+    vLLM prints `non-default args: {...}` containing internal enums (e.g.
+    `<CompilationMode.NONE: 0>`) which cannot be parsed directly via `ast.literal_eval`.
+    This helper applies targeted regex extraction for relevant serving parameters.
+
+    Args:
+        s: Raw string representation of the argument dictionary.
+
+    Returns:
+        Dict mapping argument names to extracted typed values (str, int, float).
     """
-    def g(rx, cast=str):
+    def g(rx: str, cast: Any = str) -> Any:
         m = re.search(rx, s)
         return cast(m[1]) if m else None
+
     d = {
         "model":                    g(r"'model': '([^']+)'"),
         "served_model_name":        g(r"'served_model_name': \['([^']+)'\]"),
@@ -224,12 +356,17 @@ def extract_args(s):
     return {k: v for k, v in d.items() if v is not None}
 
 
-def handle_startup(st, msg):
-    """Record one-shot startup facts from a TS_A message. Return True on a hit.
+def handle_startup(st: dict[str, Any], msg: str) -> bool:
+    """Capture one-shot engine startup and configuration facts.
 
-    Each startup fact appears exactly once in a normal boot; we keep first
-    wins for single-valued fields and append for the (rare) repeated ones
-    (weights-load timing fires once per loader pass).
+    Inspects line message against startup regexes and populates the `st` dict.
+
+    Args:
+        st: Target dictionary to store extracted startup facts.
+        msg: Payload string of a Style A log line.
+
+    Returns:
+        True if the line matched a startup event pattern, False otherwise.
     """
     m = INIT_ENGINE.search(msg)
     if m:
@@ -302,41 +439,44 @@ def handle_startup(st, msg):
 
 
 # =====================================================================
-# PARSER
+# CORE PARSER PIPELINE
 # =====================================================================
 
-def parse(path):
-    """Single pass over the log file; returns a dict of parsed structures.
+def parse(path: str) -> ParsedLog:
+    """Perform a single-pass parse of a raw vLLM docker-log dump.
 
-    Returned keys (see build_report() for how each is rendered):
-        startup      {version, model, arch[], args{}, kv_*, weights_took[],
-                      model_load, init_engine_s, graphs, ple_*, server_url, ...}
-        engines      [{ts, prompt, gen, running, waiting, kv, prefix, mm}, ...]  (log order)
-        specs        [{ts, acc_len, acc_tps, draft_tps, accepted, drafted,
-                      p1, p2, p3, draft_acc}, ...]  (log order)
-        accesses     [{seq, client, method, path, status, reason}, ...]  (log order)
-        jit          [{ts, kernel}, ...]
-        warnings     [{level, ts, msg}, ...]  (pre-dedup; deduped at render)
-        noise        Counter{family: count}
-        info_by_source Counter{file.py: count}   # benign INFO lines (family "vllm-info")
-        unrecognized [(line_no, raw), ...]  -> S7 canary
-        total        non-empty line count
-        first/last   min/max container timestamp seen (either style)
+    Lines are classified using a 3-layer priority filter:
+      1. Process tag strip -> Style A timestamp (Engine, Spec, JIT, Startup, Noise, Warnings, Benign INFO).
+      2. Style B full-date timestamp (FlashInfer autotuner noise).
+      3. No-timestamp fallback (Uvicorn HTTP access log, Noise, Unrecognized canary).
+
+    Args:
+        path: File path to the raw container log dump (.txt).
+
+    Returns:
+        ParsedLog TypedDict containing all structured data models.
     """
-    with open(path) as f:
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
         lines = f.read().splitlines()
 
-    # Infer the year for style-A timestamps from the first full-date line.
+    # Infer the year for Style A timestamps from the first full-date line encountered.
     ym = re.search(r"\b(\d{4})-\d{2}-\d{2}\b", "\n".join(lines))
     year = int(ym.group(1)) if ym else datetime.now().year
 
-    startup, engines, specs, accesses = {}, [], [], []
-    jit, warnings = [], []
-    noise, unrecognized = Counter(), []
-    info_by_source = Counter()            # file.py -> count of benign INFO lines
-    total, first, last = 0, None, None
+    startup: dict[str, Any] = {}
+    engines: list[EngineSample] = []
+    specs: list[SpecSample] = []
+    accesses: list[AccessLogEntry] = []
+    jit: list[JitEntry] = []
+    warnings: list[WarningEntry] = []
+    noise: Counter[str] = Counter()
+    info_by_source: Counter[str] = Counter()
+    unrecognized: list[tuple[int, str]] = []
+    total = 0
+    first: Optional[datetime] = None
+    last: Optional[datetime] = None
 
-    def track(t):
+    def track(t: datetime) -> None:
         nonlocal first, last
         first = t if first is None else min(first, t)
         last = t if last is None else max(last, t)
@@ -344,21 +484,18 @@ def parse(path):
     for n, raw in enumerate(lines, 1):
         raw = raw.rstrip("\n")
         if not raw.strip():
-            continue                       # blank lines skipped, not counted
+            continue  # Skip empty lines
         total += 1
 
         pm = PROCESS.match(raw)
         payload = pm.group(3) if pm else raw
 
-        # A bare process tag with an empty payload is the first physical line of a
-        # two-line progress-bar entry: the bar text (e.g. "Loading safetensors ...")
-        # lands on the NEXT line, untagged. Count the orphan tag as noise so it
-        # doesn't reach the S7 canary.
+        # Handle two-line progress bars where line 1 is only an orphan process tag
         if pm and not payload.strip():
             noise["tag-only-prefix"] += 1
             continue
 
-        # ---- layer 1: vLLM logger line with a style-A timestamp -----------
+        # ---- Layer 1: vLLM logger line with Style A timestamp -------------
         a = TS_A.match(payload)
         if a:
             level = a.group(1)
@@ -369,41 +506,56 @@ def parse(path):
 
             e = ENG.search(msg)
             if e:
-                engines.append(dict(ts=ts, prompt=float(e[1]), gen=float(e[2]),
-                                    running=int(e[3]), waiting=int(e[4]),
-                                    kv=float(e[5]), prefix=float(e[6]),
-                                    mm=float(e[7]) if e[7] is not None else None))
+                engines.append({
+                    "ts": ts,
+                    "prompt": float(e[1]),
+                    "gen": float(e[2]),
+                    "running": int(e[3]),
+                    "waiting": int(e[4]),
+                    "kv": float(e[5]),
+                    "prefix": float(e[6]),
+                    "mm": float(e[7]) if e[7] is not None else None,
+                })
                 continue
+
             s = SPEC.search(msg)
             if s:
-                specs.append(dict(ts=ts, acc_len=float(s[1]), acc_tps=float(s[2]),
-                                  draft_tps=float(s[3]), accepted=int(s[4]),
-                                  drafted=int(s[5]), p1=float(s[6]), p2=float(s[7]),
-                                  p3=float(s[8]), draft_acc=float(s[9])))
+                specs.append({
+                    "ts": ts,
+                    "acc_len": float(s[1]),
+                    "acc_tps": float(s[2]),
+                    "draft_tps": float(s[3]),
+                    "accepted": int(s[4]),
+                    "drafted": int(s[5]),
+                    "p1": float(s[6]),
+                    "p2": float(s[7]),
+                    "p3": float(s[8]),
+                    "draft_acc": float(s[9]),
+                })
                 continue
+
             j = JIT.search(msg)
             if j:
-                jit.append(dict(ts=ts, kernel=j[1]))
+                jit.append({"ts": ts, "kernel": j[1]})
                 continue
+
             if handle_startup(startup, msg):
                 continue
+
             fam = noise_match(msg)
             if fam:
                 noise[fam] += 1
                 continue
+
             if level in ("WARNING", "ERROR", "CRITICAL"):
-                warnings.append(dict(level=level, ts=ts, msg=msg))
+                warnings.append({"level": level, "ts": ts, "msg": msg})
             else:
-                # Benign one-line INFO facts we don't model individually (config
-                # echoes, kernel/backend selection, model-runner notes, ...).
-                # They are EXPECTED in any vLLM boot+serve log, so counting them
-                # here (with a per-source-file breakdown in S6) keeps the S7
-                # canary reserved for genuinely unexpected structures.
+                # Group benign INFO lines by source file to keep canary clean
                 noise["vllm-info"] += 1
                 info_by_source[a.group(7).rsplit(":", 1)[0]] += 1
             continue
 
-        # ---- layer 2: full-date (style-B) line -> FlashInfer autotuner ------
+        # ---- Layer 2: Full-date Style B timestamp (FlashInfer Autotuner) --
         b = TS_B.search(payload)
         if b:
             ts = datetime(int(b.group(1)), int(b.group(2)), int(b.group(3)),
@@ -413,59 +565,90 @@ def parse(path):
             noise["autotuner"] += 1
             continue
 
-        # ---- layer 3: no timestamp ----------------------------------------
+        # ---- Layer 3: Un-timestamped lines (Uvicorn access or unparsed) ----
         acc = ACC.search(payload)
         if acc:
-            accesses.append(dict(seq=len(accesses) + 1, client=acc[1], method=acc[2],
-                                 path=acc[3], status=int(acc[4]), reason=acc[5]))
+            accesses.append({
+                "seq": len(accesses) + 1,
+                "client": acc[1],
+                "method": acc[2],
+                "path": acc[3],
+                "status": int(acc[4]),
+                "reason": acc[5],
+            })
             continue
+
         fam = noise_match(payload)
         if fam:
             noise[fam] += 1
             continue
+
+        # Unmatched line reaches S7 canary
         unrecognized.append((n, raw))
 
-    return dict(startup=startup, engines=engines, specs=specs, accesses=accesses,
-                jit=jit, warnings=warnings, noise=noise, info_by_source=info_by_source,
-                unrecognized=unrecognized,
-                total=total, first=first, last=last)
+    return {
+        "startup": startup,
+        "engines": engines,
+        "specs": specs,
+        "accesses": accesses,
+        "jit": jit,
+        "warnings": warnings,
+        "noise": noise,
+        "info_by_source": info_by_source,
+        "unrecognized": unrecognized,
+        "total": total,
+        "first": first,
+        "last": last,
+    }
 
 
 # =====================================================================
-# SESSION AGGREGATES
+# AGGREGATION & WINDOW ANALYSIS
 # =====================================================================
 
-def activity_windows(engines):
-    """Collapse the engine samples into contiguous active-serving windows.
+def activity_windows(engines: list[EngineSample]) -> list[ActivityWindow]:
+    """Identify contiguous active serving windows from engine samples.
 
-    A window is a run of consecutive samples with Running > 0. Because samples
-    are ~10 s apart, a window's span is (n-1) * interval; we report the first
-    and last sample timestamps plus the sample count and peak concurrency.
+    A serving window represents consecutive samples with running requests > 0.
+    Since samples are emitted roughly every 10 seconds, this reconstructs
+    active client interaction periods.
+
+    Args:
+        engines: List of EngineSample dicts in chronological order.
+
+    Returns:
+        List of ActivityWindow dicts detailing window start, end, duration, and peak concurrency.
     """
-    wins, cur = [], None
+    wins: list[ActivityWindow] = []
+    cur: Optional[ActivityWindow] = None
     for e in engines:
         if e["running"] > 0:
             if cur is None:
-                cur = dict(start=e["ts"], end=e["ts"], n=1, peak=e["running"])
+                cur = {"start": e["ts"], "end": e["ts"], "n": 1, "peak": e["running"], "dur": 0.0}
             else:
-                cur["end"] = e["ts"]; cur["n"] += 1
+                cur["end"] = e["ts"]
+                cur["n"] += 1
                 cur["peak"] = max(cur["peak"], e["running"])
         else:
             if cur:
-                wins.append(cur); cur = None
+                wins.append(cur)
+                cur = None
     if cur:
         wins.append(cur)
+
     for w in wins:
         w["dur"] = (w["end"] - w["start"]).total_seconds()
     return wins
 
 
-def single_session(d):
-    """Compute the S4.1 session / throughput numbers from the engine samples.
+def single_session(d: ParsedLog) -> Optional[SessionStats]:
+    """Compute overall session throughput and concurrency statistics.
 
-    vLLM does not log total token counts, so "throughput" here means the
-    per-sample rate averages. Busy samples = generation throughput > 0.
-    The serving window is the first->last sample with Running > 0.
+    Args:
+        d: ParsedLog output from parse().
+
+    Returns:
+        SessionStats dict or None if no engine samples exist.
     """
     eng = d["engines"]
     if not eng:
@@ -473,40 +656,49 @@ def single_session(d):
     busy = [e for e in eng if e["gen"] > 0]
     run = [e for e in eng if e["running"] > 0]
     serving_span = (max(e["ts"] for e in run) - min(e["ts"] for e in run)).total_seconds() if run else 0.0
-    return dict(
-        n_samples=len(eng),
-        first_sample=eng[0]["ts"], last_sample=eng[-1]["ts"],
-        span=(eng[-1]["ts"] - eng[0]["ts"]).total_seconds(),
-        peak_gen=max(e["gen"] for e in eng),
-        peak_prompt=max(e["prompt"] for e in eng),
-        mean_gen_busy=mean([e["gen"] for e in busy]),
-        busy_samples=len(busy),
-        serving_span=serving_span,
-        n_active_windows=len(activity_windows(eng)))
+
+    return {
+        "n_samples": len(eng),
+        "first_sample": eng[0]["ts"],
+        "last_sample": eng[-1]["ts"],
+        "span": (eng[-1]["ts"] - eng[0]["ts"]).total_seconds(),
+        "peak_gen": max(e["gen"] for e in eng),
+        "peak_prompt": max(e["prompt"] for e in eng),
+        "mean_gen_busy": mean([e["gen"] for e in busy]),
+        "busy_samples": len(busy),
+        "serving_span": serving_span,
+        "n_active_windows": len(activity_windows(eng)),
+    }
 
 
 # =====================================================================
-# REPORT BUILDER
+# MODULAR REPORT RENDERERS (S1 - S7)
 # =====================================================================
 
-def build_report(d, src):
-    """Assemble the final Markdown string from parse() output (sections S1-S7)."""
-    L = []
-    st = d["startup"]
-    ts = lambda t: t.strftime("%H:%M:%S") if t else "—"
+def _fmt_ts(t: Optional[datetime]) -> str:
+    """Format datetime as HH:MM:SS string or dash if None."""
+    return t.strftime("%H:%M:%S") if t else "—"
 
-    # ---- header / summary line -------------------------------------------
-    L.append(f"# vLLM Docker Log Report — `{src}`\n")
+
+def _render_header(d: ParsedLog, src: str) -> list[str]:
+    """Render report title, generation timestamp, and top-level summary gauges."""
+    L: list[str] = [f"# vLLM Docker Log Report — `{src}`\n"]
     L.append(f"- generated: {datetime.now():%Y-%m-%d %H:%M:%S}")
     rng = f"{d['first']:%Y-%m-%d %H:%M:%S} → {d['last']:%Y-%m-%d %H:%M:%S}" if d['first'] else "n/a"
     L.append(f"- input lines: {d['total']} | log range: {rng} (container clock)")
-    L.append(f"- engine samples: {len(d['engines'])} | spec samples: {len(d['specs'])} | "
-             f"http access: {len(d['accesses'])} | warnings: {len(d['warnings'])} | "
-             f"noise families: {sum(d['noise'].values())}\n")
+    L.append(
+        f"- engine samples: {len(d['engines'])} | spec samples: {len(d['specs'])} | "
+        f"http access: {len(d['accesses'])} | warnings: {len(d['warnings'])} | "
+        f"noise families: {sum(d['noise'].values())}\n"
+    )
+    return L
 
-    # ---- S1 startup facts -------------------------------------------------
-    L.append("## 1. Startup\n")
-    rows = []
+
+def _render_startup_section(st: dict[str, Any]) -> list[str]:
+    """Render Section 1: Engine startup configuration, model parameters, and memory layout."""
+    L: list[str] = ["## 1. Startup\n"]
+    rows: list[str] = []
+
     if st.get("version"):
         rows.append(f"| vLLM version | `{st['version']}` |")
     if st.get("model"):
@@ -519,7 +711,8 @@ def build_report(d, src):
         rows.append(f"| server | {st['server_url']} |")
     if st.get("supported_tasks"):
         rows.append(f"| supported tasks | {st['supported_tasks']} |")
-    # non-default args (selected keys)
+
+    # Selected non-default argument overrides
     args = st.get("args", {})
     if args:
         rows.append("| non-default args |")
@@ -530,20 +723,27 @@ def build_report(d, src):
                   "reasoning_parser", "tool_call_parser", "load_strategy"):
             if k in args:
                 arows.append(f"  - `{k}` = {args[k]}")
-        rows += arows
-    # engine-level toggles captured from the engine-config line
+        rows.extend(arows)
+
+    # Engine toggles
     for k, lab in (("prefix_caching", "prefix caching"), ("chunked_prefill", "chunked prefill"),
                    ("dtype", "dtype")):
         if st.get(k) is not None:
             rows.append(f"| {lab} | `{st[k]}` |")
     if st.get("max_len"):
         rows.append(f"| max model len | {st['max_len']:,} |")
-    # KV sizing
+
+    # KV memory and token sizing
     if st.get("kv_avail") is not None:
         rows.append(f"| available KV memory | {st['kv_avail']} GiB |")
     if st.get("kv_tokens"):
-        rows.append(f"| GPU KV cache size | {st['kv_tokens']:,} tokens (max concurrency {st.get('kv_concurrency', '—')}× for {st.get('max_len', st.get('args', {}).get('max_model_len', '?')):,} tok/req) |")
-    # timings
+        rows.append(
+            f"| GPU KV cache size | {st['kv_tokens']:,} tokens "
+            f"(max concurrency {st.get('kv_concurrency', '—')}× for "
+            f"{st.get('max_len', st.get('args', {}).get('max_model_len', '?')):,} tok/req) |"
+        )
+
+    # Loader and warmup timings
     wt = st.get("weights_took")
     if wt:
         rows.append(f"| weight-load time | {', '.join(f'{x:.1f} s' for x in wt)} |")
@@ -561,7 +761,8 @@ def build_report(d, src):
         rows.append(f"| attention block size | {st['attn_block']} tokens |")
     if st.get("enc_budget"):
         rows.append(f"| encoder cache budget | {st['enc_budget']:,} tokens |")
-    # PLE offload
+
+    # PLE offload details (DGX Spark specific)
     if st.get("ple_table"):
         pt = st["ple_table"]
         rows.append(f"| PLE n-gram table | {pt['rows']:,} rows × {pt['bytes']} B = {pt['gib']} GiB (mmap) |")
@@ -569,39 +770,46 @@ def build_report(d, src):
         pm = st["ple_match"]
         rows.append(f"| PLE offload | matched {pm['tensors']} tensors, {pm['entries']} entries |")
     if st.get("ple_done"):
-        rows.append(f"| PLE weight load | complete |")
+        rows.append("| PLE weight load | complete |")
     if st.get("sampling_override"):
         rows.append(f"| sampling override | {st['sampling_override']} |")
+
     if rows:
-        L += ["| field | value |", "|---|---|"] + rows + [""]
+        L.extend(["| field | value |", "|---|---|"] + rows + [""])
     else:
         L.append("_no startup lines found_\n")
+    return L
 
-    # ---- S2 requests ------------------------------------------------------
-    L.append("## 2. Requests\n")
-    L.append("_vLLM INFO logs carry no per-request token counts; a request is only visible "
-             "via its HTTP access line and the engine's `Running` gauge._\n")
-    L.append("### 2.1 Active-serving windows\n")
-    L.append("Consecutive engine samples with `Running > 0` (samples are ~10 s apart).\n")
-    wins = activity_windows(d["engines"])
+
+def _render_requests_section(accesses: list[AccessLogEntry], engines: list[EngineSample]) -> list[str]:
+    """Render Section 2: Active serving windows and Uvicorn HTTP access statistics."""
+    L: list[str] = [
+        "## 2. Requests\n",
+        "_vLLM INFO logs carry no per-request token counts; a request is only visible "
+        "via its HTTP access line and the engine's `Running` gauge._\n",
+        "### 2.1 Active-serving windows\n",
+        "Consecutive engine samples with `Running > 0` (samples are ~10 s apart).\n",
+    ]
+
+    wins = activity_windows(engines)
     if wins:
         L.append("| # | start | end | samples | est. span | peak running |")
         L.append("|---|---|---|---|---|---|")
         for i, w in enumerate(wins, 1):
-            L.append(f"| {i} | {ts(w['start'])} | {ts(w['end'])} | {w['n']} | {w['dur']:.0f} s | {w['peak']} |")
+            L.append(f"| {i} | {_fmt_ts(w['start'])} | {_fmt_ts(w['end'])} | {w['n']} | {w['dur']:.0f} s | {w['peak']} |")
         L.append("")
     else:
         L.append("_no active-serving samples_\n")
 
     L.append("### 2.2 HTTP access summary\n")
-    acc = d["accesses"]
-    if acc:
-        c = Counter((x["method"], x["path"], x["status"]) for x in acc)
+    if accesses:
+        c = Counter((x["method"], x["path"], x["status"]) for x in accesses)
         L.append("| method | path | status | count |")
         L.append("|---|---|---|---|")
         for (m, p, s), cnt in sorted(c.items(), key=lambda kv: (-kv[1], kv[0])):
             L.append(f"| {m} | `{p}` | {s} | {cnt} |")
-        fails = [x for x in acc if x["status"] >= 400]
+
+        fails = [x for x in accesses if x["status"] >= 400]
         L.append("")
         if fails:
             L.append(f"**Failures (status ≥ 400): {len(fails)}**\n")
@@ -614,40 +822,57 @@ def build_report(d, src):
             L.append("_no HTTP failures_\n")
     else:
         L.append("_no access lines_\n")
+    return L
 
-    # ---- S3 timeline (engine + spec, paired by timestamp) -----------------
-    L.append("## 3. Engine & speculative-decode timeline\n")
-    L.append("One row per 10 s engine sample; the companion SpecDecoding line is joined on "
-             "the same timestamp (`—` when that interval had no speculation).\n")
-    spec_by_ts = {s["ts"]: s for s in d["specs"]}
-    L.append("| time | prompt t/s | gen t/s | run | wait | KV% | prefix% | acc-len | acc t/s | draft t/s | acc tok | draft tok | pos1 | pos2 | pos3 | draft acc% |")
-    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
-    for e in d["engines"]:
+
+def _render_timeline_section(engines: list[EngineSample], specs: list[SpecSample]) -> list[str]:
+    """Render Section 3: Paired 10-second engine throughput and MTP speculative timeline."""
+    L: list[str] = [
+        "## 3. Engine & speculative-decode timeline\n",
+        "One row per 10 s engine sample; the companion SpecDecoding line is joined on "
+        "the same timestamp (`—` when that interval had no speculation).\n",
+        "| time | prompt t/s | gen t/s | run | wait | KV% | prefix% | acc-len | acc t/s | draft t/s | acc tok | draft tok | pos1 | pos2 | pos3 | draft acc% |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+    ]
+
+    spec_by_ts = {s["ts"]: s for s in specs}
+    for e in engines:
         s = spec_by_ts.get(e["ts"])
         if s:
-            spec_cells = (f"{s['acc_len']:.2f} | {s['acc_tps']:.1f} | {s['draft_tps']:.1f} | "
-                          f"{s['accepted']} | {s['drafted']} | {s['p1']:.3f} | {s['p2']:.3f} | {s['p3']:.3f} | {s['draft_acc']:.1f}")
+            spec_cells = (
+                f"{s['acc_len']:.2f} | {s['acc_tps']:.1f} | {s['draft_tps']:.1f} | "
+                f"{s['accepted']} | {s['drafted']} | {s['p1']:.3f} | {s['p2']:.3f} | {s['p3']:.3f} | {s['draft_acc']:.1f}"
+            )
         else:
-            spec_cells = "— | — | — | — | — | — | — | — | —"   # 9 dash columns
-        L.append(f"| {ts(e['ts'])} | {e['prompt']:.1f} | {e['gen']:.1f} | {e['running']} | {e['waiting']} | "
-                 f"{e['kv']:.1f} | {e['prefix']:.1f} | {spec_cells} |")
+            spec_cells = "— | — | — | — | — | — | — | — | —"  # 9 dash columns
+        L.append(
+            f"| {_fmt_ts(e['ts'])} | {e['prompt']:.1f} | {e['gen']:.1f} | {e['running']} | {e['waiting']} | "
+            f"{e['kv']:.1f} | {e['prefix']:.1f} | {spec_cells} |"
+        )
     L.append("")
+    return L
 
-    # ---- S4 aggregates ----------------------------------------------------
-    L.append("## 4. Aggregate statistics\n")
-    L.append("### 4.1 Session & throughput\n")
+
+def _render_aggregates_section(d: ParsedLog) -> list[str]:
+    """Render Section 4: Aggregate session throughput, speculative decoding, and KV cache distribution."""
+    L: list[str] = ["## 4. Aggregate statistics\n", "### 4.1 Session & throughput\n"]
     ss = single_session(d)
+
     if ss:
-        L += ["| metric | value |", "|---|---|",
-              f"| engine samples | {ss['n_samples']} |",
-              f"| sample window | {ts(ss['first_sample'])} → {ts(ss['last_sample'])} ({ss['span']:.0f} s) |",
-              f"| peak prompt throughput | {ss['peak_prompt']:.1f} tok/s |",
-              f"| peak generation throughput | {ss['peak_gen']:.1f} tok/s |",
-              f"| mean generation throughput (busy samples) | {ss['mean_gen_busy']:.1f} tok/s |" if ss["mean_gen_busy"] is not None else "| mean generation throughput (busy) | — |",
-              f"| busy samples (gen > 0) | {ss['busy_samples']} / {ss['n_samples']} |",
-              f"| active-serving windows | {ss['n_active_windows']} |",
-              f"| serving window (first→last active) | {ss['serving_span']:.0f} s |",
-              ""]
+        L.extend([
+            "| metric | value |",
+            "|---|---|",
+            f"| engine samples | {ss['n_samples']} |",
+            f"| sample window | {_fmt_ts(ss['first_sample'])} → {_fmt_ts(ss['last_sample'])} ({ss['span']:.0f} s) |",
+            f"| peak prompt throughput | {ss['peak_prompt']:.1f} tok/s |",
+            f"| peak generation throughput | {ss['peak_gen']:.1f} tok/s |",
+            (f"| mean generation throughput (busy samples) | {ss['mean_gen_busy']:.1f} tok/s |"
+             if ss["mean_gen_busy"] is not None else "| mean generation throughput (busy) | — |"),
+            f"| busy samples (gen > 0) | {ss['busy_samples']} / {ss['n_samples']} |",
+            f"| active-serving windows | {ss['n_active_windows']} |",
+            f"| serving window (first→last active) | {ss['serving_span']:.0f} s |",
+            "",
+        ])
     else:
         L.append("_not enough data_\n")
 
@@ -657,18 +882,20 @@ def build_report(d, src):
         tot_acc = sum(s["accepted"] for s in sp)
         tot_dr = sum(s["drafted"] for s in sp)
         ratio = 100.0 * tot_acc / tot_dr if tot_dr else 0.0
-        L.append("| metric | n | mean | median | min | max | p95 | unit |")
-        L.append("|---|---|---|---|---|---|---|---|")
-        L.append(stat_row("acceptance length", [s["acc_len"] for s in sp], "tok", 2))
-        L.append(stat_row("draft acceptance rate", [s["draft_acc"] for s in sp], "%", 1))
-        L.append(stat_row("accepted throughput", [s["acc_tps"] for s in sp], "tok/s", 1))
-        L.append(stat_row("drafted throughput", [s["draft_tps"] for s in sp], "tok/s", 1))
-        L.append("")
-        L.append(f"- per-position acceptance (mean): p1 = {mean([s['p1'] for s in sp]):.3f}, "
-                 f"p2 = {mean([s['p2'] for s in sp]):.3f}, p3 = {mean([s['p3'] for s in sp]):.3f}")
-        L.append(f"- session totals: **{tot_acc}** accepted / **{tot_dr}** drafted tokens "
-                 f"→ {ratio:.1f}% overall acceptance")
-        L.append("")
+        L.extend([
+            "| metric | n | mean | median | min | max | p95 | unit |",
+            "|---|---|---|---|---|---|---|---|",
+            stat_row("acceptance length", [s["acc_len"] for s in sp], "tok", 2),
+            stat_row("draft acceptance rate", [s["draft_acc"] for s in sp], "%", 1),
+            stat_row("accepted throughput", [s["acc_tps"] for s in sp], "tok/s", 1),
+            stat_row("drafted throughput", [s["draft_tps"] for s in sp], "tok/s", 1),
+            "",
+            f"- per-position acceptance (mean): p1 = {mean([s['p1'] for s in sp]):.3f}, "
+            f"p2 = {mean([s['p2'] for s in sp]):.3f}, p3 = {mean([s['p3'] for s in sp]):.3f}",
+            f"- session totals: **{tot_acc}** accepted / **{tot_dr}** drafted tokens "
+            f"→ {ratio:.1f}% overall acceptance",
+            "",
+        ])
     else:
         L.append("_no SpecDecoding samples (speculative decoding off)_\n")
 
@@ -677,34 +904,45 @@ def build_report(d, src):
     if eng:
         dist = Counter(e["running"] for e in eng)
         mm_vals = [e["mm"] for e in eng if e["mm"] is not None]
-        L.append("| metric | value |")
-        L.append("|---|---|")
-        L.append(f"| peak GPU KV cache usage | {max(e['kv'] for e in eng):.1f}% |")
         pv = [e["prefix"] for e in eng]
-        L.append(f"| prefix cache hit rate | {min(pv):.1f}% – {max(pv):.1f}% (mean {mean(pv):.1f}%) |")
+        L.extend([
+            "| metric | value |",
+            "|---|---|",
+            f"| peak GPU KV cache usage | {max(e['kv'] for e in eng):.1f}% |",
+            f"| prefix cache hit rate | {min(pv):.1f}% – {max(pv):.1f}% (mean {mean(pv):.1f}%) |",
+        ])
         if mm_vals:
             L.append(f"| MM cache hit rate (mean) | {mean(mm_vals):.1f}% |")
-        L.append(f"| concurrency distribution | " +
-                 ", ".join(f"{k} req(s): {v}" for k, v in sorted(dist.items())) + " |")
-        L.append("")
+        L.extend([
+            f"| concurrency distribution | " + ", ".join(f"{k} req(s): {v}" for k, v in sorted(dist.items())) + " |",
+            "",
+        ])
     else:
         L.append("_no engine samples_\n")
+    return L
 
-    # ---- S5 warnings & errors --------------------------------------------
-    L.append("## 5. Warnings & errors\n")
-    L.append("### 5.1 JIT compilation during inference\n")
-    if d["jit"]:
-        L.append("First-use Triton kernels compiled mid-serve cause a one-time latency spike.\n")
-        L.append("| time | kernel |")
-        L.append("|---|---|")
-        for j in d["jit"]:
-            L.append(f"| {ts(j['ts'])} | `{j['kernel']}` |")
+
+def _render_warnings_section(warnings: list[WarningEntry], jit: list[JitEntry], accesses: list[AccessLogEntry]) -> list[str]:
+    """Render Section 5: Latency-critical Triton JIT spikes, HTTP failures, and deduplicated warnings."""
+    L: list[str] = [
+        "## 5. Warnings & errors\n",
+        "### 5.1 JIT compilation during inference\n",
+    ]
+
+    if jit:
+        L.extend([
+            "First-use Triton kernels compiled mid-serve cause a one-time latency spike.\n",
+            "| time | kernel |",
+            "|---|---|",
+        ])
+        for j in jit:
+            L.append(f"| {_fmt_ts(j['ts'])} | `{j['kernel']}` |")
         L.append("")
     else:
         L.append("_none_\n")
 
     L.append("### 5.2 HTTP failures\n")
-    fails = [x for x in d["accesses"] if x["status"] >= 400]
+    fails = [x for x in accesses if x["status"] >= 400]
     if fails:
         fc = Counter((x["method"], x["path"], x["status"]) for x in fails)
         for (m, p, s), cnt in sorted(fc.items()):
@@ -714,86 +952,127 @@ def build_report(d, src):
         L.append("_none_\n")
 
     L.append("### 5.3 Other warnings (deduped)\n")
-    if d["warnings"]:
-        wc = {}
-        for w in d["warnings"]:
+    if warnings:
+        wc: dict[tuple[str, str], list[Any]] = {}
+        for w in warnings:
             key = (w["level"], w["msg"])
             e = wc.setdefault(key, [0, w["ts"]])
             e[0] += 1
             e[1] = min(e[1], w["ts"])
-        L.append("| level | count | first seen | message |")
-        L.append("|---|---|---|---|")
+
+        L.extend([
+            "| level | count | first seen | message |",
+            "|---|---|---|---|",
+        ])
         for (level, msg), (cnt, first_ts) in sorted(wc.items(), key=lambda kv: (-kv[1][0], kv[0][1])):
-            L.append(f"| {level} | {cnt} | {ts(first_ts)} | {msg} |")
+            L.append(f"| {level} | {cnt} | {_fmt_ts(first_ts)} | {msg} |")
         L.append("")
     else:
         L.append("_none_\n")
+    return L
 
-    # ---- S6 recognized noise ---------------------------------------------
-    L.append("## 6. Recognized noise (counted, not shown)\n")
-    boiler = {f: c for f, c in d["noise"].items() if f != "vllm-info"}
-    n_info = d["noise"].get("vllm-info", 0)
-    if not d["noise"]:
+
+def _render_noise_and_canary_section(
+    noise: Counter[str],
+    info_by_source: Counter[str],
+    unrecognized: list[tuple[int, str]]
+) -> list[str]:
+    """Render Sections 6 (boilerplate noise classification) and 7 (canary unmatched lines)."""
+    L: list[str] = ["## 6. Recognized noise (counted, not shown)\n"]
+    boiler = {f: c for f, c in noise.items() if f != "vllm-info"}
+    n_info = noise.get("vllm-info", 0)
+
+    if not noise:
         L.append("_none_\n")
     else:
         if boiler:
-            L.append("Repetitive warmup boilerplate, recognized so it doesn't pollute "
-                     "the S7 canary.\n")
-            L.append("| family | count |")
-            L.append("|---|---|")
+            L.extend([
+                "Repetitive warmup boilerplate, recognized so it doesn't pollute the S7 canary.\n",
+                "| family | count |",
+                "|---|---|",
+            ])
             for fam, cnt in sorted(boiler.items(), key=lambda kv: -kv[1]):
                 L.append(f"| {fam} | {cnt} |")
             L.append("")
+
         if n_info:
-            src = d.get("info_by_source", Counter())
-            L.append(f"Benign one-line `INFO` facts without an individual matcher "
-                     f"({n_info} total), grouped by source file:\n")
-            L.append("| source file | count |")
-            L.append("|---|---|")
-            for sfile, cnt in sorted(src.items(), key=lambda kv: (-kv[1], kv[0])):
+            L.extend([
+                f"Benign one-line `INFO` facts without an individual matcher ({n_info} total), "
+                f"grouped by source file:\n",
+                "| source file | count |",
+                "|---|---|",
+            ])
+            for sfile, cnt in sorted(info_by_source.items(), key=lambda kv: (-kv[1], kv[0])):
                 L.append(f"| `{sfile}` | {cnt} |")
             L.append("")
 
-    # ---- S7 unrecognized lines (the canary) --------------------------------
     L.append("## 7. Unrecognized lines (canary)\n")
-    u = d["unrecognized"]
-    if u:
-        L.append(f"{len(u)} lines did not match any known pattern — inspect these if they "
-                 "look like a real (new) log format:\n")
-        L.append("```")
-        for n, raw in u[:15]:
+    if unrecognized:
+        L.extend([
+            f"{len(unrecognized)} lines did not match any known pattern — inspect these if they "
+            f"look like a real (new) log format:\n",
+            "```",
+        ])
+        for n, raw in unrecognized[:15]:
             L.append(f"L{n}: {raw}")
-        if len(u) > 15:
-            L.append(f"... and {len(u)-15} more")
+        if len(unrecognized) > 15:
+            L.append(f"... and {len(unrecognized) - 15} more")
         L.append("```")
     else:
         L.append("_none — every line matched a known pattern_")
-    return "\n".join(L) + "\n"
+
+    return L
+
+
+def build_report(d: ParsedLog, src: str) -> str:
+    """Assemble the final Markdown performance report from parsed structures (sections S1-S7).
+
+    Coordinates modular sub-renderers for each section to build a clean,
+    deterministic Markdown document suitable for operator inspection and CI archiving.
+
+    Args:
+        d: ParsedLog output dict returned by parse().
+        src: Name or path of the input log file.
+
+    Returns:
+        Full rendered Markdown report string.
+    """
+    lines: list[str] = []
+    lines.extend(_render_header(d, src))
+    lines.extend(_render_startup_section(d["startup"]))
+    lines.extend(_render_requests_section(d["accesses"], d["engines"]))
+    lines.extend(_render_timeline_section(d["engines"], d["specs"]))
+    lines.extend(_render_aggregates_section(d))
+    lines.extend(_render_warnings_section(d["warnings"], d["jit"], d["accesses"]))
+    lines.extend(_render_noise_and_canary_section(d["noise"], d["info_by_source"], d["unrecognized"]))
+    return "\n".join(lines) + "\n"
 
 
 # =====================================================================
 # CLI ENTRY POINT
 # =====================================================================
 
-def main():
-    """parse -> build_report -> write -> print a one-line count summary.
-
-    The printed counts double as a quick sanity check: compare them with
-    `grep -c "Engine 000:"`, `grep -c "SpecDecoding metrics"`,
-    `grep -cE '"[A-Z]+ .+ HTTP/"'` and `grep -c "JIT compilation during inference"`
-    on the raw log to confirm nothing was misclassified.
-    """
+def main() -> None:
+    """CLI entrypoint: parse -> build_report -> write -> print summary."""
     ap = argparse.ArgumentParser(description="Parse a vLLM docker-log dump into a Markdown report.")
-    ap.add_argument("log_file")
-    ap.add_argument("-o", "--output", default=None, help="output markdown (default: <input>.report.md)")
-    a = ap.parse_args()
-    out = a.output or (a.log_file[:-4] + ".report.md" if a.log_file.endswith(".txt") else a.log_file + ".report.md")
-    d = parse(a.log_file)
-    with open(out, "w") as f:
-        f.write(build_report(d, a.log_file))
-    print(f"wrote {out}  (lines={d['total']} engines={len(d['engines'])} specs={len(d['specs'])} "
-          f"access={len(d['accesses'])} jit={len(d['jit'])} warnings={len(d['warnings'])} "
-          f"noise={sum(d['noise'].values())} unrecognized={len(d['unrecognized'])})")
+    ap.add_argument("log_file", help="Path to input raw vLLM log dump (.txt)")
+    ap.add_argument("-o", "--output", default=None, help="Output markdown path (default: <input>.report.md)")
+    args = ap.parse_args()
+
+    out = args.output or (
+        args.log_file[:-4] + ".report.md" if args.log_file.endswith(".txt") else args.log_file + ".report.md"
+    )
+    d = parse(args.log_file)
+    report_content = build_report(d, args.log_file)
+
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(report_content)
+
+    print(
+        f"wrote {out}  (lines={d['total']} engines={len(d['engines'])} specs={len(d['specs'])} "
+        f"access={len(d['accesses'])} jit={len(d['jit'])} warnings={len(d['warnings'])} "
+        f"noise={sum(d['noise'].values())} unrecognized={len(d['unrecognized'])})"
+    )
 
 
 if __name__ == "__main__":
