@@ -6,7 +6,8 @@ source "$SCRIPT_DIR/../../../../commonScripts/lib.sh"
 load_env
 
 CONTAINER="qwen38-flash-next-mia-nvfp4"
-DATE_DIR="${SCRIPT_DIR}/metadata/2026-09-05"
+DATE_STR=$(date +%Y-%m-%d)
+DATE_DIR="${SCRIPT_DIR}/metadata/${DATE_STR}"
 mkdir -p "$DATE_DIR"
 
 OUTPUT_FILE="${1:-${DATE_DIR}/01_vllm_log.txt}"
@@ -20,7 +21,7 @@ if [[ -n "${INFERENCE_API_KEY:-}" ]]; then
 fi
 
 # Mirror to parent metadata directory so parser can find it at either scope
-PARENT_METADATA_DIR="${SCRIPT_DIR}/../metadata/2026-09-05"
+PARENT_METADATA_DIR="${SCRIPT_DIR}/../metadata/${DATE_STR}"
 mkdir -p "$PARENT_METADATA_DIR"
 cp "$OUTPUT_FILE" "${PARENT_METADATA_DIR}/01_vllm_log.txt"
 

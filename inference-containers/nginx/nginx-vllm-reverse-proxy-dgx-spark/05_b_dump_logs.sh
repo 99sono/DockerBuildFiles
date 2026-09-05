@@ -1,33 +1,36 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
+# Dump nginx-proxy container logs to a timestamped file for analysis.
+# Non-following snapshot — full log, no truncation.
+# Sensitive values (api_key) are masked with "dummy-key" before writing.
+# Use 05_a_follow_logs.sh for live tail instead.
 
-# ============================================================
-# Configuration
-# ============================================================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
-source "$SCRIPT_DIR/00_env.sh"
+source "$SCRIPT_DIR/../../../commonScripts/lib.sh"
+load_env
 
-# Get the nginx container name from environment configuration
-CONTAINER_NAME="$NGINX_CONTAINER_NAME"
+CONTAINER="${NGINX_CONTAINER_NAME:-nginx-proxy}"
+DATE_STR=$(date +%Y-%m-%d)
+TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+METADATA_DIR="${SCRIPT_DIR}/metadata/${DATE_STR}"
+mkdir -p "$METADATA_DIR"
+OUTPUT_FILE="${METADATA_DIR}/${TIMESTAMP}_${CONTAINER}_log_dump.txt"
 
-# ============================================================
-# Pre-flight check: Verify container exists (running or stopped)
-# ============================================================
-if ! docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
-    echo "Error: Container '$CONTAINER_NAME' does not exist." >&2
-    echo "Have you started it with ./01_up.sh yet?" >&2
-    exit 1
+docker_logs_dump_container "$CONTAINER" "$OUTPUT_FILE"
+
+# Additional security check: explicitly scrub any occurrence of INFERENCE_API_KEY
+if [[ -n "${INFERENCE_API_KEY:-}" ]] && [[ "${INFERENCE_API_KEY}" != "dummy-key" ]]; then
+  sed -i "s/${INFERENCE_API_KEY}/dummy-key/g" "$OUTPUT_FILE"
 fi
 
-# ============================================================
-# Main: Dump container logs to local file for analysis
-# ============================================================
-echo "Dumping $CONTAINER_NAME container logs ..."
+# Fail-safe assertion: delete the dump and abort if the key survived every mask
+if [[ -n "${INFERENCE_API_KEY:-}" ]] && [[ "${INFERENCE_API_KEY}" != "dummy-key" ]] \
+   && grep -F -q -- "$INFERENCE_API_KEY" "$OUTPUT_FILE"; then
+  echo "❌ CRITICAL: API key leak detected in $OUTPUT_FILE — deleting dump." >&2
+  rm -f "$OUTPUT_FILE"
+  exit 1
+fi
 
-docker logs "$CONTAINER_NAME" > nginx_logs_dump.txt 2>&1
-
-echo "Done! Logs saved to nginx_logs_dump.txt"
-echo "Last 20 lines:"
+echo ""
+echo "First 20 lines (preview):"
 echo "---------------------------------------------------"
-tail -n 20 nginx_logs_dump.txt
+head -n 20 "$OUTPUT_FILE"
