@@ -92,3 +92,37 @@ python3 04_test_vllm_curl.py
 - **Batching:** `--max-num-seqs 4`, `--max-num-batched-tokens 2048`
 - **Speculative Decoding:** `--speculative-config '{"method":"mtp","num_speculative_tokens":3}'`
 - **Parsers:** `--reasoning-parser qwen3`, `--tool-call-parser qwen3_coder`
+
+---
+
+## 🧠 Deep-Dive: Memory Management & Safety on DGX Spark (GB10)
+
+The DGX Spark features **128 GB of unified LPDDR5X memory** (121.69 GiB usable) shared dynamically between the CPU and the Blackwell GPU. Running a massive 125B MoE model (with a 51B n-gram PLE embedding) at **TP=1 on a single node** carries distinct memory hazards that were identified and solved by Mia's AI Lab:
+
+### 1. The Unified Memory "Death Spiral" Hazard
+* **The Problem:** vLLM detects GB10 as an integrated GPU and calculates "free GPU memory" based on host `MemAvailable` (which includes Linux page cache). If unconstrained, vLLM attempts to occupy `GMU × MemTotal` (e.g. 90–95%), allocating GPU memory straight out of the operating system's page cache and kernel buffers.
+* **The Consequence:** When host memory runs dry on unified architecture, the Linux kernel **does not trigger an OOM kill**. Instead, the NVIDIA GPU driver starts failing memory allocations (`NV_ERR_NO_MEMORY` in `journalctl -k`), and the entire machine experiences a **hard kernel lockup / freeze** requiring a physical power cycle.
+* **The Fix (`HOST_RESERVE_GIB=26`):**
+  We strictly cap the container's GPU allocation ceiling to `MemTotal - 26 GiB` (`--gpu-memory-utilization 0.78`). This reserve guarantees memory for:
+  - Host OS processes & co-tenants (~7 GiB)
+  - vLLM host-side processes (~6 GiB)
+  - PLE memory-mapped page cache (≥ 6 GiB)
+  - NVIDIA kernel driver free-page reserve (≥ 3 GiB)
+  - Dynamic request workspace growth (2–3 GiB)
+
+### 2. Why Memory-Mapped PLE Offload (`mmap` + `MADV_RANDOM`) is Essential
+* The PLE n-gram embedding table is **~26.8 GiB to 51 GiB** on its own.
+* Storing the PLE table in anonymous RAM or GPU VRAM would drive non-evictable memory to ~104 GiB + KV cache, blowing past the safety ceiling.
+* By building a packed uint8 table (`00_c_prepare_patches_and_ple.sh` via `build_ple_packed_table.py`) and memory-mapping it with `MADV_RANDOM`:
+  - The table is held as **file-backed, evictable page cache**.
+  - Disk reads per decoded token drop from ~1,366 KiB down to **57 KiB** (a 24× reduction).
+  - The non-evictable resident footprint drops to **~77 GiB + KV cache**, freeing ~16.5 GiB for almost **1,000,000 FP8 KV tokens**.
+
+### 3. GB10 CUDA Stream Ops Bug & Host Handshake
+* Blackwell GB10 reports `CU_DEVICE_ATTRIBUTE_CAN_USE_STREAM_MEM_OPS = 0`.
+* Upstream vLLM stock offload code attempts to synchronize the CPU offload worker and GPU stream using `cuStreamWaitValue32` / `cuStreamWriteValue32`. On GB10, this causes the GPU worker to **deadlock and hang forever right after CUDA graph capture**.
+* The applied patch (`patch_ple_offload.py`) introduces a clean host-side handshake using a shared-memory sequence flag, completely eliminating the deadlock on GB10.
+
+### 4. QSA Sparse Attention FP8 KV Cache Hoist
+* Stock vLLM previously rejected FP8 KV on Qwen Sparse Attention (`QSA`).
+* The included `patch_qsa_fp8_kv.py` hoists the scalar scales outside the tensor core dots, keeping the full tile size (`block_n`), avoiding FP32 tile materialization, and making FP8 KV caching fast, mathematically exact to within 1 BF16 ULP, and fully functional on DGX Spark.
