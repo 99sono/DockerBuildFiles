@@ -16,6 +16,7 @@ CLINE expects an OpenAI-compatible endpoint.
 | `gemma-4-26b-it-nvfp4` | 256,000 |
 | `nemotron-cascade-2-nvfp4` | 256,000 |
 | `qwen3.6-27b-text-nvfp4-mtp` | 32768 |
+| `qwen3.8-flash-next` | 262,144 |
 
 ## Quick Start
 

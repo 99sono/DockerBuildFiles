@@ -11,7 +11,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-MODEL_ID="nvidia/Qwen3.8-Flash-Next-NVFP4"
+MODEL_ID="Mia-AiLab/Qwen3.8-Flash-Next-NVFP4"
 IMAGE="${VLLM_IMAGE:-vllm/vllm-openai:qwen38-flash-next}"
 HF_CACHE_DIR="${HF_HOME:-$HOME/.cache/huggingface}"
 ORG="${MODEL_ID%%/*}"
