@@ -89,12 +89,16 @@ together mean a normal warmup+serve log ends with S7 empty.
 
 ## How to extend
 
-All line grammar lives at the top of `parse_docker_log.py`:
+All line grammar lives at the top of `parse_docker_log.py`; each report section is
+rendered by its own modular sub-renderer (S1 → `_render_startup_section()`, S2 →
+`_render_requests_section()`, S3 → `_render_timeline_section()`, S4 →
+`_render_aggregates_section()`, S5 → `_render_warnings_section()`, S6+S7 →
+`_render_noise_and_canary_section()`), all orchestrated by `build_report()`:
 
 - **new one-shot fact** → add a `re.compile` near the other startup regexes and
-  a branch in `handle_startup()`, then a row in `build_report()` S1.
-- **new metric line** → add a regex + a collector list in `parse()` + a section in
-  `build_report()`.
+  a branch in `handle_startup()`, then a row in `_render_startup_section()` (S1).
+- **new metric line** → add a regex + a collector list in `parse()` + a block in
+  the matching `_render_*` section function.
 - **new noise family** → add `(name, re.compile(...))` to `NOISE_RE`.
 - **new vLLM version** → first check the S7 canary; the unmatched lines tell you
   exactly which pattern drifted.
@@ -104,5 +108,5 @@ All line grammar lives at the top of `parse_docker_log.py`:
 ```
 $ bash inference-containers/vllm/log-parser/03_parse_docker_log_file_to_markdown_report.sh \
     inference-containers/vllm/qwen-3.8-flash-next-dgx-spark/mia-nvfp4/metadata/2026-09-05/01_vllm_log.txt
-wrote .../2026-09-05/01_vllm_log.report.md  (lines=664 engines=... specs=... access=... jit=... warnings=... noise=... unrecognized=...)
+wrote .../2026-09-05/01_vllm_log.report.md  (lines=702 engines=46 specs=40 access=30 jit=6 warnings=25 noise=532 unrecognized=0)
 ```
