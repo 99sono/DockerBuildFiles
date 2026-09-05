@@ -40,7 +40,51 @@ Key breakthroughs contributed by Mia AI Lab incorporated here:
 
 ---
 
-## 3. Directory Layout
+## 3. Educational Deep Dive: Understanding the Parallelism Architecture
+
+To get the most out of a dual-Spark cluster, it is crucial to understand how model computations and memory are divided across the two physical machines.
+
+### A. Pipeline Parallelism (PP) — What We Deliberately Avoid
+* **The Concept**: Splitting the model *sequentially* by layers (e.g., in a 48-layer model, `spark01` holds Layers 1–24, and `spark02` holds Layers 25–48).
+* **The "Pipeline Bubble" Problem**: During inference, `spark01` computes Layers 1–24 while `spark02` sits completely idle waiting for activations over the wire. Then, while `spark02` computes Layers 25–48, `spark01` sits idle waiting for the next pass.
+* **Verdict**: Sequential dependency creates massive idle gaps ("bubbles"), cutting effective cluster compute utilization roughly in half.
+
+### B. Tensor Parallelism (TP=2) — Slicing Every Layer Simultaneously
+* **The Concept**: Instead of splitting layers sequentially, **every single layer is split mathematically across both GPUs**:
+  * In **Layer 1**, `spark01` holds half the attention heads ($Q, K, V$) and `spark02` holds the other half.
+  * Both GB10 chips compute their half of the matrix **at the exact same microsecond in parallel**.
+  * At the end of each layer, an ultrafast NCCL `all-reduce` over your 200G ConnectX-7 link sums the outputs, and both GPUs immediately advance to Layer 2 together in lockstep.
+
+### C. Expert Parallelism (EP=true) — Partitioning Whole MoE Experts
+Qwen 3.8 Flash Next features an MoE architecture with **512 routed experts**.
+
+* **Why not pure TP on MoE?** Slicing 512 tiny expert matrices into even smaller slivers harms GPU arithmetic intensity (the Tensor Cores finish in nanoseconds and spend all their time waiting on memory bandwidth).
+* **The EP Solution**: Rather than slicing individual expert matrices, **the experts themselves are partitioned whole**:
+
+```text
+               Token Embeddings arrive at Layer Router
+                                 │
+           Router determines which expert each token activates
+                                 │
+              ┌──────────────────┴──────────────────┐
+              ▼                                     ▼
+     spark01 (Rank 0)                      spark02 (Rank 1)
+     Holds Experts 0 to 255                Holds Experts 256 to 511
+     (256 full experts in RAM)             (256 full experts in RAM)
+```
+
+* If a token activates **Expert 42**: it runs locally on `spark01` without network traffic.
+* If a token activates **Expert 380**: vLLM dispatches the token embedding across the RoCE link to `spark02` via `allgather_reducescatter`, `spark02` executes the expert, and the output vectors are reduced back.
+
+### Summary: Why This Architecture Kicks Ass
+By combining **TP=2** (for attention & dense projections) with **EP=true** (for the 512 MoE experts) while **avoiding Pipeline Parallelism (PP=1)**:
+1. **Zero Pipeline Bubbles**: Both GB10 chips are compute-active throughout 100% of every generation step.
+2. **Maximum Hardware Utilization**: Matrix calculations run in parallel with high arithmetic intensity on Blackwell cores.
+3. **Halved Memory Footprint**: The massive ~99 GiB weight footprint is split into ~50 GiB per Spark, freeing ~32 GiB on each node purely for FP8 KV cache (~3.65M tokens / ~13.9× context headroom).
+
+---
+
+## 4. Directory Layout
 
 ```text
 mia-dual-spark-nvfp4/
@@ -74,7 +118,7 @@ mia-dual-spark-nvfp4/
 
 ---
 
-## 4. Operational Step-by-Step Guide
+## 5. Operational Step-by-Step Guide
 
 ### Step A: Prerequisites on Both Nodes
 1. Ensure the Docker image `vllm/vllm-openai:qwen38-flash-next` is present.
