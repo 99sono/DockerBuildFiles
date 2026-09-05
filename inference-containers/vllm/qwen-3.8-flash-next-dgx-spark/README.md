@@ -8,8 +8,9 @@ This directory provides Docker Compose configurations for running **Qwen 3.8 Fla
 
 | Preset | Target Model | PLE Table Format | Table Size | DGX Spark Single-Node Status |
 |---|---|---|---|---|
-| **[`mia-nvfp4/`](mia-nvfp4)** | [`Mia-AiLab/Qwen3.8-Flash-Next-NVFP4`](https://huggingface.co/Mia-AiLab/Qwen3.8-Flash-Next-NVFP4) | NVFP4 (W4A8 block scales) | **~26.8 GiB** | **✅ Working (Tested)** |
-| **[`nvidia-nvfp4/`](nvidia-nvfp4)** | [`nvidia/Qwen3.8-Flash-Next-NVFP4`](https://huggingface.co/nvidia/Qwen3.8-Flash-Next-NVFP4) | FP8 (`F8_E4M3`) | **~51.2 GiB** | ⚠️ Exceeds single-node UVM budget (requires multi-node or custom FP8 table packer) |
+| **[`mia-nvfp4/`](mia-nvfp4)** | [`Mia-AiLab/Qwen3.8-Flash-Next-NVFP4`](https://huggingface.co/Mia-AiLab/Qwen3.8-Flash-Next-NVFP4) | NVFP4 (W4A8 block scales) | **~26.8 GiB** | **✅ Working (Tested & Verified)** |
+
+*(Note: The official [`nvidia/Qwen3.8-Flash-Next-NVFP4`](https://huggingface.co/nvidia/Qwen3.8-Flash-Next-NVFP4) is excluded because its uncompressed 51.2 GiB FP8 PLE table cannot mathematically fit in a single 128 GB DGX Spark unified memory envelope alongside model weights and KV cache. See architectural context below.)*
 
 ---
 
