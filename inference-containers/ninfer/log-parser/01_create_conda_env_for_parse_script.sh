@@ -12,7 +12,8 @@
 # recreate it ("prompt" mode) and keeps the existing one on "N".
 # =====================================================================
 # Shared helpers: conda_create_env, conda_env_exists, logging, etc.
-# Relative depth: metadata/ -> qwen-3.8-27b-5090/ -> ninfer/ -> inference-containers/ -> repo root
-source ../../../../commonScripts/lib.sh
+# Relative depth: log-parser/ -> ninfer/ -> inference-containers/ -> repo root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../../../commonScripts/lib.sh"
 # conda_create_env <env-name> <python-version> <force|prompt>
 conda_create_env "testNInferLogParse" "3.12" "prompt"
