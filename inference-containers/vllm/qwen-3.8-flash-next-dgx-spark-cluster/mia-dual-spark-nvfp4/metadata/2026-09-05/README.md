@@ -33,7 +33,19 @@ cd inference-containers/vllm/qwen-3.8-flash-next-dgx-spark-cluster/mia-dual-spar
 
 ---
 
-### Step 2: Generate the Parsed Markdown Report (`01_vllm_head_log.report.md`)
+### Step 2: (First-Time Only) Create the Parser Conda Environment
+
+If the `testVLLMLogParse` conda environment has not been created yet on the host, create and verify it using the log-parser setup scripts:
+
+```bash
+cd inference-containers/vllm/log-parser
+./01_create_conda_env_for_parse_script.sh  # Creates 'testVLLMLogParse' with Python 3.12
+./02_install_python_tools.sh               # Verifies stdlib imports (pure-stdlib parser)
+```
+
+---
+
+### Step 3: Generate the Parsed Markdown Report (`01_vllm_head_log.report.md`)
 
 You can generate the markdown report using either the convenience bash script or direct Python invocation.
 
@@ -61,7 +73,7 @@ conda run --no-capture-output -n testVLLMLogParse python \
 
 ---
 
-### Step 3: Verification & S7 Canary Check
+### Step 4: Verification & S7 Canary Check
 
 When `parse_docker_log.py` finishes, it outputs a one-line classification audit:
 
@@ -76,7 +88,7 @@ wrote .../01_vllm_head_log.report.md (lines=614 engines=33 specs=25 access=33 ji
 
 ---
 
-### Step 4: Synthesizing the Comparative Analysis (`02_analysis_of_dual_spark_performance.md`)
+### Step 5: Synthesizing the Comparative Analysis (`02_analysis_of_dual_spark_performance.md`)
 
 Once the report is generated:
 1. Extract Section 3 (Timeline) and Section 4 (Aggregate Statistics) from both:
