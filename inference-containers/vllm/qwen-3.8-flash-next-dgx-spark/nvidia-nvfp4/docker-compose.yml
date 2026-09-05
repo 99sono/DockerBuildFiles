@@ -1,0 +1,120 @@
+services:
+  qwen38-flash-next-nvfp4:
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:qwen38-flash-next}
+    container_name: qwen38-flash-next-nvfp4
+    hostname: inference-server
+    platform: linux/arm64
+    ipc: host
+    shm_size: "32g"
+
+    # Limit container host-side memory to protect unified memory from exhaustion
+    mem_limit: 104g
+    memswap_limit: 104g
+
+    cap_add:
+      - SYS_NICE
+      - SYS_PTRACE
+
+    ulimits:
+      memlock: -1
+      stack: 67108864
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+    volumes:
+      # Model weights and shared Hugging Face cache
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      # Shared memory and vLLM cache (memory-mapped PLE table)
+      - ~/.cache/vllm:/root/.cache/vllm
+      - /dev/shm:/dev/shm
+
+      # Overlay patches for single-node DGX Spark GB10 stability
+      - ./files/ple_layer_patched.py:/usr/local/lib/python3.12/dist-packages/vllm/models/qwen3_8_flash_next/nvidia/ple_layer.py:ro
+      - ./files/modelopt_patched.py:/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/quantization/modelopt.py:ro
+      - ./files/qsa_ops_patched.py:/usr/local/lib/python3.12/dist-packages/vllm/models/qwen3_8_flash_next/nvidia/ops/qsa.py:ro
+      - ./files/qsa_nvidia_patched.py:/usr/local/lib/python3.12/dist-packages/vllm/models/qwen3_8_flash_next/nvidia/qsa.py:ro
+      - ./files/mtp_patched.py:/usr/local/lib/python3.12/dist-packages/vllm/models/qwen3_8_flash_next/nvidia/mtp.py:ro
+      - ./files/ple_offload/ple_offload_layer.py:/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/ple_offload_layer.py:ro
+      - ./files/ple_offload/connector.py:/usr/local/lib/python3.12/dist-packages/vllm/v1/ple_offload/connector.py:ro
+      - ./files/ple_offload/worker.py:/usr/local/lib/python3.12/dist-packages/vllm/v1/ple_offload/worker.py:ro
+      - ./files/ple_offload/protocol.py:/usr/local/lib/python3.12/dist-packages/vllm/v1/ple_offload/protocol.py:ro
+
+    environment:
+      VLLM_WORKER_MULTIPROC_METHOD: spawn
+      PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+      HF_XET_HIGH_PERFORMANCE: "1"
+      VLLM_USE_RUST_FRONTEND: "0"
+
+      # DGX Spark PLE CPU-offload configuration
+      VLLM_PLE_CPU_OFFLOAD: "1"
+      VLLM_PLE_PACKED_TABLE_DIR: "/root/.cache/vllm/ple_cache/nvidia--Qwen3.8-Flash-Next-NVFP4"
+      VLLM_PLE_OFFLOAD_STEP_TIMEOUT: "300"
+
+    command:
+      - "--model"
+      - "nvidia/Qwen3.8-Flash-Next-NVFP4"
+      - "--served-model-name"
+      - "${INFERENCE_MODEL_ALIAS:-qwen3.8-flash-next}"
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
+      - "--trust-remote-code"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "${INFERENCE_SERVER_PORT:-8000}"
+
+      # --- MEMORY & CONTEXT ---
+      # GPU memory utilization (GMU 0.78 gives ~94.8 GiB, leaving >=26 GiB safety margin on 121.7 GiB box)
+      - "--gpu-memory-utilization"
+      - "${INFERENCE_GPU_MEMORY_UTILIZATION:-0.78}"
+      - "--max-model-len"
+      - "${INFERENCE_MAX_MODEL_LEN:-262144}"
+      - "--max-num-seqs"
+      - "4"
+      - "--max-num-batched-tokens"
+      - "2048"
+
+      # --- ARCHITECTURE & KV CACHE ---
+      - "--kv-cache-dtype"
+      - "fp8"
+      - "--dtype"
+      - "auto"
+      - "--quantization"
+      - "modelopt"
+
+      # --- EXECUTOR & ENGINE ---
+      # mp executor is strictly required for PLE offload worker
+      - "--distributed-executor-backend"
+      - "mp"
+      - "--tensor-parallel-size"
+      - "1"
+      - "--safetensors-load-strategy"
+      - "lazy"
+      - "--enable-chunked-prefill"
+      - "--async-scheduling"
+
+      # --- PARSERS ---
+      - "--reasoning-parser"
+      - "qwen3"
+      - "--tool-call-parser"
+      - "qwen3_coder"
+      - "--enable-auto-tool-choice"
+
+      # --- MTP SPECULATIVE DECODING ---
+      - "--speculative-config"
+      - '{"method":"mtp","num_speculative_tokens":3}'
+
+      # --- COMPILATION & CUDA GRAPHS ---
+      - "--compilation-config"
+      - '{"mode":0,"cudagraph_mode":"FULL_DECODE_ONLY","cudagraph_capture_sizes":[4,8,12,16]}'
+
+    networks:
+      - development-network
+
+networks:
+  development-network:
+    external: true
