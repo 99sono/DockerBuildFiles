@@ -31,9 +31,11 @@ vllm/*/hf-cache/
 *.diff
 *.orig
 **/orig/
-# Generated patch overlays (extracted/generated at runtime by 00_c_prepare_patches_and_ple.sh)
+# Generated patch overlays (extracted/generated at runtime by 00_a_prepare_patches.sh)
 inference-containers/vllm/qwen-3.8-flash-next-dgx-spark/**/files/*_patched.py
 inference-containers/vllm/qwen-3.8-flash-next-dgx-spark/**/files/ple_offload/
+inference-containers/vllm/qwen-3.8-flash-next-dgx-spark-cluster/**/files/*_patched.py
+inference-containers/vllm/qwen-3.8-flash-next-dgx-spark-cluster/**/files/ple_offload/
 
 # Python cache files
 __pycache__/
