@@ -12,7 +12,8 @@
 # lines HERE — nowhere else should manage the env's packages.
 # =====================================================================
 # Shared helpers + logging (see commonScripts/lib.sh)
-source ../../../../commonScripts/lib.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../../../commonScripts/lib.sh"
 # Run a one-liner inside the env: import every stdlib module the parser
 # uses, then print a success line. Fails (non-zero) if any import breaks.
 conda run --no-capture-output -n testNInferLogParse python -c "import argparse, datetime, math, re, statistics; print('testNInferLogParse: python + stdlib OK')"
