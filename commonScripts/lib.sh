@@ -200,10 +200,13 @@ docker_logs_follow_compose() {
 
 ## docker_logs_dump_container <container_name> [output_file]
 # Dumps all logs from a container to a file, masking sensitive values
-# (e.g., api_key) before writing. Exits with error if not running.
+# (api_key lists, Bearer tokens, api-key/apikey assignments, and the literal
+# INFERENCE_API_KEY value) before writing. Exits with error if not running.
 # Args:  container_name — exact Docker container name (required)
 #        output_file    — optional output path, default "<container>_log_dump.txt"
-# Returns: 0 on success; exits 1 if the container is not running.
+# Returns: 0 on success; exits 1 if the container is not running, or if the
+#          post-write leak assertion finds INFERENCE_API_KEY in the dump
+#          (in that case the dump file is deleted before exiting).
 # Side effect: writes the log dump file and prints a summary to stdout.
 docker_logs_dump_container() {
   local container="${1:?Usage: docker_logs_dump_container <name> [output_file]}"
@@ -213,10 +216,33 @@ docker_logs_dump_container() {
     echo "❌ Container '$container' is not running." >&2; exit 1
   fi
 
-  # Mask sensitive values: replace api_key content with dummy-key
+  # Layer 1 — structural masks applied while writing (sed -E):
+  #   1. argparse-style lists:  api_key': ['secret']  -> api_key': ['dummy-key']
+  #   2. Authorization headers: Bearer <token>        -> Bearer [REDACTED]
+  #   3. Flag/ENV forms:        api-key=<secret>      -> api-key [REDACTED]
+  # Layer 2 — literal scrub of the real INFERENCE_API_KEY value (regex-escaped).
+  # Skipped when the key is literally "dummy-key" (would self-match the masks).
+  local -a literal_mask=()
+  if [ -n "${INFERENCE_API_KEY:-}" ] && [ "${INFERENCE_API_KEY}" != "dummy-key" ]; then
+    local key_escaped
+    key_escaped=$(printf '%s' "${INFERENCE_API_KEY}" | sed 's/[][\.*^$/]/\\&/g')
+    literal_mask=(-e "s/${key_escaped}/dummy-key/g")
+  fi
+
   docker logs "$container" 2>&1 | sed -E \
     -e "s/api_key': \['[^']+'\]/api_key': ['dummy-key']/g" \
+    -e 's/Bearer [A-Za-z0-9_.-]{10,}/Bearer [REDACTED]/g' \
+    -e 's/(api-key|apikey)[:= ]+[A-Za-z0-9_.-]{10,}/\1 [REDACTED]/g' \
+    "${literal_mask[@]}" \
     > "$outfile"
+
+  # Fail-safe assertion: if the real key survived every mask, destroy the dump.
+  if [ -n "${INFERENCE_API_KEY:-}" ] && [ "${INFERENCE_API_KEY}" != "dummy-key" ] \
+     && grep -F -q -- "${INFERENCE_API_KEY}" "$outfile"; then
+    rm -f "$outfile"
+    echo "❌ CRITICAL: INFERENCE_API_KEY leak detected in '$outfile' — dump deleted. Do not share." >&2
+    exit 1
+  fi
 
   local line_count file_size
   line_count=$(wc -l < "$outfile")
