@@ -65,9 +65,9 @@ services:
       # 90% of 32 GB VRAM reserved for weights + KV/state pool.
       - "--mem-fraction-static"
       - "0.9"
-      # Cap context at 32768 (32k) for safe headroom on 32 GB VRAM with bf16 KV cache.
+      # 128k context (182,400 full-attention KV tokens fit in the 8.36 GB bfloat16 pool).
       - "--context-length"
-      - "32768"
+      - "131072"
       # FlashAttention 4 (FA4) backend required by Inkling2.
       - "--attention-backend"
       - "fa4"
