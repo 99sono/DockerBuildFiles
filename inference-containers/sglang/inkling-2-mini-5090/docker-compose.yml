@@ -1,0 +1,93 @@
+services:
+  inkling-2-mini-server:
+    # Official SGLang image with day-0 Inkling-2-Mini + DSpark support.
+    image: lmsysorg/sglang:inkling-2-mini
+    container_name: inkling-2-mini-sglang-5090
+    hostname: inference-server
+    platform: linux/amd64
+    # All models served on port 8000. Single-model capacity avoids client port mismatches.
+    ports:
+      - "${INFERENCE_SERVER_PORT:-8000}:8000"
+
+    volumes:
+      # HuggingFace cache mounted so pre-downloaded weights are served locally.
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      # Shared memory for high-speed KV cache paging.
+      - /dev/shm:/dev/shm
+
+    # 32GB shm_size matches RTX 5090 VRAM; SGLang needs large /dev/shm for paged KV.
+    shm_size: "32g"
+    ipc: host
+
+    # Healthcheck probes SGLang's /health endpoint on port 8000.
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 300s
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=0
+      - HF_HOME=/root/.cache/huggingface
+
+    command:
+      # Model: thinkingmachines/Inkling-2-Mini (NVFP4 + MXFP8, ~20 GB, looped MoE + DSpark).
+      - "sglang"
+      - "serve"
+      - "--trust-remote-code"
+      - "--model-path"
+      - "thinkingmachines/Inkling-2-Mini"
+      # Aliased name presented in /v1/models API response.
+      - "--served-model-name"
+      - "${INFERENCE_MODEL_ALIAS:-inkling-2-mini}"
+      # API key authentication (Bearer token on all routes).
+      - "--api-key"
+      - "${INFERENCE_API_KEY:-dummy-key}"
+      # Bind to all interfaces for network access.
+      - "--host"
+      - "0.0.0.0"
+      # Internal container port.
+      - "--port"
+      - "${INFERENCE_SERVER_PORT:-8000}"
+
+      # --- QUANTIZATION / KV CACHE (RTX 5090 32GB) ---
+      # Use auto (bf16) KV cache; fp8_e4m3 hits a Triton _decode_partials cast bug in FA4.
+      - "--kv-cache-dtype"
+      - "auto"
+      # 90% of 32 GB VRAM reserved for weights + KV/state pool.
+      - "--mem-fraction-static"
+      - "0.9"
+      # 128k context (182,400 full-attention KV tokens fit in the 8.36 GB bfloat16 pool).
+      - "--context-length"
+      - "131072"
+      # FlashAttention 4 (FA4) backend required by Inkling2.
+      - "--attention-backend"
+      - "fa4"
+      # Single concurrent request — validated single-stream envelope on 32GB.
+      - "--max-running-requests"
+      - "1"
+      - "--cuda-graph-max-bs-decode"
+      - "1"
+      - "--disable-prefill-cuda-graph"
+
+      # --- PARSERS (agent harnesses) ---
+      - "--reasoning-parser"
+      - "inkling"
+      - "--tool-call-parser"
+      - "inkling"
+
+    networks:
+      - development-network
+
+networks:
+  # Allows this server to communicate with other internal tools/proxies.
+  development-network:
+    external: true
