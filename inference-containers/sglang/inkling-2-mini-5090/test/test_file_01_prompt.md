@@ -1,0 +1,1 @@
+Write a heartfelt haiku about a father who deeply loves his wife and little daughter. Let it overflow with warmth, tenderness, and quiet devotion.
